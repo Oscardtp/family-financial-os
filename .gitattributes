@@ -1,0 +1,14 @@
+# Enforce LF line endings across platforms (avoid CRLF churn in schema/SQL/ts)
+* text=auto eol=lf
+
+# Binary assets
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.svg  text eol=lf
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary

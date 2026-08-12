@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// --- Enums ---
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  CREDIT_CARD
+  LOAN
+  INVESTMENT
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum Direction {
+  DEBIT
+  CREDIT
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+/// --- Core ---
+
+/// Financial account per user. `userId` is the Supabase auth.users.id (UUID); no FK
+/// because auth is managed by Supabase, not Prisma.
+model Account {
+  id            String        @id @default(uuid(7))
+  userId        String
+  name          String
+  slug          String?       @unique
+  currency      String        @default("USD")
+  type          AccountType
+  normalBalance NormalBalance @default(DEBIT)
+  color         String?
+  icon          String?
+  isArchived    Boolean       @default(false)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+
+  ledgerLines   LedgerLine[]
+  @@index([userId])
+  @@index([type])
+}
+
+/// A monetary event: Income/Expense/Transfer/Adjustment. The double-entry
+/// invariant (ΣDEBIT = ΣCREDIT) is enforced by the Financial Engine, not the DB.
+model Transaction {
+  id            String        @id @default(uuid(7))
+  userId        String
+  type          TransactionType
+  description   String?
+  postedAt      DateTime      @default(now()) @db.Timestamptz(6)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+
+  ledgerLines   LedgerLine[]
+  @@index([userId])
+  @@index([postedAt])
+  @@index([type])
+}
+
+/// One leg of a Transaction (double-entry). amountCents is the MAGNITUDE (>=0);
+/// direction (DEBIT/CREDIT) + account.normalBalance determine the balance effect.
+model LedgerLine {
+  id            String        @id @default(uuid(7))
+  transactionId String
+  accountId     String
+  amountCents   BigInt
+  direction     Direction
+  description   String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+
+  transaction   Transaction   @relation(fields: [transactionId], references: [id])
+  account       Account       @relation(fields: [accountId], references: [id])
+  @@index([transactionId])
+  @@index([accountId])
+  @@index([direction])
+}
+
+/// Budget target (rollup) for a period. spentCents is a derived cached snapshot.
+model Budget {
+  id            String        @id @default(uuid(7))
+  userId        String
+  name          String
+  period        BudgetPeriod
+  targetCents   BigInt
+  spentCents    BigInt?
+  currency      String        @default("USD")
+  startDate     DateTime      @db.Timestamptz(6)
+  endDate       DateTime      @db.Timestamptz(6)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+  @@index([userId])
+}
+
+/// Savings goal. savedCents is a derived cached snapshot.
+model Goal {
+  id            String        @id @default(uuid(7))
+  userId        String
+  name          String
+  targetCents   BigInt
+  savedCents    BigInt        @default(0)
+  currency      String        @default("USD")
+  targetDate    DateTime?     @db.Timestamptz(6)
+  isCompleted   Boolean       @default(false)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamptz(6)
+  @@index([userId])
+}
+
+/// Periodic net-worth snapshot (assets - liabilities), derived from account balances.
+model NetWorthSnapshot {
+  id               String   @id @default(uuid(7))
+  userId           String
+  asOf             DateTime @db.Timestamptz(6)
+  assetsCents      BigInt
+  liabilitiesCents BigInt
+  netCents         BigInt
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  @@index([userId])
+  @@index([asOf])
+}

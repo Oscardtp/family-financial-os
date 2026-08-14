@@ -1136,7 +1136,7 @@ class SQLiteRepository:
 
     def get_by_household(self, household_id: str, type_hint=None):
         if type_hint == "account" or type_hint is None:
-            accounts = self.get_accounts(household_id)
+            accounts = self.get_accounts_by_household(household_id)
             if accounts:
                 return accounts
         if type_hint == "member" or type_hint is None:

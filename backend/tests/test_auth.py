@@ -68,7 +68,7 @@ class TestAuth:
             "password": "password123"
         })
         assert response.status_code == 400
-        assert "already registered" in response.json()["error"]["message"].lower()
+        assert "already registered" in response.json()["detail"].lower()
 
     def test_login_returns_session_cookie(self, client, registered_user):
         response = client.post("/api/v1/auth/login", json={

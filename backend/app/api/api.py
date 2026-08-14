@@ -24,8 +24,10 @@ from app.api.deps import (
     get_account_use_case, get_transaction_use_case, get_budget_use_case,
     get_debt_use_case, get_goal_use_case, get_asset_use_case,
     get_liability_use_case, get_member_use_case, get_household_use_case,
-    get_category_use_case, get_current_user, get_repository
+    get_category_use_case, get_current_user, get_repository, get_auth_use_case,
+    get_household_id
 )
+from app.application.use_cases import AuthUseCase
 
 
 # ── Response Helpers ───────────────────────────────────
@@ -71,25 +73,15 @@ class RegisterRequest(BaseModel):
 
 
 @router.post("/auth/login")
-async def login(data: LoginRequest, response: Response, repo: SQLiteRepository = Depends(get_repository)):
-    user = repo.get_user_by_email(data.email)
-    if not user or not user.is_active:
+async def login(data: LoginRequest, response: Response, use_case: AuthUseCase = Depends(get_auth_use_case)):
+    try:
+        user, session = use_case.login(data.email, "hashed")
+    except ValueError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    session_id = str(uuid.uuid4())
-    from datetime import timedelta
-    expires_at = Timestamp((datetime.now() + timedelta(days=7)).isoformat())
-    session = Session(
-        id=session_id,
-        user_id=user.id,
-        household_id=user.household_id or "default-household",
-        expires_at=expires_at,
-    )
-    repo.create_session(session)
 
     response.set_cookie(
         key="session_id",
-        value=session_id,
+        value=session.id,
         httponly=True,
         max_age=7 * 24 * 60 * 60,
     )
@@ -100,38 +92,28 @@ async def login(data: LoginRequest, response: Response, repo: SQLiteRepository =
 
 
 @router.post("/auth/logout")
-async def logout(response: Response, current_user: dict = Depends(get_current_user)):
-    repo = get_repository()
-    repo.delete_session(current_user["session"].id)
+async def logout(response: Response, current_user: dict = Depends(get_current_user), use_case: AuthUseCase = Depends(get_auth_use_case)):
+    use_case.logout(current_user["session"].id)
     response.delete_cookie("session_id")
     return success_response({"message": "Sesión cerrada"})
 
 
-@router.post("/auth/register")
-async def register(data: RegisterRequest, repo: SQLiteRepository = Depends(get_repository)):
-    existing = repo.get_user_by_email(data.email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    household = Household(
-        id=str(uuid.uuid4()),
-        name=data.household_name or "Mi Hogar",
-    )
-    repo.create_household(household)
-
-    user = User(
-        id=str(uuid.uuid4()),
-        name=data.name,
-        email=data.email,
-        password_hash="hashed",
-        household_id=household.id,
-    )
-    repo.create_user(user)
+@router.post("/auth/register", status_code=201)
+async def register(data: RegisterRequest, use_case: AuthUseCase = Depends(get_auth_use_case)):
+    try:
+        user, household = use_case.register(
+            name=data.name,
+            email=data.email,
+            password_hash="hashed",
+            household_name=data.household_name or "Mi Hogar",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     return success_response({
         "user": {"id": user.id, "name": user.name, "email": user.email},
         "household": {"id": household.id, "name": household.name, "currency": household.currency}
-    }, meta={"status_code": 201})
+    })
 
 
 @router.get("/auth/me")
@@ -158,8 +140,8 @@ class HouseholdUpdate(BaseModel):
 
 
 @router.get("/household")
-async def get_household(use_case: HouseholdUseCase = Depends(get_household_use_case)):
-    household = use_case.get_household("default-household")
+async def get_household(household_id: str = Depends(get_household_id), use_case: HouseholdUseCase = Depends(get_household_use_case)):
+    household = use_case.get_household(household_id)
     if not household:
         raise HTTPException(status_code=404, detail="Household not found")
     return success_response({
@@ -172,8 +154,8 @@ async def get_household(use_case: HouseholdUseCase = Depends(get_household_use_c
 
 
 @router.put("/household")
-async def update_household(data: HouseholdUpdate, use_case: HouseholdUseCase = Depends(get_household_use_case)):
-    household = use_case.get_household("default-household")
+async def update_household(data: HouseholdUpdate, household_id: str = Depends(get_household_id), use_case: HouseholdUseCase = Depends(get_household_use_case)):
+    household = use_case.get_household(household_id)
     if not household:
         raise HTTPException(status_code=404, detail="Household not found")
     updated = use_case._repo.update_household(household)
@@ -202,8 +184,8 @@ class MemberUpdate(BaseModel):
 
 
 @router.get("/members")
-async def list_members(use_case: MemberUseCase = Depends(get_member_use_case)):
-    members = use_case.get_members("default-household")
+async def list_members(household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
+    members = use_case.get_members(household_id)
     return success_response([
         {
             "id": m.id,
@@ -217,9 +199,9 @@ async def list_members(use_case: MemberUseCase = Depends(get_member_use_case)):
 
 
 @router.post("/members", status_code=201)
-async def create_member(data: MemberCreate, use_case: MemberUseCase = Depends(get_member_use_case)):
+async def create_member(data: MemberCreate, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
     member = use_case.create_member(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         role=data.role,
     )
@@ -232,7 +214,7 @@ async def create_member(data: MemberCreate, use_case: MemberUseCase = Depends(ge
 
 
 @router.get("/members/{id}")
-async def get_member(id: str, use_case: MemberUseCase = Depends(get_member_use_case)):
+async def get_member(id: str, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
     member = use_case.get_member(id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
@@ -246,7 +228,7 @@ async def get_member(id: str, use_case: MemberUseCase = Depends(get_member_use_c
 
 
 @router.put("/members/{id}")
-async def update_member(id: str, data: MemberUpdate, use_case: MemberUseCase = Depends(get_member_use_case)):
+async def update_member(id: str, data: MemberUpdate, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
     member = use_case.get_member(id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
@@ -259,13 +241,13 @@ async def update_member(id: str, data: MemberUpdate, use_case: MemberUseCase = D
 
 
 @router.delete("/members/{id}", status_code=204)
-async def delete_member(id: str, use_case: MemberUseCase = Depends(get_member_use_case)):
-    use_case._repo.delete(id, "default-household")
+async def delete_member(id: str, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
+    use_case._repo.delete(id, household_id)
     return Response(status_code=204)
 
 
 @router.put("/members/{id}/role")
-async def update_member_role(id: str, role: str, use_case: MemberUseCase = Depends(get_member_use_case)):
+async def update_member_role(id: str, role: str, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
     member = use_case.update_member_role(id, role)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
@@ -273,7 +255,7 @@ async def update_member_role(id: str, role: str, use_case: MemberUseCase = Depen
 
 
 @router.put("/members/{id}/status")
-async def update_member_status(id: str, status: str, use_case: MemberUseCase = Depends(get_member_use_case)):
+async def update_member_status(id: str, status: str, household_id: str = Depends(get_household_id), use_case: MemberUseCase = Depends(get_member_use_case)):
     member = use_case.get_member(id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
@@ -306,9 +288,10 @@ async def list_accounts(
     type: Optional[str] = Query(None),
     member_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    household_id: str = Depends(get_household_id),
     use_case: AccountUseCase = Depends(get_account_use_case)
 ):
-    accounts = use_case.get_accounts("default-household")
+    accounts = use_case.get_accounts(household_id)
     if type:
         accounts = [a for a in accounts if a.account_type == type]
     return success_response([
@@ -325,9 +308,9 @@ async def list_accounts(
 
 
 @router.post("/accounts", status_code=201)
-async def create_account(data: AccountCreate, use_case: AccountUseCase = Depends(get_account_use_case)):
+async def create_account(data: AccountCreate, household_id: str = Depends(get_household_id), use_case: AccountUseCase = Depends(get_account_use_case)):
     account = use_case.create_account(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         account_type=data.type,
         currency="COP",
@@ -345,7 +328,7 @@ async def create_account(data: AccountCreate, use_case: AccountUseCase = Depends
 
 
 @router.get("/accounts/{id}")
-async def get_account(id: str, use_case: AccountUseCase = Depends(get_account_use_case)):
+async def get_account(id: str, household_id: str = Depends(get_household_id), use_case: AccountUseCase = Depends(get_account_use_case)):
     account = use_case.get_account(id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -360,7 +343,7 @@ async def get_account(id: str, use_case: AccountUseCase = Depends(get_account_us
 
 
 @router.put("/accounts/{id}")
-async def update_account(id: str, data: AccountUpdate, use_case: AccountUseCase = Depends(get_account_use_case)):
+async def update_account(id: str, data: AccountUpdate, household_id: str = Depends(get_household_id), use_case: AccountUseCase = Depends(get_account_use_case)):
     account = use_case.get_account(id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -373,13 +356,13 @@ async def update_account(id: str, data: AccountUpdate, use_case: AccountUseCase 
 
 
 @router.delete("/accounts/{id}", status_code=204)
-async def delete_account(id: str, use_case: AccountUseCase = Depends(get_account_use_case)):
-    use_case.delete_account(id, "default-household")
+async def delete_account(id: str, household_id: str = Depends(get_household_id), use_case: AccountUseCase = Depends(get_account_use_case)):
+    use_case.delete_account(id, household_id)
     return Response(status_code=204)
 
 
 @router.get("/accounts/{id}/balance")
-async def get_account_balance(id: str, use_case: AccountUseCase = Depends(get_account_use_case)):
+async def get_account_balance(id: str, household_id: str = Depends(get_household_id), use_case: AccountUseCase = Depends(get_account_use_case)):
     balance = use_case.get_balance(id)
     if balance is None:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -410,8 +393,8 @@ class CategoryUpdate(BaseModel):
 
 
 @router.get("/categories")
-async def list_categories(type: Optional[str] = Query(None), use_case: CategoryUseCase = Depends(get_category_use_case)):
-    categories = use_case.get_categories("default-household")
+async def list_categories(type: Optional[str] = Query(None), household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
+    categories = use_case.get_categories(household_id)
     if type:
         categories = [c for c in categories if c.type == type]
     return success_response([
@@ -429,9 +412,9 @@ async def list_categories(type: Optional[str] = Query(None), use_case: CategoryU
 
 
 @router.post("/categories", status_code=201)
-async def create_category(data: CategoryCreate, use_case: CategoryUseCase = Depends(get_category_use_case)):
+async def create_category(data: CategoryCreate, household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
     category = use_case.create_category(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         type=data.type,
         parent_id=data.parent_id,
@@ -450,8 +433,8 @@ async def create_category(data: CategoryCreate, use_case: CategoryUseCase = Depe
 
 
 @router.get("/categories/tree")
-async def get_category_tree(use_case: CategoryUseCase = Depends(get_category_use_case)):
-    categories = use_case.get_categories("default-household")
+async def get_category_tree(household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
+    categories = use_case.get_categories(household_id)
     root_categories = [c for c in categories if c.parent_id is None]
     result = []
     for root in root_categories:
@@ -470,7 +453,7 @@ async def get_category_tree(use_case: CategoryUseCase = Depends(get_category_use
 
 
 @router.get("/categories/{id}")
-async def get_category(id: str, use_case: CategoryUseCase = Depends(get_category_use_case)):
+async def get_category(id: str, household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
     category = use_case.get_category(id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -486,7 +469,7 @@ async def get_category(id: str, use_case: CategoryUseCase = Depends(get_category
 
 
 @router.put("/categories/{id}")
-async def update_category(id: str, data: CategoryUpdate, use_case: CategoryUseCase = Depends(get_category_use_case)):
+async def update_category(id: str, data: CategoryUpdate, household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
     category = use_case.get_category(id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -499,8 +482,8 @@ async def update_category(id: str, data: CategoryUpdate, use_case: CategoryUseCa
 
 
 @router.delete("/categories/{id}", status_code=204)
-async def delete_category(id: str, use_case: CategoryUseCase = Depends(get_category_use_case)):
-    use_case._repo.delete(id, "default-household")
+async def delete_category(id: str, household_id: str = Depends(get_household_id), use_case: CategoryUseCase = Depends(get_category_use_case)):
+    use_case._repo.delete(id, household_id)
     return Response(status_code=204)
 
 
@@ -543,7 +526,7 @@ async def list_transactions(
     sort: str = Query("date_desc"),
     use_case: TransactionUseCase = Depends(get_transaction_use_case)
 ):
-    transactions = use_case.get_transactions("default-household")
+    transactions = use_case.get_transactions(household_id)
     if account_id:
         transactions = [t for t in transactions if t.account_id == account_id]
     if type:
@@ -574,10 +557,10 @@ async def list_transactions(
 
 
 @router.post("/transactions", status_code=201)
-async def create_transaction(data: TransactionCreate, use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+async def create_transaction(data: TransactionCreate, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
     if data.type == "income":
         transaction = use_case.register_income(
-            household_id="default-household",
+            household_id=household_id,
             account_id=data.account_id,
             amount=float(data.amount),
             category_id=data.category_id,
@@ -585,7 +568,7 @@ async def create_transaction(data: TransactionCreate, use_case: TransactionUseCa
         )
     elif data.type == "expense":
         transaction = use_case.register_expense(
-            household_id="default-household",
+            household_id=household_id,
             account_id=data.account_id,
             amount=float(data.amount),
             category_id=data.category_id,
@@ -606,7 +589,7 @@ async def create_transaction(data: TransactionCreate, use_case: TransactionUseCa
 
 
 @router.get("/transactions/{id}")
-async def get_transaction(id: str, use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+async def get_transaction(id: str, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
     transaction = use_case.get_transaction(id)
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -623,7 +606,7 @@ async def get_transaction(id: str, use_case: TransactionUseCase = Depends(get_tr
 
 
 @router.put("/transactions/{id}")
-async def update_transaction(id: str, data: TransactionUpdate, use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+async def update_transaction(id: str, data: TransactionUpdate, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
     transaction = use_case.get_transaction(id)
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -637,8 +620,8 @@ async def update_transaction(id: str, data: TransactionUpdate, use_case: Transac
 
 
 @router.delete("/transactions/{id}", status_code=204)
-async def delete_transaction(id: str, use_case: TransactionUseCase = Depends(get_transaction_use_case)):
-    use_case.delete_transaction(id, "default-household")
+async def delete_transaction(id: str, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+    use_case.delete_transaction(id, household_id)
     return Response(status_code=204)
 
 
@@ -674,9 +657,9 @@ async def list_transfers(
 
 
 @router.post("/transfers", status_code=201)
-async def create_transfer(data: TransferCreate, use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+async def create_transfer(data: TransferCreate, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
     transfer = use_case.register_transfer(
-        household_id="default-household",
+        household_id=household_id,
         from_account_id=data.from_account_id,
         to_account_id=data.to_account_id,
         amount=float(data.amount),
@@ -732,7 +715,7 @@ async def list_budgets(
     year: Optional[int] = Query(None),
     use_case: BudgetUseCase = Depends(get_budget_use_case)
 ):
-    budgets = use_case.get_budgets("default-household")
+    budgets = use_case.get_budgets(household_id)
     return success_response([
         {
             "id": b.id,
@@ -751,9 +734,9 @@ async def list_budgets(
 
 
 @router.post("/budgets", status_code=201)
-async def create_budget(data: BudgetCreate, use_case: BudgetUseCase = Depends(get_budget_use_case)):
+async def create_budget(data: BudgetCreate, household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
     budget = use_case.create_budget(
-        household_id="default-household",
+        household_id=household_id,
         category_id=data.category_id,
         limit=float(data.amount),
         period=data.period,
@@ -774,8 +757,8 @@ async def create_budget(data: BudgetCreate, use_case: BudgetUseCase = Depends(ge
 
 
 @router.get("/budgets/summary")
-async def get_budgets_summary(month: str = Query(...), use_case: BudgetUseCase = Depends(get_budget_use_case)):
-    budgets = use_case.get_budgets("default-household")
+async def get_budgets_summary(month: str = Query(...), household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
+    budgets = use_case.get_budgets(household_id)
     total_budget = sum(b.amount.value for b in budgets)
     total_spent = sum(b.spent.value for b in budgets)
     total_remaining = total_budget - total_spent
@@ -800,7 +783,7 @@ async def get_budgets_summary(month: str = Query(...), use_case: BudgetUseCase =
 
 
 @router.get("/budgets/{id}")
-async def get_budget(id: str, use_case: BudgetUseCase = Depends(get_budget_use_case)):
+async def get_budget(id: str, household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
     budget = use_case.get_budget(id)
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
@@ -819,7 +802,7 @@ async def get_budget(id: str, use_case: BudgetUseCase = Depends(get_budget_use_c
 
 
 @router.put("/budgets/{id}")
-async def update_budget(id: str, data: BudgetUpdate, use_case: BudgetUseCase = Depends(get_budget_use_case)):
+async def update_budget(id: str, data: BudgetUpdate, household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
     budget = use_case.get_budget(id)
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
@@ -833,13 +816,13 @@ async def update_budget(id: str, data: BudgetUpdate, use_case: BudgetUseCase = D
 
 
 @router.delete("/budgets/{id}", status_code=204)
-async def delete_budget(id: str, use_case: BudgetUseCase = Depends(get_budget_use_case)):
-    use_case._repo.delete(id, "default-household")
+async def delete_budget(id: str, household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
+    use_case._repo.delete(id, household_id)
     return Response(status_code=204)
 
 
 @router.get("/budgets/{id}/progress")
-async def get_budget_progress(id: str, use_case: BudgetUseCase = Depends(get_budget_use_case)):
+async def get_budget_progress(id: str, household_id: str = Depends(get_household_id), use_case: BudgetUseCase = Depends(get_budget_use_case)):
     budget = use_case.get_budget(id)
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
@@ -987,8 +970,8 @@ class DebtPaymentCreate(BaseModel):
 
 
 @router.get("/debts")
-async def list_debts(status: Optional[str] = Query(None), use_case: DebtUseCase = Depends(get_debt_use_case)):
-    debts = use_case.get_debts("default-household")
+async def list_debts(status: Optional[str] = Query(None), household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
+    debts = use_case.get_debts(household_id)
     if status:
         debts = [d for d in debts if d.status == status]
     return success_response([
@@ -1009,9 +992,9 @@ async def list_debts(status: Optional[str] = Query(None), use_case: DebtUseCase 
 
 
 @router.post("/debts", status_code=201)
-async def create_debt(data: DebtCreate, use_case: DebtUseCase = Depends(get_debt_use_case)):
+async def create_debt(data: DebtCreate, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
     debt = use_case.create_debt(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         principal=float(data.principal),
         rate=float(data.interest_rate),
@@ -1036,8 +1019,8 @@ async def create_debt(data: DebtCreate, use_case: DebtUseCase = Depends(get_debt
 
 
 @router.get("/debts/summary")
-async def get_debts_summary(use_case: DebtUseCase = Depends(get_debt_use_case)):
-    debts = use_case.get_debts("default-household")
+async def get_debts_summary(household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
+    debts = use_case.get_debts(household_id)
     total_debt = sum(d.balance.value for d in debts)
     monthly_payments = sum(d.monthly_payment.value for d in debts if d.status == "active")
     return success_response({
@@ -1049,7 +1032,7 @@ async def get_debts_summary(use_case: DebtUseCase = Depends(get_debt_use_case)):
 
 
 @router.get("/debts/{id}")
-async def get_debt(id: str, use_case: DebtUseCase = Depends(get_debt_use_case)):
+async def get_debt(id: str, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
     debt = use_case.get_debt(id)
     if not debt:
         raise HTTPException(status_code=404, detail="Debt not found")
@@ -1068,7 +1051,7 @@ async def get_debt(id: str, use_case: DebtUseCase = Depends(get_debt_use_case)):
 
 
 @router.put("/debts/{id}")
-async def update_debt(id: str, data: DebtUpdate, use_case: DebtUseCase = Depends(get_debt_use_case)):
+async def update_debt(id: str, data: DebtUpdate, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
     debt = use_case.get_debt(id)
     if not debt:
         raise HTTPException(status_code=404, detail="Debt not found")
@@ -1082,13 +1065,13 @@ async def update_debt(id: str, data: DebtUpdate, use_case: DebtUseCase = Depends
 
 
 @router.delete("/debts/{id}", status_code=204)
-async def delete_debt(id: str, use_case: DebtUseCase = Depends(get_debt_use_case)):
-    use_case._repo.delete(id, "default-household")
+async def delete_debt(id: str, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
+    use_case._repo.delete(id, household_id)
     return Response(status_code=204)
 
 
 @router.get("/debts/{id}/payments")
-async def list_debt_payments(id: str, use_case: DebtUseCase = Depends(get_debt_use_case)):
+async def list_debt_payments(id: str, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
     payments = use_case._payment_repo.get_by_debt(id)
     return success_response([
         {
@@ -1102,12 +1085,12 @@ async def list_debt_payments(id: str, use_case: DebtUseCase = Depends(get_debt_u
 
 
 @router.post("/debts/{id}/payments", status_code=201)
-async def create_debt_payment(id: str, data: DebtPaymentCreate, use_case: DebtUseCase = Depends(get_debt_use_case)):
+async def create_debt_payment(id: str, data: DebtPaymentCreate, household_id: str = Depends(get_household_id), use_case: DebtUseCase = Depends(get_debt_use_case)):
     payment = use_case.make_payment(
         debt_id=id,
         payment_amount=float(data.amount),
         account_id=data.account_id or "default",
-        household_id="default-household",
+        household_id=household_id,
         notes=data.notes or "",
     )
     return success_response({
@@ -1155,8 +1138,8 @@ class GoalContributionCreate(BaseModel):
 
 
 @router.get("/goals")
-async def list_goals(is_active: Optional[bool] = Query(None), use_case: GoalUseCase = Depends(get_goal_use_case)):
-    goals = use_case.get_goals("default-household")
+async def list_goals(is_active: Optional[bool] = Query(None), household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
+    goals = use_case.get_goals(household_id)
     if is_active is not None:
         goals = [g for g in goals if g.is_active == is_active]
     return success_response([
@@ -1175,9 +1158,9 @@ async def list_goals(is_active: Optional[bool] = Query(None), use_case: GoalUseC
 
 
 @router.post("/goals", status_code=201)
-async def create_goal(data: GoalCreate, use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def create_goal(data: GoalCreate, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     goal = use_case.create_goal(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         target_amount=float(data.target_amount),
         currency="COP",
@@ -1196,7 +1179,7 @@ async def create_goal(data: GoalCreate, use_case: GoalUseCase = Depends(get_goal
 
 
 @router.get("/goals/{id}")
-async def get_goal(id: str, use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def get_goal(id: str, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     goal = use_case.get_goal(id)
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
@@ -1213,7 +1196,7 @@ async def get_goal(id: str, use_case: GoalUseCase = Depends(get_goal_use_case)):
 
 
 @router.put("/goals/{id}")
-async def update_goal(id: str, data: GoalUpdate, use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def update_goal(id: str, data: GoalUpdate, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     goal = use_case.get_goal(id)
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
@@ -1227,13 +1210,13 @@ async def update_goal(id: str, data: GoalUpdate, use_case: GoalUseCase = Depends
 
 
 @router.delete("/goals/{id}", status_code=204)
-async def delete_goal(id: str, use_case: GoalUseCase = Depends(get_goal_use_case)):
-    use_case.delete_goal(id, "default-household")
+async def delete_goal(id: str, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
+    use_case.delete_goal(id, household_id)
     return Response(status_code=204)
 
 
 @router.get("/goals/{id}/progress")
-async def get_goal_progress(id: str, use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def get_goal_progress(id: str, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     goal = use_case.get_goal(id)
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
@@ -1258,12 +1241,12 @@ async def list_goal_contributions(id: str):
 
 
 @router.post("/goals/{id}/contributions", status_code=201)
-async def create_goal_contribution(id: int, data: GoalContributionCreate, use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def create_goal_contribution(id: int, data: GoalContributionCreate, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     contribution = use_case.contribute(
         goal_id=id,
         amount=float(data.amount),
         account_id=data.account_id or "default",
-        household_id="default-household",
+        household_id=household_id,
         notes=data.notes or "",
     )
     return success_response({
@@ -1295,8 +1278,8 @@ class AssetUpdate(BaseModel):
 
 
 @router.get("/assets")
-async def list_assets(use_case: AssetUseCase = Depends(get_asset_use_case)):
-    assets = use_case.get_assets("default-household")
+async def list_assets(household_id: str = Depends(get_household_id), use_case: AssetUseCase = Depends(get_asset_use_case)):
+    assets = use_case.get_assets(household_id)
     return success_response([
         {
             "id": a.id,
@@ -1310,9 +1293,9 @@ async def list_assets(use_case: AssetUseCase = Depends(get_asset_use_case)):
 
 
 @router.post("/assets", status_code=201)
-async def create_asset(data: AssetCreate, use_case: AssetUseCase = Depends(get_asset_use_case)):
+async def create_asset(data: AssetCreate, household_id: str = Depends(get_household_id), use_case: AssetUseCase = Depends(get_asset_use_case)):
     asset = use_case.create_asset(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         value=float(data.value),
         currency="COP",
@@ -1330,7 +1313,7 @@ async def create_asset(data: AssetCreate, use_case: AssetUseCase = Depends(get_a
 
 
 @router.get("/assets/{id}")
-async def get_asset(id: str, use_case: AssetUseCase = Depends(get_asset_use_case)):
+async def get_asset(id: str, household_id: str = Depends(get_household_id), use_case: AssetUseCase = Depends(get_asset_use_case)):
     asset = use_case.get_asset(id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -1345,7 +1328,7 @@ async def get_asset(id: str, use_case: AssetUseCase = Depends(get_asset_use_case
 
 
 @router.put("/assets/{id}")
-async def update_asset(id: str, data: AssetUpdate, use_case: AssetUseCase = Depends(get_asset_use_case)):
+async def update_asset(id: str, data: AssetUpdate, household_id: str = Depends(get_household_id), use_case: AssetUseCase = Depends(get_asset_use_case)):
     asset = use_case.get_asset(id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -1358,8 +1341,8 @@ async def update_asset(id: str, data: AssetUpdate, use_case: AssetUseCase = Depe
 
 
 @router.delete("/assets/{id}", status_code=204)
-async def delete_asset(id: str, use_case: AssetUseCase = Depends(get_asset_use_case)):
-    use_case._repo.delete(id, "default-household")
+async def delete_asset(id: str, household_id: str = Depends(get_household_id), use_case: AssetUseCase = Depends(get_asset_use_case)):
+    use_case._repo.delete(id, household_id)
     return Response(status_code=204)
 
 
@@ -1384,8 +1367,8 @@ class LiabilityUpdate(BaseModel):
 
 
 @router.get("/liabilities")
-async def list_liabilities(use_case: LiabilityUseCase = Depends(get_liability_use_case)):
-    liabilities = use_case.get_liabilities("default-household")
+async def list_liabilities(household_id: str = Depends(get_household_id), use_case: LiabilityUseCase = Depends(get_liability_use_case)):
+    liabilities = use_case.get_liabilities(household_id)
     return success_response([
         {
             "id": l.id,
@@ -1400,9 +1383,9 @@ async def list_liabilities(use_case: LiabilityUseCase = Depends(get_liability_us
 
 
 @router.post("/liabilities", status_code=201)
-async def create_liability(data: LiabilityCreate, use_case: LiabilityUseCase = Depends(get_liability_use_case)):
+async def create_liability(data: LiabilityCreate, household_id: str = Depends(get_household_id), use_case: LiabilityUseCase = Depends(get_liability_use_case)):
     liability = use_case.create_liability(
-        household_id="default-household",
+        household_id=household_id,
         name=data.name,
         amount=float(data.amount),
         currency="COP",
@@ -1422,7 +1405,7 @@ async def create_liability(data: LiabilityCreate, use_case: LiabilityUseCase = D
 
 
 @router.get("/liabilities/{id}")
-async def get_liability(id: str, use_case: LiabilityUseCase = Depends(get_liability_use_case)):
+async def get_liability(id: str, household_id: str = Depends(get_household_id), use_case: LiabilityUseCase = Depends(get_liability_use_case)):
     liability = use_case.get_liability(id)
     if not liability:
         raise HTTPException(status_code=404, detail="Liability not found")
@@ -1437,7 +1420,7 @@ async def get_liability(id: str, use_case: LiabilityUseCase = Depends(get_liabil
 
 
 @router.put("/liabilities/{id}")
-async def update_liability(id: str, data: LiabilityUpdate, use_case: LiabilityUseCase = Depends(get_liability_use_case)):
+async def update_liability(id: str, data: LiabilityUpdate, household_id: str = Depends(get_household_id), use_case: LiabilityUseCase = Depends(get_liability_use_case)):
     liability = use_case.get_liability(id)
     if not liability:
         raise HTTPException(status_code=404, detail="Liability not found")
@@ -1450,8 +1433,8 @@ async def update_liability(id: str, data: LiabilityUpdate, use_case: LiabilityUs
 
 
 @router.delete("/liabilities/{id}", status_code=204)
-async def delete_liability(id: str, use_case: LiabilityUseCase = Depends(get_liability_use_case)):
-    use_case.delete_liability(id, "default-household")
+async def delete_liability(id: str, household_id: str = Depends(get_household_id), use_case: LiabilityUseCase = Depends(get_liability_use_case)):
+    use_case.delete_liability(id, household_id)
     return Response(status_code=204)
 
 
@@ -1461,13 +1444,14 @@ async def delete_liability(id: str, use_case: LiabilityUseCase = Depends(get_lia
 
 @router.get("/net-worth")
 async def get_net_worth(
+    household_id: str = Depends(get_household_id),
     use_case_assets: AssetUseCase = Depends(get_asset_use_case),
     use_case_liabilities: LiabilityUseCase = Depends(get_liability_use_case),
     use_case_accounts: AccountUseCase = Depends(get_account_use_case),
 ):
-    assets = use_case_assets.get_assets("default-household")
-    liabilities = use_case_liabilities.get_liabilities("default-household")
-    accounts = use_case_accounts.get_accounts("default-household")
+    assets = use_case_assets.get_assets(household_id)
+    liabilities = use_case_liabilities.get_liabilities(household_id)
+    accounts = use_case_accounts.get_accounts(household_id)
 
     total_assets_value = sum(a.value.value for a in assets)
     total_liabilities_value = sum(l.amount.value for l in liabilities)
@@ -1493,6 +1477,7 @@ async def get_net_worth(
 
 @router.get("/dashboard")
 async def get_dashboard(
+    household_id: str = Depends(get_household_id),
     period: str = Query("month"),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None),
@@ -1504,13 +1489,13 @@ async def get_dashboard(
     use_case_assets: AssetUseCase = Depends(get_asset_use_case),
     use_case_liabilities: LiabilityUseCase = Depends(get_liability_use_case),
 ):
-    transactions = use_case_tx.get_transactions("default-household")
-    accounts = use_case_accounts.get_accounts("default-household")
-    budgets = use_case_budgets.get_budgets("default-household")
-    debts = use_case_debts.get_debts("default-household")
-    goals = use_case_goals.get_goals("default-household")
-    assets = use_case_assets.get_assets("default-household")
-    liabilities = use_case_liabilities.get_liabilities("default-household")
+    transactions = use_case_tx.get_transactions(household_id)
+    accounts = use_case_accounts.get_accounts(household_id)
+    budgets = use_case_budgets.get_budgets(household_id)
+    debts = use_case_debts.get_debts(household_id)
+    goals = use_case_goals.get_goals(household_id)
+    assets = use_case_assets.get_assets(household_id)
+    liabilities = use_case_liabilities.get_liabilities(household_id)
 
     income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
     expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
@@ -1595,6 +1580,7 @@ async def get_calendar(
 
 @router.get("/reports/cash-flow")
 async def get_cash_flow_report(
+    household_id: str = Depends(get_household_id),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
@@ -1607,6 +1593,7 @@ async def get_cash_flow_report(
 
 @router.get("/reports/income-expenses")
 async def get_income_expenses_report(
+    household_id: str = Depends(get_household_id),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
@@ -1620,6 +1607,7 @@ async def get_income_expenses_report(
 
 @router.get("/reports/categories")
 async def get_categories_report(
+    household_id: str = Depends(get_household_id),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None),
     type: Optional[str] = Query(None)
@@ -1633,7 +1621,7 @@ async def get_categories_report(
 
 
 @router.get("/reports/accounts")
-async def get_accounts_report():
+async def get_accounts_report(household_id: str = Depends(get_household_id)):
     return success_response({
         "accounts": [
             {"id": 3, "name": "Bancolombia", "balance": "2850000.00", "type": "bank"},
@@ -1644,6 +1632,7 @@ async def get_accounts_report():
 
 @router.get("/reports/members")
 async def get_members_report(
+    household_id: str = Depends(get_household_id),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
@@ -1657,6 +1646,7 @@ async def get_members_report(
 
 @router.get("/reports/savings")
 async def get_savings_report(
+    household_id: str = Depends(get_household_id),
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
@@ -1668,7 +1658,7 @@ async def get_savings_report(
 
 
 @router.get("/reports/debt")
-async def get_debt_report():
+async def get_debt_report(household_id: str = Depends(get_household_id)):
     return success_response({
         "total_debt": "26100000.00",
         "monthly_payments": "930000.00",
@@ -1677,7 +1667,7 @@ async def get_debt_report():
 
 
 @router.get("/reports/net-worth")
-async def get_net_worth_report():
+async def get_net_worth_report(household_id: str = Depends(get_household_id)):
     return success_response({
         "current": "158400000.00",
         "history": []
@@ -1718,9 +1708,9 @@ async def delete_notification(id: str):
 # ══════════════════════════════════════════════════════
 
 @router.get("/search")
-async def search(q: str = Query(...), use_case_accounts: AccountUseCase = Depends(get_account_use_case), use_case_tx: TransactionUseCase = Depends(get_transaction_use_case)):
-    accounts = use_case_accounts.get_accounts("default-household")
-    transactions = use_case_tx.get_transactions("default-household")
+async def search(q: str = Query(...), household_id: str = Depends(get_household_id), use_case_accounts: AccountUseCase = Depends(get_account_use_case), use_case_tx: TransactionUseCase = Depends(get_transaction_use_case)):
+    accounts = use_case_accounts.get_accounts(household_id)
+    transactions = use_case_tx.get_transactions(household_id)
     matched_accounts = [a for a in accounts if q.lower() in a.name.lower()]
     matched_transactions = [t for t in transactions if q.lower() in (t.description or "").lower()]
     return success_response({
@@ -1743,8 +1733,8 @@ async def search(q: str = Query(...), use_case_accounts: AccountUseCase = Depend
 # ══════════════════════════════════════════════════════
 
 @router.get("/settings")
-async def get_settings(use_case: HouseholdUseCase = Depends(get_household_use_case)):
-    household = use_case.get_household("default-household")
+async def get_settings(household_id: str = Depends(get_household_id), use_case: HouseholdUseCase = Depends(get_household_use_case)):
+    household = use_case.get_household(household_id)
     if not household:
         raise HTTPException(status_code=404, detail="Household not found")
     return success_response({

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "application-security": {
+      "source": "custom",
+      "sourceType": "internal",
+      "skillPath": ".kilo/skills/application-security/SKILL.md",
+      "version": "1.0.0"
+    },
+    "architecture-patterns": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/architecture-patterns/SKILL.md",
+      "version": "1.0.0"
+    },
+    "conventional-commits": {
+      "source": "conventional-commits",
+      "sourceType": "spec",
+      "skillPath": ".kilo/skills/conventional-commits/SKILL.md",
+      "version": "1.0.0"
+    },
+    "e2e-testing": {
+      "source": "custom",
+      "sourceType": "internal",
+      "skillPath": ".kilo/skills/e2e-testing/SKILL.md",
+      "version": "1.0.0"
+    },
+    "nextjs-app-router-patterns": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/nextjs-app-router-patterns/SKILL.md",
+      "version": "latest"
+    },
+    "playwright": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/playwright/SKILL.md",
+      "version": "latest"
+    },
+    "postgresql-table-design": {
+      "source": "custom",
+      "sourceType": "internal",
+      "skillPath": ".kilo/skills/postgresql-table-design/SKILL.md",
+      "version": "1.0.0"
+    },
+    "prisma-client-api": {
+      "source": "prisma/prisma",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/prisma-client-api/SKILL.md",
+      "version": "7.9.1"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/prisma",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/prisma-database-setup/SKILL.md",
+      "version": "7.6.0"
+    },
+    "python-testing": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/python-testing/SKILL.md",
+      "computedHash": "6e28d59012e98e0f8afe387807074730267047dddc1c1df2934fb5c061b21428"
+    },
+    "supabase": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/supabase/SKILL.md",
+      "version": "0.1.2"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/supabase-postgres-best-practices/SKILL.md",
+      "version": "1.1.1"
+    },
+    "vitest-testing": {
+      "source": "vitest-dev/vitest",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/vitest-testing/SKILL.md",
+      "version": "latest"
+    },
+    "zod": {
+      "source": "colinhacks/zod",
+      "sourceType": "github",
+      "skillPath": ".kilo/skills/zod/SKILL.md",
+      "version": "latest"
+    }
+  }
+}

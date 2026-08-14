@@ -7,7 +7,7 @@ from app.infrastructure.sqlite import SQLiteRepository
 from app.application.use_cases import (
     TransactionUseCase, BudgetUseCase, DebtUseCase, GoalUseCase,
     AccountUseCase, AssetUseCase, LiabilityUseCase, MemberUseCase,
-    HouseholdUseCase
+    HouseholdUseCase, AuthUseCase, CategoryUseCase
 )
 from app.application.interfaces import (
     AccountRepository, TransactionRepository, TransferRepository,
@@ -95,8 +95,13 @@ def get_household_use_case(
 def get_category_use_case(
     repo: SQLiteRepository = Depends(get_repository),
 ):
-    from app.application.use_cases import CategoryUseCase
     return CategoryUseCase(repo)
+
+
+def get_auth_use_case(
+    repo: SQLiteRepository = Depends(get_repository),
+) -> AuthUseCase:
+    return AuthUseCase(repo)
 
 
 security = HTTPBearer(auto_error=False)
@@ -128,3 +133,7 @@ def get_current_user(
         "user": user,
         "session": session,
     }
+
+
+def get_household_id(current_user: dict = Depends(get_current_user)) -> str:
+    return current_user["session"].household_id

@@ -1,54 +1,79 @@
 # Project Context — Family Financial OS
 
-## Propósito
+## Overview
 
-Family Financial OS es un **Sistema Operativo Financiero Familiar**: una plataforma para que un
-hogar entienda e administre integralmente su economía, más allá de un simple gestor de gastos.
+Family Financial OS is a personal and family financial management system designed to help households track income, expenses, budgets, debts, savings goals, and net worth. The project is currently undergoing migration from a Python/FastAPI + MySQL + vanilla JavaScript stack to a modern Next.js + TypeScript + Supabase + PostgreSQL + Prisma architecture.
 
-Se basa en cuatro conceptos fundamentales:
+## Target Users
 
-1. **Patrimonio** — qué posee y qué debe la famila.
-2. **Flujo** — cómo entra y sale el dinero.
-3. **Compromisos** — obligaciones futuras (gastos recurrentes, deudas, metas).
-4. **Decisiones** — impacto de un cambio financiero ("¿qué pasa si…?").
+- Individual users managing personal finances
+- Families managing shared household finances
+- Users who need detailed financial tracking and reporting
 
-## Alcance actual (esta fase)
+## Core Features
 
-**Backend / Financial Core.** No se desarrolla frontend en esta fase. El backend quedará preparado
-para ser consumido por: aplicación Web, aplicación Mobile, y futuramente un asistente financiero IA y un
-gemelo financiero digital.
+### Financial Management
+- **Accounts**: Checking, savings, credit cards, cash, investments
+- **Transactions**: Income, expenses, transfers with ledger entries
+- **Categories**: Hierarchical income/expense categorization
+- **Budgets**: Periodic budgets with progress tracking
+- **Debts**: Debt tracking with payment schedules and amortization
+- **Savings Goals**: Goal-based savings with progress tracking
+- **Assets & Liabilities**: Net worth tracking
+- **Recurring Transactions**: Automated recurring payments
+- **Reports**: Cash flow, income vs expenses, category analysis, net worth
 
-## Stack (confirmado)
+### Household Collaboration
+- Multi-member households with role-based access
+- Data isolation between households
+- Shared financial visibility
 
-| Capa | Tecnología | Versión (stable, verificada) |
-|------|------------|------------------------------|
-| Runtime | Node.js | v24.18 |
-| Framework | Next.js | 16.3.0 (App Router) |
-| UI (futuro) | React | 19.2.8 |
-| Lenguaje | TypeScript | 5.9.3 (alineado a Next 16) |
-| ORM | Prisma | 7.9.1 |
-| DB | PostgreSQL | 17.10 (local dev) / Supabase (prod) |
-| Validación | Zod | 4.4.3 (v4) |
-| Testing | Vitest | 4.1.10 (+ Playwright en fases posteriores) |
-| Lint/Format | ESLint 9 / Prettier | 3.9.6 |
-| Auth | Supabase Auth | @supabase/supabase-js 2.112.3 + @supabase/ssr 0.12.4 |
-| Dinero (engine puro) | Dinero.js | 2.0.2 (bigint) |
+### Audit & Compliance
+- Immutable ledger entries
+- Full transaction audit trail
+- Balance calculation from ledger (not cached)
 
-## Decisiones arquitectónicas clave (ver ADRs en docs/decisions/)
+## Current State
 
-- ADR-001: Modular Monolith (no microservicios).
-- ADR-002: PostgreSQL como única DB (local portable para dev; Supabase para prod).
-- ADR-003: Prisma como capa de acceso a PostgreSQL + singleton global.
-- ADR-004: Dinero en unidades menores con `bigint` (Dinero.js v2), nunca `float`.
-- ADR-005: Selección de Agent Skills (ver .ai/skills-registry.md).
+### Existing Implementation
+- **Backend**: Python/FastAPI with 98 REST endpoints
+- **Frontend**: HTML5 + CSS3 + vanilla JavaScript SPA
+- **Database**: MySQL 8.4+ with 19 tables
+- **Architecture**: Domain-Driven Design with PHP-style layered structure
 
-## Reglas de prioridad
+### Migration Target
+- **Frontend**: Next.js 14+ with App Router
+- **Backend**: Next.js API Routes (thin controllers)
+- **Database**: PostgreSQL via Supabase
+- **ORM**: Prisma
+- **Validation**: Zod
+- **Testing**: Vitest + Playwright
 
-```
-CORRECCIÓN FINANCIERA > SIMPLICIDAD > MANTENIBILIDAD > ESCALABILIDAD PREMATURA
-```
+## Financial Rules
 
-## Próximo paso
+1. **Income**: Increases asset account balance, decreases liability account balance
+2. **Expense**: Decreases asset account balance, increases liability account balance
+3. **Transfer**: Source account -amount, destination account +amount (no net effect)
+4. **Account Nature**:
+   - Asset accounts: bank, cash, digital_wallet, savings, investment
+   - Liability accounts: credit_card
+5. **Money Precision**: All amounts stored as strings (exact decimal), never floats
+6. **Ledger**: Immutable, append-only, balances calculated from entries
+7. **No Overdraft**: Cannot spend more than available balance in asset accounts
 
-Completar el bootstrap técnico (dependencias, schema, migración, cliente Prisma, tests puro,
-docs, git) y reportar antes de pasar a implementar el dominio financiero.
+## Non-Functional Requirements
+
+- **Performance**: Dashboard loads in < 2 seconds
+- **Security**: Row Level Security for all household data
+- **Reliability**: Financial calculations must be 100% accurate
+- **Testability**: Financial Engine must have 100% test coverage
+- **Maintainability**: Framework-agnostic Financial Engine
+
+## Constraints
+
+- No microservices architecture
+- No LLM for financial calculations
+- No floating-point arithmetic for money
+- Financial Engine must remain framework-independent
+- Prisma is the PostgreSQL access layer only
+- Supabase is infrastructure only (auth, storage, edge functions)

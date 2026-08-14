@@ -14,7 +14,9 @@ import os
 from app.domain.domain import (
     Money, Timestamp, Account, AccountType, Transaction,
     TransactionType, TransactionStatus, Budget, Debt, Goal,
-    Asset, Liability, Member, Household, User, Session
+    Asset, Liability, Member, Household, User, Session,
+    Transfer, LedgerEntry, RecurringPayment, DebtPayment, GoalContribution,
+    Category, Notification
 )
 
 
@@ -55,7 +57,7 @@ def init_db():
         household_id TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -65,8 +67,8 @@ def init_db():
         expires_at TEXT NOT NULL,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS members (
@@ -77,7 +79,7 @@ def init_db():
         status TEXT DEFAULT 'active',
         email TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS accounts (
@@ -93,7 +95,7 @@ def init_db():
         initial_balance INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS categories (
@@ -106,8 +108,8 @@ def init_db():
         icon TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id),
-        FOREIGN KEY (parent_id) REFERENCES categories(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE,
+        FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS transactions (
@@ -126,9 +128,9 @@ def init_db():
         notes TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY (account_id) REFERENCES accounts(id),
-        FOREIGN KEY (category_id) REFERENCES categories(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS transfers (
@@ -142,9 +144,9 @@ def init_db():
         description TEXT,
         reference TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (from_account_id) REFERENCES accounts(id),
-        FOREIGN KEY (to_account_id) REFERENCES accounts(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS ledger_entries (
@@ -157,8 +159,8 @@ def init_db():
         balance_after INTEGER NOT NULL,
         household_id TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (account_id) REFERENCES accounts(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS budgets (
@@ -172,8 +174,8 @@ def init_db():
         spent INTEGER NOT NULL DEFAULT 0,
         currency TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id),
-        FOREIGN KEY (category_id) REFERENCES categories(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS recurring_payments (
@@ -188,9 +190,9 @@ def init_db():
         next_due_date TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id),
-        FOREIGN KEY (category_id) REFERENCES categories(id),
-        FOREIGN KEY (account_id) REFERENCES accounts(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS debts (
@@ -208,7 +210,7 @@ def init_db():
         installments INTEGER,
         start_date TEXT,
         balance INTEGER NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS debt_payments (
@@ -220,8 +222,8 @@ def init_db():
         account_id TEXT,
         notes TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (debt_id) REFERENCES debts(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS goals (
@@ -235,7 +237,7 @@ def init_db():
         is_completed INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS goal_contributions (
@@ -247,8 +249,8 @@ def init_db():
         account_id TEXT,
         notes TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (goal_id) REFERENCES goals(id),
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS assets (
@@ -261,7 +263,7 @@ def init_db():
         description TEXT,
         notes TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS liabilities (
@@ -276,7 +278,7 @@ def init_db():
         description TEXT,
         is_debt INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (household_id) REFERENCES households(id)
+        FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
     """)
     conn.commit()
@@ -392,6 +394,9 @@ class SQLiteRepository:
             password_hash=row["password_hash"], household_id=row["household_id"],
             is_active=bool(row["is_active"]), created_at=Timestamp(row["created_at"]),
         )
+
+    def get_by_email(self, email: str) -> Optional[User]:
+        return self.get_user_by_email(email)
 
     def get_user_by_id(self, user_id: str) -> Optional[User]:
         conn = self._connect()
@@ -1060,6 +1065,142 @@ class SQLiteRepository:
                      (liability_id, household_id))
         conn.commit()
         conn.close()
+
+    def create(self, obj):
+        if isinstance(obj, Account):
+            return self.create_account(obj)
+        elif isinstance(obj, Member):
+            return self.create_member(obj)
+        elif isinstance(obj, Category):
+            return self.create_category(obj)
+        elif isinstance(obj, Transaction):
+            return self.create_transaction(obj)
+        elif isinstance(obj, Budget):
+            return self.create_budget(obj)
+        elif isinstance(obj, Debt):
+            return self.create_debt(obj)
+        elif isinstance(obj, Goal):
+            return self.create_goal(obj)
+        elif isinstance(obj, Asset):
+            return self.create_asset(obj)
+        elif isinstance(obj, Liability):
+            return self.create_liability(obj)
+        elif isinstance(obj, Household):
+            return self.create_household(obj)
+        elif isinstance(obj, User):
+            return self.create_user(obj)
+        elif isinstance(obj, Session):
+            return self.create_session(obj)
+        elif isinstance(obj, RecurringPayment):
+            return self.create_recurring_payment(obj)
+        elif isinstance(obj, DebtPayment):
+            return self.create_debt_payment(obj)
+        elif isinstance(obj, GoalContribution):
+            return self.create_goal_contribution(obj)
+        elif isinstance(obj, Transfer):
+            return self.create_transfer(obj)
+        elif isinstance(obj, LedgerEntry):
+            return self.create_ledger_entry(obj)
+        else:
+            raise ValueError(f"Cannot create object of type {type(obj)}")
+
+    def get_by_id(self, id: str):
+        result = self.get_account(id)
+        if result:
+            return result
+        result = self.get_member(id)
+        if result:
+            return result
+        result = self.get_category(id)
+        if result:
+            return result
+        result = self.get_budget(id)
+        if result:
+            return result
+        result = self.get_debt(id)
+        if result:
+            return result
+        result = self.get_goal(id)
+        if result:
+            return result
+        result = self.get_asset(id)
+        if result:
+            return result
+        result = self.get_liability(id)
+        if result:
+            return result
+        result = self.get_user_by_id(id)
+        if result:
+            return result
+        return None
+
+    def get_by_household(self, household_id: str, type_hint=None):
+        if type_hint == "account" or type_hint is None:
+            accounts = self.get_accounts(household_id)
+            if accounts:
+                return accounts
+        if type_hint == "member" or type_hint is None:
+            members = self.get_members(household_id)
+            if members:
+                return members
+        if type_hint == "category" or type_hint is None:
+            categories = self.get_categories(household_id)
+            if categories:
+                return categories
+        if type_hint == "budget" or type_hint is None:
+            budgets = self.get_budgets(household_id)
+            if budgets:
+                return budgets
+        if type_hint == "debt" or type_hint is None:
+            debts = self.get_debts(household_id)
+            if debts:
+                return debts
+        if type_hint == "goal" or type_hint is None:
+            goals = self.get_goals(household_id)
+            if goals:
+                return goals
+        if type_hint == "asset" or type_hint is None:
+            assets = self.get_assets(household_id)
+            if assets:
+                return assets
+        if type_hint == "liability" or type_hint is None:
+            liabilities = self.get_liabilities(household_id)
+            if liabilities:
+                return liabilities
+        return []
+
+    def get_all(self):
+        return self.get_households()
+
+    def update(self, obj):
+        if isinstance(obj, Household):
+            return self.update_household(obj)
+        elif isinstance(obj, Account):
+            return self.update_account(obj)
+        elif isinstance(obj, Member):
+            return self.update_member(obj)
+        elif isinstance(obj, Category):
+            return self.update_category(obj)
+        elif isinstance(obj, Asset):
+            return self.update_asset(obj)
+        elif isinstance(obj, Liability):
+            return self.update_liability(obj)
+        elif isinstance(obj, Debt):
+            return self.update_debt(obj)
+        elif isinstance(obj, Goal):
+            return self.update_goal(obj)
+        else:
+            raise ValueError(f"Cannot update object of type {type(obj)}")
+
+    def delete(self, id: str, household_id: str = None):
+        self.delete_account(id, household_id)
+        self.delete_member(id)
+        self.delete_category(id)
+        self.delete_budget(id, household_id)
+        self.delete_debt(id, household_id)
+        self.delete_goal(id, household_id)
+        self.delete_asset(id, household_id)
+        self.delete_liability(id, household_id)
 
 
 # ── Repository initialization ────────────────────────────

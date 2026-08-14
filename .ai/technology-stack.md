@@ -1,90 +1,104 @@
-# Technology Stack
+# Technology Stack — Family Financial OS
 
-## Verificado en este entorno (Node v24.18, Windows 11 PS 5.1)
+## Target Stack
 
-| Dependencia | Versión | Estado | Nota |
-|---|---|---|---|
-| next | 16.3.0 | instalado | App Router (único paradigma) |
-| react / react-dom | 19.2.8 | instalado | peer de Next 16 |
-| typescript | 5.9.3 | instalado | `npx tsc --noEmit` → 0 errores |
-| @prisma/client | 7.9.1 | instalado | cliente ORM v7 (rust-free) |
-| prisma (dev) | 7.9.1 | instalado | CLI v7 |
-| @prisma/adapter-pg | 7.x | instalado | driver adapter directo (Postgres) |
-| pg | 8.x | instalado | peer de @prisma/adapter-pg |
-| dotenv | 16.x | instalado (dev) | carga `.env` en `prisma.config.ts` |
-| zod | 4.4.3 | instalado | validación DTOs |
-| vitest (dev) | 4.1.10 | instalado | `npm test` → 2/2 PASS |
-| eslint 9 + eslint-config-next 16 + prettier | 3.9.6 | instalados | `npm run lint` → 0 problemas |
-| @supabase/supabase-js | — | **pendiente** | auth, fase web |
-| dinero.js | 2.0.2 | **pendiente** | motor Money, fase engine |
+| Layer | Technology | Version | Purpose |
+|-------|------------|---------|---------|
+| Framework | Next.js | 14+ | App Router, SSR, API Routes |
+| Language | TypeScript | 5.x | Type safety across stack |
+| Database | PostgreSQL | 16+ | Primary data store |
+| ORM | Prisma | 5.x | Database access layer |
+| Infrastructure | Supabase | Latest | Auth, storage, edge functions |
+| Validation | Zod | 3.x | Runtime schema validation |
+| Testing (Unit) | Vitest | 1.x | Fast unit/integration tests |
+| Testing (E2E) | Playwright | 1.x | Browser automation tests |
+| Decimal Math | Decimal.js | 10.x | Financial calculations |
+| Linting | ESLint | 8.x | Code quality |
+| Formatting | Prettier | 3.x | Code formatting |
 
-## Estado de la DB local — PROVISIONADA Y VALIDADA ✅
+## Why These Technologies
 
-- **PostgreSQL 17.10 portable** (EDB no-installer), **sin Docker, sin cuenta**.
-- Binarias: `C:\Users\HP\AppData\Local\Programs\pg17\pgsql\bin` (pg_ctl, initdb, postgres, psql).
-- Data dir: `C:\Users\HP\AppData\Local\pgdata-ffos` (initdb con `-U postgres -A trust`).
-- Puerto **5432**, auth `trust` (dev local). Base `ffos`.
-- `DATABASE_URL="postgresql://postgres@127.0.0.1:5432/ffos?schema=public"` (en `.env`, gitignorado).
-- `prisma migrate dev --name init` aplicada → tablas: Account, Transaction, LedgerLine, Budget,
-  Goal, NetWorthSnapshot (+ enums + FKs + índices). `prisma validate` 🚀.
-- Smoke test PASS: `Transaction.create` (sin id) genera UUID v7 y persiste contra Postgres local.
-- ⚠️ El sandbox mata `postgres.exe` al cerrar la sesión del agente → **arrancar pg por sesión**
-  (`pg_ctl -D "...\pgdata-ffos" -w start` o `postgres.exe -D <data>` vía `Start-Process`).
+### Next.js + TypeScript
+- Industry standard for React applications
+- Built-in SSR, SSG, ISR for performance
+- TypeScript ensures type safety across frontend and API
+- Large ecosystem and community support
 
-## Scripts npm (package.json)
+### PostgreSQL
+- ACID compliance critical for financial data
+- Advanced features: CTEs, window functions, JSON
+- Row Level Security built-in
+- Supabase integration
 
-`dev` | `build` | `start` | `lint` | **`test`** (`vitest run`) | `test:watch` |
-`prisma:generate` | `prisma:migrate:dev` | `prisma:studio`.
+### Prisma
+- Type-safe database access
+- Excellent TypeScript integration
+- Migration management
+- Works with PostgreSQL and Supabase
 
-## Prisma 7 — patrones (verificados con firecrawl-developer-index)
+### Supabase
+- Open source Firebase alternative
+- Built-in authentication
+- PostgreSQL with RLS
+- Storage and real-time features
+- Easy local development
 
-### 1. Conexión fuera del schema (breaking change de v7)
-`datasource.url` se eliminó en Prisma 7 — la conexión vive en `prisma.config.ts` (root), no en schema.prisma.
+### Zod
+- TypeScript-first validation
+- Composable schemas
+- Excellent TypeScript inference
+- Works seamlessly with React Hook Form
 
-`prisma.config.ts`:
-```ts
-import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
-export default defineConfig({
-  schema: "prisma/schema.prisma",
-  migrations: { path: "prisma/migrations" },
-  datasource: { url: env("DATABASE_URL") },
-});
+### Vitest
+- Fast, Vite-native testing
+- Excellent TypeScript support
+- Compatible with Jest API
+- Built-in coverage
+
+### Playwright
+- Cross-browser testing
+- Auto-waiting for elements
+- Trace viewer for debugging
+- Excellent CI/CD integration
+
+### Decimal.js
+- Arbitrary precision decimal arithmetic
+- Prevents floating-point errors in financial calculations
+- Well-maintained and performant
+
+## Deprecated Technologies
+
+| Technology | Reason for Replacement |
+|------------|------------------------|
+| Python/FastAPI | Migrating to Next.js full-stack |
+| MySQL | Replaced by PostgreSQL for RLS and advanced features |
+| PDO | Replaced by Prisma |
+| Vanilla JS | Replaced by React + TypeScript |
+| Custom CSS | Migrated to Tailwind CSS (planned) |
+
+## Environment Requirements
+
+- Node.js 18+
+- PostgreSQL 16+ (or Supabase)
+- npm or pnpm
+- Git
+
+## Package Structure
+
 ```
-`schema.prisma`:
-```prisma
-datasource db { provider = "postgresql" }   // sin url
-generator client { provider = "prisma-client-js" }
-```
-> `env("DATABASE_URL")` lanza si falta. En CI que solo hace `prisma generate`, usar `process.env.DATABASE_URL!`.
-
-### 2. Cliente runtime con driver adapter (Prisma 7, rust-free)
-```ts
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-new PrismaClient({ adapter });                          // runtime directo a Postgres
+package.json (root)
+├── Dependencies: next, react, react-dom, @prisma/client, @supabase/*, zod, decimal.js
+├── DevDependencies: vitest, @vitest/coverage-v8, @playwright/test, typescript, eslint, prettier
 ```
 
-### 3. Singleton + HMR (sin fuges de conexiones)
-```ts
-// src/infra/database/prisma.ts
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-declare global { var prisma: PrismaClient | undefined }
-function createClient() {
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
-}
-const client = global.prisma ?? createClient();
-if (process.env.NODE_ENV !== "production") global.prisma = client;
-export default client;
-```
-Fuente: docs.prisma.io + prisma/prisma#17566 (evita múltiples instancias en HMR).
+## Configuration Files
 
-### 4. UUIDs v7 — `@default(uuid(7))`
-Prisma 7 PSL soporta `uuid(7)`: el UUID v7 se genera **cliente-side** (no necesita `DEFAULT` DB; se verificó
-que `column_default` queda vacío y `create` sin id devuelve un UUID v7). Satisface R6 de architecture-rules.
-
-## Supabase (deferred — auth fuera de scope)
-No instalado. Pattern server-side verificado (docs oficiales): `createServerClient` de `@supabase/ssr` +
-cookies httpOnly + `getUser()` en route handlers; `middleware.ts` protege rutas. Se añade en la fase de auth.
+- `tsconfig.json` - TypeScript configuration
+- `vitest.config.ts` - Vitest configuration
+- `playwright.config.ts` - Playwright configuration
+- `next.config.js` - Next.js configuration
+- `eslint.config.js` - ESLint flat config
+- `prettier.config.js` - Prettier configuration
+- `.env` - Environment variables
+- `.env.example` - Environment variable template
+- `prisma/schema.prisma` - Database schema

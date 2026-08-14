@@ -1,92 +1,143 @@
-# Architecture Rules
+# Architecture Rules — Family Financial OS
 
-Arquitectura **Modular Monolith** (Clean Architecture): un único despliegue, capas bien aisladas
-por responsabilidad. No se salta de capa (p. ej. API → repository). Las reglas son *forzables*
-por tests pero NO se impone con tooling extra todavía (TDD lo garantiza).
+## Layered Architecture
 
-## Capas (ordago → adentro, flechas de dependencia hacia adentro)
+The project follows a strict layered architecture where dependencies flow inward only.
 
 ```
-src/
- ├ api/            — Entrada: HTTP (Next Route Handlers / Controllers) + Zod DTOs
- ├ config/         — Variables de entorno y factoría de inyección (DI root)
- ├ modules/        — Bounded Contexts del dominio (finanzas)
- │   ├ accounts/    (entidad Account)
- │   ├ transactions/(entidades + reglas: Money, Double-Entry, Transfer/Expense)
- │   ├ budgets/
- │   ├ goals/
- │   └ net-worth/   (Patrimonio = assets - liabilities)
- ├ shared/         — Kernel: Money (Dinero.js), errors, Value Objects genéricos
- ├ infrastructure/ — Adaptadores a externos: database/ (Prisma), auth/ (Supabase),
- │                   repositories/ (implementaciones de interfaces de dominio)
- └ lib/            — Utilities, date-fns, logging
+┌─────────────────────────────────────────────────────────────┐
+│                    Next.js (Presentation)                    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Application Layer                         │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Domain Layer                             │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│               Infrastructure / Prisma Layer                  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     PostgreSQL                               │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Supabase (Infrastructure)                │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-`@/` mapea a `src/`. `@api/*`, `@modules/*`, `@infra/*`, `@shared/*` son aliases de ruta
-TypeScript configurados en `tsconfig.json` (paths) + Next alias (`moduleNameRenderer`). Hasta que
-no exista el código, las reglas de ruta se definen aquí y se aplicarán al crear los módulos.
+## Layer Responsibilities
 
-## Rules
+### Next.js (Presentation)
+- Server Components for data fetching
+- Client Components for interactivity
+- Thin API Route handlers
+- No business logic
 
-**R1. Clean Architecture por bounded context.** Cada módulo de `modules/` es autocontenida:
-sus *use-cases*, *entities*, *value objects*, *repository interfaces* y *DTOs*. No importa de
-otros contextos; si necesita datos de otro, usa su puerta de enlace (repository o endpoint público).
+### Application Layer
+- Use cases / Services orchestrate workflows
+- DTOs and mappers for type conversion
+- Input validation (Zod)
+- Transaction management
 
-**R2. Inversión de dependencias.** El dominio no depende de infraestructura. Los repositorios
-son **interfaces en el dominio**; las **implementaciones** viven en `infrastructure/repositories`
-(Prisma). Se inyectan en las *use-cases* (inyección por constructor).
+### Domain Layer
+- Entities with behavior (not anemic)
+- Value Objects (Money, Currency)
+- Domain Services for complex logic
+- Repository interfaces (ports)
+- Business rules
+- **ZERO external framework dependencies**
 
-**R3. Puerto único de entrada: API → Controllers.** Todo request HTTP pasa por `api/` (Controllers),
-se valida con Zod, se traduce a un *use-case*, y devuelve el resultado. El Controller es el único
-que conoce a los *use-cases* y a los repositorios concretos.
+### Financial Engine (Framework-Agnostic)
+- Pure functions for all calculations
+- No I/O, no side effects
+- Deterministic, fully testable
+- Uses Decimal.js for precision
+- No imports from any framework
 
-**R4. Transacciones monetarias son atómicas.** Cualquier operación que mueva dinero (transferencia
-inter-cuentas, registrar una transacción con su contra-movimiento) se ejecuta dentro de una
-transacción de base de datos (`$transaction`). Si falla, nada se persiste (doble entrada o nada).
+### Infrastructure / Prisma Layer
+- Repository implementations (adapters)
+- Prisma Client configuration
+- External service clients
 
-**R5. Doble entrada contable (invariante de dominio).** Cada movimiento de afecta a **dos**
-asientos opuestos en el libro mayor: débito y crédito. La balanza cuadra: `Σ débitos = Σ créditos`.
-El engine verifica esto antes de confirmar cualquier lote de transacciones. Se registra
-`transaction_id` (UUID v7) y `line_id`.
+### PostgreSQL
+- Data persistence via Prisma
+- RLS policies for security
+- Constraints and triggers
 
-**R6. Dinero en unidades menores (`bigint`).** Todo importe monetario se almacena y opera en
-unidades menores (centavos) usando `bigint` + Dinero.js v2. Nunca `float`/`number` para cálculos
-financieros. Conversión a float solo para presentación (no para cálculo).
+### Supabase (Infrastructure)
+- Authentication
+- Storage (receipts, documents)
+- Edge Functions (if needed)
 
-**R7. Transferencia ≠ Gasto.** Una transferencia entre cuentas propias NO es un gasto; es
-una reubicación de patrimonio (debito en una cuenta, crédito en otra; el total no cambia).
-Un *gasto* reduce el patrimonio. La categoría de una transacción es *tipo*: Income, Expense,
-Transfer, Adjustment. El motor las clasifica y las suma/resta correctamente en el P&L vs el
-Balance.
+## Dependency Rules
 
-**R8. Estado derivado, no guardado.** Saldo de cuentas, balance, patrimonio neto, presupuestos
-gastados — se **derivan** recalculando transacciones. Se puede materializar un *snapshot*
-periódico por rendimiento, pero la fuente de la verdad es la tabla de transacciones + asientos.
-Ningún saldo se escribe a mano.
+1. Inner layers must never depend on outer layers
+2. Domain defines interfaces, Infrastructure implements them
+3. Application depends only on Domain interfaces
+4. Next.js depends on Application and Infrastructure
+5. Financial Engine has zero external dependencies
 
-**R9. Inmutabilidad de transacciones.** Las transacciones son *append-only*. Si una operación
-es incorrecta, se crea una transacción de corrección (con referencia a la original); nunca se
-borran/editan las transacciones reales (auditable, ideal para conciliación bancaria).
+## Financial Engine Isolation Rules
 
-**R10. Determinismo.** Las fechas/hora se almacenan en UTC. Cálculos de intereses, depreciación
-y presupuestos son deterministas (seed fija, reglas explícitas) para que un mismo input produzca
-el mismo output (reproducible para tests y auditoría).
+The Financial Engine (`domain/financial-engine/`) must never import:
+- `@prisma/client`
+- `@supabase/supabase-js`
+- `next/*`
+- Any external framework or library (except standard library + Decimal.js)
 
-## Reglas de capa de infraestructura
+Allowed imports:
+- Standard TypeScript/JavaScript
+- `decimal.js` or `big.js`
+- Internal domain types only
 
-- **Database**: `infrastructure/database/prisma.ts` es el único punto de creación del cliente
-  Prisma (`@prisma/client`). Repositorios Prisma usan `PrismaClient` singleton.
-- **Auth**: `infrastructure/auth/` expone un `AuthService` (interface en dominio) + implementación
-  Supabase. El *user id* del auth se pasa al dominio como `UserId` (branded). Nunca se filtra ni
-  se loguea.
-- **HTTP**: los *Controllers* son *Route Handlers* de Next 16 (`app/api/.../route.ts`). No usan
-  `getServerSideProps`; la UI futura consumirá la API.
+## Data Flow Rules
 
-## Convenciones de naming
+1. All financial operations flow through the Application layer
+2. Domain entities contain behavior, not just data
+3. Repository interfaces defined in Domain, implemented in Infrastructure
+4. Prisma models are infrastructure concerns, never exposed to Domain
+5. Supabase is never accessed from Domain or Financial Engine
 
-- Tablas: `snake_case` (PostgreSQL).
-- Columnas: `snake_case`.
-- Model Prisma: `PascalCase` (ej. `FinancialAccount`).
-- DTOs/Requests: `camelCase` (JSON).
-- Eventos de dominio / use-cases: verbos (`RegisterTransaction`, `CreateBudget`).
-- IDs: `UUID v7` (orden cronológico, sin revelar secuencia).
+## Household Isolation Rules
+
+1. Every financial table has `household_id` column
+2. All queries filter by `household_id`
+3. RLS enforces household-level access
+4. No cross-household data access permitted
+5. User membership verified before operations
+
+## Money Handling Rules
+
+1. All amounts stored as strings in database
+2. All calculations use Decimal.js
+3. No JavaScript `number` for financial values
+4. Currency always explicit (ISO 4217)
+5. Validation at every boundary
+
+## Test Strategy
+
+| Layer | Test Type | Tool |
+|-------|-----------|------|
+| Financial Engine | Unit | Vitest |
+| Domain | Unit | Vitest |
+| Application | Integration | Vitest + test DB |
+| Infrastructure | Integration | Vitest + test DB |
+| Next.js | E2E | Playwright |
+
+## Error Handling Rules
+
+1. Domain exceptions defined in `domain/errors/`
+2. Infrastructure maps database errors to domain exceptions
+3. Application layer translates domain exceptions to HTTP responses
+4. Never expose internal details in API error responses
+5. Log errors server-side only

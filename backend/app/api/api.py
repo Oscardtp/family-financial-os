@@ -1595,10 +1595,20 @@ async def get_cash_flow_report(
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
+    from app.financial_engine.engine import cash_flow as calc_cash_flow
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    accounts = repo.get_accounts_by_household(household_id)
+    
+    total_income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
+    total_expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
+    
     return success_response({
-        "income": [{"month": "2026-01", "amount": "8500000.00"}],
-        "expenses": [{"month": "2026-01", "amount": "4700000.00"}],
-        "savings": [{"month": "2026-01", "amount": "3800000.00"}]
+        "income": [{"month": datetime.now().strftime("%Y-%m"), "amount": Money(total_income, "COP", 2).to_string()}],
+        "expenses": [{"month": datetime.now().strftime("%Y-%m"), "amount": Money(total_expenses, "COP", 2).to_string()}],
+        "savings": [{"month": datetime.now().strftime("%Y-%m"), "amount": Money(total_income - total_expenses, "COP", 2).to_string()}]
     })
 
 
@@ -1608,10 +1618,17 @@ async def get_income_expenses_report(
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    total_income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
+    total_expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
+    
     return success_response({
-        "total_income": "52500000.00",
-        "total_expenses": "28000000.00",
-        "net": "24500000.00",
+        "total_income": Money(total_income, "COP", 2).to_string(),
+        "total_expenses": Money(total_expenses, "COP", 2).to_string(),
+        "net": Money(total_income - total_expenses, "COP", 2).to_string(),
         "by_month": []
     })
 
@@ -1623,20 +1640,50 @@ async def get_categories_report(
     to: Optional[str] = Query(None),
     type: Optional[str] = Query(None)
 ):
-    return success_response({
-        "categories": [
-            {"id": 2, "name": "Mercado", "total": "2400000.00", "percentage": 35.0},
-            {"id": 5, "name": "Combustible", "total": "180000.00", "percentage": 2.6}
-        ]
-    })
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    categories = repo.get_categories(household_id)
+    
+    category_totals = {}
+    for t in transactions:
+        if type and t.type != type:
+            continue
+        cat_id = t.category_id or "uncategorized"
+        category_totals[cat_id] = category_totals.get(cat_id, 0) + t.amount.value
+    
+    total = sum(category_totals.values()) if category_totals else 1
+    
+    result = []
+    for cat in categories:
+        cat_total = category_totals.get(cat.id, 0)
+        if cat_total > 0:
+            result.append({
+                "id": cat.id,
+                "name": cat.name,
+                "total": Money(cat_total, "COP", 2).to_string(),
+                "percentage": round((cat_total / total) * 100, 1) if total > 0 else 0
+            })
+    
+    return success_response({"categories": result})
 
 
 @router.get("/reports/accounts")
 async def get_accounts_report(household_id: str = Depends(get_household_id)):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    accounts = repo.get_accounts_by_household(household_id)
     return success_response({
         "accounts": [
-            {"id": 3, "name": "Bancolombia", "balance": "2850000.00", "type": "bank"},
-            {"id": 2, "name": "Nequi", "balance": "450000.00", "type": "digital_wallet"}
+            {
+                "id": a.id,
+                "name": a.name,
+                "balance": a.balance.to_string(),
+                "type": a.account_type
+            }
+            for a in accounts
         ]
     })
 
@@ -1647,12 +1694,31 @@ async def get_members_report(
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
-    return success_response({
-        "members": [
-            {"id": 1, "name": "Carlos", "transactions": 45, "total": "3200000.00"},
-            {"id": 2, "name": "María", "transactions": 32, "total": "1800000.00"}
-        ]
-    })
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    members = repo.get_members(household_id)
+    
+    member_stats = {}
+    for t in transactions:
+        member_id = t.member_id or "unknown"
+        if member_id not in member_stats:
+            member_stats[member_id] = {"count": 0, "total": 0}
+        member_stats[member_id]["count"] += 1
+        member_stats[member_id]["total"] += t.amount.value
+    
+    result = []
+    for m in members:
+        stats = member_stats.get(m.id, {"count": 0, "total": 0})
+        result.append({
+            "id": m.id,
+            "name": m.name,
+            "transactions": stats["count"],
+            "total": Money(stats["total"], "COP", 2).to_string()
+        })
+    
+    return success_response({"members": result})
 
 
 @router.get("/reports/savings")
@@ -1661,28 +1727,290 @@ async def get_savings_report(
     from_date: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None)
 ):
+    from app.financial_engine.engine import savings_rate as calc_savings_rate
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    total_income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
+    total_expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
+    
+    rate = calc_savings_rate(total_income, total_expenses)
+    
     return success_response({
-        "total_saved": "24500000.00",
-        "monthly_average": "3062500.00",
-        "savings_rate": 46.7
+        "total_saved": Money(total_income - total_expenses, "COP", 2).to_string(),
+        "monthly_average": Money((total_income - total_expenses) / max(1, len(set(t.date.to_date_string()[:7] for t in transactions))), "COP", 2).to_string(),
+        "savings_rate": rate
     })
 
 
 @router.get("/reports/debt")
 async def get_debt_report(household_id: str = Depends(get_household_id)):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    debts = repo.get_debts(household_id)
+    total_debt = sum(d.balance.value for d in debts if d.status == "active")
+    monthly_payments = sum(d.monthly_payment.value for d in debts if d.status == "active")
+    
     return success_response({
-        "total_debt": "26100000.00",
-        "monthly_payments": "930000.00",
-        "debts": []
+        "total_debt": Money(total_debt, "COP", 2).to_string(),
+        "monthly_payments": Money(monthly_payments, "COP", 2).to_string(),
+        "debts": [
+            {
+                "id": d.id,
+                "name": d.name,
+                "balance": d.balance.to_string(),
+                "monthly_payment": d.monthly_payment.to_string(),
+                "status": d.status
+            }
+            for d in debts
+        ]
     })
 
 
 @router.get("/reports/net-worth")
 async def get_net_worth_report(household_id: str = Depends(get_household_id)):
+    from app.financial_engine.engine import net_worth as calc_net_worth
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    accounts = repo.get_accounts_by_household(household_id)
+    debts = repo.get_debts(household_id)
+    assets = repo.get_assets(household_id)
+    liabilities = repo.get_liabilities(household_id)
+    
+    account_balances = [a.balance.value for a in accounts if AccountType.get_nature(a.account_type) == "asset"]
+    debt_balances = [d.balance.value for d in debts if d.status == "active"]
+    asset_values = [a.current_value.value for a in assets]
+    liability_values = [l.balance.value for l in liabilities]
+    
+    current = calc_net_worth(account_balances + asset_values, debt_balances + liability_values)
+    
     return success_response({
-        "current": "158400000.00",
+        "current": Money(current, "COP", 2).to_string(),
         "history": []
     })
+
+
+@router.get("/reports/monthly/{year}/{month}")
+async def get_monthly_report(year: int, month: int, household_id: str = Depends(get_household_id)):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    month_str = f"{year}-{month:02d}"
+    month_txs = [t for t in transactions if t.date.to_date_string().startswith(month_str)]
+    
+    total_income = sum(t.amount.value for t in month_txs if t.type == TransactionType.INCOME)
+    total_expenses = sum(t.amount.value for t in month_txs if t.type == TransactionType.EXPENSE)
+    
+    return success_response({
+        "total_income": Money(total_income, "COP", 2).to_string(),
+        "total_expenses": Money(total_expenses, "COP", 2).to_string(),
+        "net_income": Money(total_income - total_expenses, "COP", 2).to_string(),
+        "transactions_count": len(month_txs)
+    })
+
+
+@router.get("/reports/expenses-by-category")
+async def get_expenses_by_category(
+    household_id: str = Depends(get_household_id),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to: Optional[str] = Query(None)
+):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    categories = repo.get_categories(household_id)
+    
+    expense_txs = [t for t in transactions if t.type == TransactionType.EXPENSE]
+    if from_date:
+        expense_txs = [t for t in expense_txs if t.date.to_date_string() >= from_date]
+    if to:
+        expense_txs = [t for t in expense_txs if t.date.to_date_string() <= to]
+    
+    category_totals = {}
+    for t in expense_txs:
+        cat_id = t.category_id or "uncategorized"
+        category_totals[cat_id] = category_totals.get(cat_id, 0) + t.amount.value
+    
+    total = sum(category_totals.values()) if category_totals else 1
+    
+    result = []
+    for cat in categories:
+        cat_total = category_totals.get(cat.id, 0)
+        if cat_total > 0:
+            result.append({
+                "id": cat.id,
+                "name": cat.name,
+                "amount": Money(cat_total, "COP", 2).to_string(),
+                "percentage": round((cat_total / total) * 100, 1) if total > 0 else 0
+            })
+    
+    return success_response({"categories": result})
+
+
+@router.get("/reports/income-vs-expenses")
+async def get_income_vs_expenses(
+    household_id: str = Depends(get_household_id),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to: Optional[str] = Query(None)
+):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    if from_date:
+        transactions = [t for t in transactions if t.date.to_date_string() >= from_date]
+    if to:
+        transactions = [t for t in transactions if t.date.to_date_string() <= to]
+    
+    total_income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
+    total_expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
+    
+    return success_response({
+        "total_income": Money(total_income, "COP", 2).to_string(),
+        "total_expenses": Money(total_expenses, "COP", 2).to_string(),
+        "net": Money(total_income - total_expenses, "COP", 2).to_string(),
+        "by_month": []
+    })
+
+
+# ══════════════════════════════════════════════════════
+# EXPORT
+# ══════════════════════════════════════════════════════
+
+@router.get("/export/transactions")
+async def export_transactions(
+    format: str = Query("json"),
+    household_id: str = Depends(get_household_id)
+):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    transactions = repo.get_transactions(household_id)
+    data = [
+        {
+            "id": t.id,
+            "date": t.date.to_date_string(),
+            "type": t.type,
+            "amount": t.amount.to_string(),
+            "description": t.description,
+            "account_id": t.account_id,
+            "category_id": t.category_id,
+        }
+        for t in transactions
+    ]
+    
+    if format == "csv":
+        from fastapi.responses import StreamingResponse
+        import io
+        output = io.StringIO()
+        if data:
+            output.write(",".join(data[0].keys()) + "\n")
+            for row in data:
+                output.write(",".join(str(v) for v in row.values()) + "\n")
+        return StreamingResponse(io.StringIO(output.getvalue()), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=transactions.csv"})
+    
+    return success_response(data)
+
+
+@router.get("/export/accounts")
+async def export_accounts(
+    format: str = Query("json"),
+    household_id: str = Depends(get_household_id)
+):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    accounts = repo.get_accounts_by_household(household_id)
+    data = [
+        {
+            "id": a.id,
+            "name": a.name,
+            "type": a.account_type,
+            "balance": a.balance.to_string(),
+            "currency": a.currency,
+        }
+        for a in accounts
+    ]
+    
+    if format == "csv":
+        from fastapi.responses import StreamingResponse
+        import io
+        output = io.StringIO()
+        if data:
+            output.write(",".join(data[0].keys()) + "\n")
+            for row in data:
+                output.write(",".join(str(v) for v in row.values()) + "\n")
+        return StreamingResponse(io.StringIO(output.getvalue()), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=accounts.csv"})
+    
+    return success_response(data)
+
+
+@router.get("/export/all")
+async def export_all(
+    format: str = Query("json"),
+    household_id: str = Depends(get_household_id)
+):
+    from app.api.deps import get_repository
+    repo = get_repository()
+    
+    accounts = repo.get_accounts_by_household(household_id)
+    transactions = repo.get_transactions(household_id)
+    categories = repo.get_categories(household_id)
+    members = repo.get_members(household_id)
+    
+    data = {
+        "accounts": [
+            {
+                "id": a.id,
+                "name": a.name,
+                "type": a.account_type,
+                "balance": a.balance.to_string(),
+                "currency": a.currency,
+            }
+            for a in accounts
+        ],
+        "transactions": [
+            {
+                "id": t.id,
+                "date": t.date.to_date_string(),
+                "type": t.type,
+                "amount": t.amount.to_string(),
+                "description": t.description,
+            }
+            for t in transactions
+        ],
+        "categories": [
+            {
+                "id": c.id,
+                "name": c.name,
+                "type": c.type,
+            }
+            for c in categories
+        ],
+        "members": [
+            {
+                "id": m.id,
+                "name": m.name,
+                "role": m.role,
+            }
+            for m in members
+        ]
+    }
+    
+    if format == "csv":
+        from fastapi.responses import StreamingResponse
+        import io
+        import json
+        output = io.StringIO()
+        output.write(json.dumps(data, indent=2))
+        return StreamingResponse(io.StringIO(output.getvalue()), media_type="application/json", headers={"Content-Disposition": "attachment; filename=all_data.json"})
+    
+    return success_response(data)
 
 
 # ══════════════════════════════════════════════════════

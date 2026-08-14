@@ -987,6 +987,23 @@ class SQLiteRepository:
             balance=Money(row["balance"], row["currency"], 2),
         )
 
+    def get_by_debt(self, debt_id: str) -> List[DebtPayment]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT * FROM debt_payments WHERE debt_id = ?",
+            (debt_id,),
+        ).fetchall()
+        conn.close()
+        return [
+            DebtPayment(
+                id=r["id"], debt_id=r["debt_id"], amount=Money(r["amount"], "COP", 2),
+                date=Timestamp(r["date"]), household_id=r["household_id"],
+                account_id=r["account_id"], notes=r["notes"],
+                created_at=Timestamp(r["created_at"]),
+            )
+            for r in rows
+        ]
+
     def update_debt(self, debt: Debt) -> Debt:
         conn = self._connect()
         conn.execute(
@@ -1058,6 +1075,23 @@ class SQLiteRepository:
             is_completed=bool(row["is_completed"]), is_active=bool(row["is_active"]),
             created_at=Timestamp(row["created_at"]),
         )
+
+    def get_by_goal(self, goal_id: str) -> List[GoalContribution]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT * FROM goal_contributions WHERE goal_id = ?",
+            (goal_id,),
+        ).fetchall()
+        conn.close()
+        return [
+            GoalContribution(
+                id=r["id"], goal_id=r["goal_id"], amount=Money(r["amount"], "COP", 2),
+                date=Timestamp(r["date"]), household_id=r["household_id"],
+                account_id=r["account_id"], notes=r["notes"],
+                created_at=Timestamp(r["created_at"]),
+            )
+            for r in rows
+        ]
 
     def update_goal(self, goal_id: str, updates: dict) -> Goal:
         conn = self._connect()

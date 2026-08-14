@@ -1291,17 +1291,21 @@ async def get_goal_progress(id: str, household_id: str = Depends(get_household_i
 
 
 @router.get("/goals/{id}/contributions")
-async def list_goal_contributions(id: str):
-    contributions = [
-        {"id": 1, "amount": "500000.00", "date": "2026-01-15", "notes": "Aporte inicial"},
-        {"id": 2, "amount": "500000.00", "date": "2026-02-15", "notes": "Aporte mensual"},
-        {"id": 3, "amount": "500000.00", "date": "2026-03-15", "notes": "Aporte mensual"}
-    ]
-    return success_response(contributions)
+async def list_goal_contributions(id: str, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
+    contributions = use_case._contribution_repo.get_by_goal(id)
+    return success_response([
+        {
+            "id": c.id,
+            "amount": c.amount.to_string(),
+            "date": c.date.to_date_string(),
+            "notes": c.notes,
+        }
+        for c in contributions
+    ])
 
 
 @router.post("/goals/{id}/contributions", status_code=201)
-async def create_goal_contribution(id: int, data: GoalContributionCreate, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
+async def create_goal_contribution(id: str, data: GoalContributionCreate, household_id: str = Depends(get_household_id), use_case: GoalUseCase = Depends(get_goal_use_case)):
     contribution = use_case.contribute(
         goal_id=id,
         amount=float(data.amount),

@@ -158,6 +158,14 @@ async def update_household(data: HouseholdUpdate, household_id: str = Depends(ge
     household = use_case.get_household(household_id)
     if not household:
         raise HTTPException(status_code=404, detail="Household not found")
+    if data.name is not None:
+        household.name = data.name
+    if data.currency is not None:
+        household.currency = data.currency
+    if data.country is not None:
+        household.country = data.country
+    if data.timezone is not None:
+        household.timezone = data.timezone
     updated = use_case._repo.update_household(household)
     return success_response({
         "id": updated.id,
@@ -496,7 +504,7 @@ class TransactionCreate(BaseModel):
     account_id: str
     category_id: str
     amount: str  # "85000.00"
-    date: str  # "2026-08-13"
+    date: Optional[str] = None
     member_id: Optional[str] = None
     description: Optional[str] = None
     notes: Optional[str] = None
@@ -524,6 +532,7 @@ async def list_transactions(
     page: int = Query(1, ge=1),
     per_page: int = Query(25, ge=1, le=100),
     sort: str = Query("date_desc"),
+    household_id: str = Depends(get_household_id),
     use_case: TransactionUseCase = Depends(get_transaction_use_case)
 ):
     transactions = use_case.get_transactions(household_id)
@@ -558,6 +567,8 @@ async def list_transactions(
 
 @router.post("/transactions", status_code=201)
 async def create_transaction(data: TransactionCreate, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+    from datetime import datetime
+    tx_date = data.date or datetime.now().isoformat()
     if data.type == "income":
         transaction = use_case.register_income(
             household_id=household_id,
@@ -633,7 +644,7 @@ class TransferCreate(BaseModel):
     from_account_id: str
     to_account_id: str
     amount: str  # "500000.00"
-    date: str  # "2026-08-13"
+    date: Optional[str] = None
     description: Optional[str] = None
 
 

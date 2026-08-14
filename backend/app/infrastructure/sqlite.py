@@ -480,6 +480,16 @@ class SQLiteRepository:
                       role=row["role"], status=row["status"], email=row["email"],
                       created_at=Timestamp(row["created_at"]))
 
+    def delete_member(self, member_id: str, household_id: str = None) -> None:
+        conn = self._connect()
+        if household_id:
+            conn.execute("DELETE FROM members WHERE id = ? AND household_id = ?",
+                         (member_id, household_id))
+        else:
+            conn.execute("DELETE FROM members WHERE id = ?", (member_id,))
+        conn.commit()
+        conn.close()
+
     # ── Accounts ───────────────────────────
 
     def create_account(self, account: Account) -> Account:
@@ -506,7 +516,7 @@ class SQLiteRepository:
         if row is None:
             return None
         return Account(
-            id=row["id"], name=row["name"], account_type=AccountType(row["type"]),
+            id=row["id"], name=row["name"], account_type=row["type"],
             currency=row["currency"], balance=Money(row["balance"], row["currency"], 2),
             household_id=row["household_id"], member_id=row["member_id"],
             account_number=row["account_number"], status=row["status"],
@@ -524,7 +534,7 @@ class SQLiteRepository:
         conn.close()
         return [
             Account(
-                id=r["id"], name=r["name"], account_type=AccountType(r["type"]),
+                id=r["id"], name=r["name"], account_type=r["type"],
                 currency=r["currency"], balance=Money(r["balance"], r["currency"], 2),
                 household_id=r["household_id"], member_id=r["member_id"],
                 account_number=r["account_number"], status=r["status"],
@@ -552,6 +562,9 @@ class SQLiteRepository:
                      (new_balance.value, datetime.now().isoformat(), account_id))
         conn.commit()
         conn.close()
+
+    def update_balance(self, account_id: str, new_balance: Money) -> None:
+        self.update_account_balance(account_id, new_balance)
 
     def delete_account(self, account_id: str, household_id: str) -> None:
         conn = self._connect()
@@ -601,6 +614,16 @@ class SQLiteRepository:
                         color=row["color"], icon=row["icon"], is_active=bool(row["is_active"]),
                         created_at=Timestamp(row["created_at"]))
 
+    def delete_category(self, category_id: str, household_id: str = None) -> None:
+        conn = self._connect()
+        if household_id:
+            conn.execute("DELETE FROM categories WHERE id = ? AND household_id = ?",
+                         (category_id, household_id))
+        else:
+            conn.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+        conn.commit()
+        conn.close()
+
     # ── Transactions ───────────────────────
 
     def create_transaction(self, transaction: Transaction) -> Transaction:
@@ -617,6 +640,71 @@ class SQLiteRepository:
         conn.commit()
         conn.close()
         return transaction
+
+    def create_transfer(self, transfer: Transfer) -> Transfer:
+        conn = self._connect()
+        conn.execute(
+            "INSERT INTO transfers (id, from_account_id, to_account_id, amount, currency, date, household_id, description, reference, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (transfer.id, transfer.from_account_id, transfer.to_account_id,
+             transfer.amount.value, transfer.amount.currency, transfer.date.to_iso(),
+             transfer.household_id, transfer.description, transfer.reference,
+             transfer.created_at.to_iso()),
+        )
+        conn.commit()
+        conn.close()
+        return transfer
+
+    def create_ledger_entry(self, entry: LedgerEntry) -> LedgerEntry:
+        conn = self._connect()
+        conn.execute(
+            "INSERT INTO ledger_entries (id, transaction_id, account_id, type, amount, balance_before, balance_after, household_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (entry.id, entry.transaction_id, entry.account_id, entry.type,
+             entry.amount.value, entry.balance_before.value, entry.balance_after.value,
+             entry.household_id, entry.created_at.to_iso()),
+        )
+        conn.commit()
+        conn.close()
+        return entry
+
+    def create_recurring_payment(self, payment: RecurringPayment) -> RecurringPayment:
+        conn = self._connect()
+        conn.execute(
+            "INSERT INTO recurring_payments (id, name, amount, frequency, category_id, account_id, household_id, day_of_month, next_due_date, is_active, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (payment.id, payment.name, payment.amount.value, payment.frequency,
+             payment.category_id, payment.account_id, payment.household_id,
+             payment.day_of_month, payment.next_due_date.to_iso() if payment.next_due_date else None,
+             1 if payment.is_active else 0, payment.created_at.to_iso()),
+        )
+        conn.commit()
+        conn.close()
+        return payment
+
+    def create_debt_payment(self, payment: DebtPayment) -> DebtPayment:
+        conn = self._connect()
+        conn.execute(
+            "INSERT INTO debt_payments (id, debt_id, amount, date, household_id, account_id, notes, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (payment.id, payment.debt_id, payment.amount.value, payment.date.to_iso(),
+             payment.household_id, payment.account_id, payment.notes, payment.created_at.to_iso()),
+        )
+        conn.commit()
+        conn.close()
+        return payment
+
+    def create_goal_contribution(self, contribution: GoalContribution) -> GoalContribution:
+        conn = self._connect()
+        conn.execute(
+            "INSERT INTO goal_contributions (id, goal_id, amount, date, household_id, account_id, notes, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (contribution.id, contribution.goal_id, contribution.amount.value, contribution.date.to_iso(),
+             contribution.household_id, contribution.account_id, contribution.notes, contribution.created_at.to_iso()),
+        )
+        conn.commit()
+        conn.close()
+        return contribution
 
     def get_transactions(self, household_id: str) -> List[Transaction]:
         conn = self._connect()
@@ -1105,6 +1193,9 @@ class SQLiteRepository:
             raise ValueError(f"Cannot create object of type {type(obj)}")
 
     def get_by_id(self, id: str):
+        result = self.get_household(id)
+        if result:
+            return result
         result = self.get_account(id)
         if result:
             return result

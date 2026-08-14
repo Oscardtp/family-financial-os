@@ -7,7 +7,7 @@ from app.infrastructure.sqlite import SQLiteRepository
 from app.application.use_cases import (
     TransactionUseCase, BudgetUseCase, DebtUseCase, GoalUseCase,
     AccountUseCase, AssetUseCase, LiabilityUseCase, MemberUseCase,
-    HouseholdUseCase, AuthUseCase, CategoryUseCase
+    HouseholdUseCase, AuthUseCase, CategoryUseCase, RecurringPaymentUseCase
 )
 from app.application.interfaces import (
     AccountRepository, TransactionRepository, TransferRepository,
@@ -97,6 +97,12 @@ def get_category_use_case(
     repo: SQLiteRepository = Depends(get_repository),
 ):
     return CategoryUseCase(repo)
+
+
+def get_recurring_payment_use_case(
+    repo: SQLiteRepository = Depends(get_repository),
+) -> RecurringPaymentUseCase:
+    return RecurringPaymentUseCase(repo)
 
 
 def get_auth_use_case(

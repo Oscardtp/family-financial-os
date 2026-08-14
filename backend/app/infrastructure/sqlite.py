@@ -682,6 +682,61 @@ class SQLiteRepository:
         conn.close()
         return payment
 
+    def get_recurring_payments(self, household_id: str) -> List[RecurringPayment]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT * FROM recurring_payments WHERE household_id = ?",
+            (household_id,),
+        ).fetchall()
+        conn.close()
+        return [
+            RecurringPayment(
+                id=r["id"], name=r["name"], amount=Money(r["amount"], "COP", 2),
+                frequency=r["frequency"], category_id=r["category_id"],
+                account_id=r["account_id"], household_id=r["household_id"],
+                day_of_month=r["day_of_month"],
+                next_due_date=Timestamp(r["next_due_date"]) if r["next_due_date"] else None,
+                is_active=bool(r["is_active"]),
+                created_at=Timestamp(r["created_at"]),
+            )
+            for r in rows
+        ]
+
+    def get_recurring_payment(self, payment_id: str) -> Optional[RecurringPayment]:
+        conn = self._connect()
+        row = conn.execute("SELECT * FROM recurring_payments WHERE id = ?", (payment_id,)).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return RecurringPayment(
+            id=row["id"], name=row["name"], amount=Money(row["amount"], "COP", 2),
+            frequency=row["frequency"], category_id=row["category_id"],
+            account_id=row["account_id"], household_id=row["household_id"],
+            day_of_month=row["day_of_month"],
+            next_due_date=Timestamp(row["next_due_date"]) if row["next_due_date"] else None,
+            is_active=bool(row["is_active"]),
+            created_at=Timestamp(row["created_at"]),
+        )
+
+    def update_recurring_payment(self, payment_id: str, data: dict) -> Optional[RecurringPayment]:
+        payment = self.get_recurring_payment(payment_id)
+        if not payment:
+            return None
+        for key, value in data.items():
+            if hasattr(payment, key):
+                setattr(payment, key, value)
+        conn = self._connect()
+        conn.execute(
+            "UPDATE recurring_payments SET name=?, amount=?, frequency=?, category_id=?, account_id=?, day_of_month=?, next_due_date=?, is_active=? WHERE id=?",
+            (payment.name, payment.amount.value, payment.frequency, payment.category_id,
+             payment.account_id, payment.day_of_month,
+             payment.next_due_date.to_iso() if payment.next_due_date else None,
+             1 if payment.is_active else 0, payment.id),
+        )
+        conn.commit()
+        conn.close()
+        return payment
+
     def create_debt_payment(self, payment: DebtPayment) -> DebtPayment:
         conn = self._connect()
         conn.execute(
@@ -1220,6 +1275,9 @@ class SQLiteRepository:
         result = self.get_liability(id)
         if result:
             return result
+        result = self.get_recurring_payment(id)
+        if result:
+            return result
         result = self.get_user_by_id(id)
         if result:
             return result
@@ -1258,6 +1316,10 @@ class SQLiteRepository:
             liabilities = self.get_liabilities(household_id)
             if liabilities:
                 return liabilities
+        if type_hint == "recurring_payment" or type_hint is None:
+            recurring_payments = self.get_recurring_payments(household_id)
+            if recurring_payments:
+                return recurring_payments
         return []
 
     def get_all(self):

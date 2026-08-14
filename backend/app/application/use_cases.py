@@ -533,6 +533,105 @@ class CategoryUseCase:
         return self._repo.get_by_id(category_id)
 
 
+class RecurringPaymentUseCase:
+    def __init__(self, repo):
+        self._repo = repo
+
+    def create_recurring_payment(self, household_id: str, name: str, amount: float, frequency: str, category_id: str, account_id: str, day_of_month: int = None, next_due_date: str = None) -> RecurringPayment:
+        payment = RecurringPayment(
+            id=str(uuid.uuid4()),
+            name=name,
+            amount=Money.from_float(amount, "COP", 2),
+            frequency=frequency,
+            category_id=category_id,
+            account_id=account_id,
+            household_id=household_id,
+            day_of_month=day_of_month,
+            next_due_date=Timestamp(next_due_date) if next_due_date else Timestamp(datetime.now()),
+        )
+        self._repo.create(payment)
+        return payment
+
+    def get_recurring_payments(self, household_id: str) -> List[RecurringPayment]:
+        return self._repo.get_by_household(household_id, type_hint="recurring_payment")
+
+    def get_recurring_payment(self, payment_id: str) -> Optional[RecurringPayment]:
+        return self._repo.get_by_id(payment_id)
+
+    def execute_recurring_payment(self, payment_id: str, household_id: str) -> Transaction:
+        payment = self._repo.get_by_id(payment_id)
+        if not payment:
+            raise ValueError("Recurring payment not found")
+        if not payment.is_active:
+            raise ValueError("Recurring payment is not active")
+
+        account = self._repo.get_account(payment.account_id)
+        if not account:
+            raise ValueError("Account not found")
+
+        money_amount = payment.amount
+        if account.balance < money_amount:
+            raise ValueError("Insufficient balance")
+
+        new_balance = account.balance - money_amount
+
+        transaction = Transaction(
+            account_id=payment.account_id,
+            category_id=payment.category_id,
+            type=TransactionType.EXPENSE,
+            amount=money_amount,
+            description=f"Pago recurrente: {payment.name}",
+            date=Timestamp(datetime.now()),
+            household_id=household_id,
+            status=TransactionStatus.PROCESSED,
+        )
+        self._repo.create(transaction)
+        self._repo.update_balance(payment.account_id, new_balance)
+        self._repo.create(LedgerEntry(
+            transaction_id=transaction.id,
+            account_id=payment.account_id,
+            type=TransactionType.EXPENSE,
+            amount=money_amount,
+            balance_before=account.balance,
+            balance_after=new_balance,
+            household_id=household_id,
+        ))
+
+        payment.next_due_date = Timestamp(self._calculate_next_due(payment.next_due_date.to_datetime(), payment.frequency))
+        self._repo.update(payment.id, {
+            "next_due_date": payment.next_due_date.to_iso(),
+        })
+
+        return transaction
+
+    def skip_recurring_payment(self, payment_id: str) -> RecurringPayment:
+        payment = self._repo.get_by_id(payment_id)
+        if not payment:
+            raise ValueError("Recurring payment not found")
+
+        payment.next_due_date = Timestamp(self._calculate_next_due(payment.next_due_date.to_datetime(), payment.frequency))
+        self._repo.update(payment.id, {
+            "next_due_date": payment.next_due_date.to_iso(),
+        })
+        return payment
+
+    def _calculate_next_due(self, current_date, frequency: str):
+        if frequency == "monthly":
+            month = current_date.month - 1 + 1
+            year = current_date.year + month // 12
+            month = month % 12 + 1
+            day = min(current_date.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
+            return datetime(year, month, day, current_date.hour, current_date.minute, current_date.second)
+        elif frequency == "weekly":
+            return current_date + timedelta(days=7)
+        elif frequency == "biweekly":
+            return current_date + timedelta(days=14)
+        elif frequency == "yearly":
+            return current_date.replace(year=current_date.year + 1)
+        else:
+            return current_date + timedelta(days=30)
+
+
 class AuthUseCase:
     def __init__(self, repo: SQLiteRepository):
         self._repo = repo

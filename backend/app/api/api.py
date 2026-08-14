@@ -24,8 +24,8 @@ from app.api.deps import (
     get_account_use_case, get_transaction_use_case, get_budget_use_case,
     get_debt_use_case, get_goal_use_case, get_asset_use_case,
     get_liability_use_case, get_member_use_case, get_household_use_case,
-    get_category_use_case, get_current_user, get_repository, get_auth_use_case,
-    get_household_id
+    get_category_use_case, get_recurring_payment_use_case, get_current_user,
+    get_repository, get_auth_use_case, get_household_id
 )
 from app.application.use_cases import AuthUseCase
 
@@ -870,85 +870,134 @@ class RecurringPaymentUpdate(BaseModel):
 
 
 @router.get("/recurring-payments")
-async def list_recurring_payments(is_active: Optional[bool] = Query(None)):
-    payments = [
+async def list_recurring_payments(household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payments = use_case.get_recurring_payments(household_id)
+    return success_response([
         {
-            "id": 1, "name": "Arriendo", "amount": "1200000.00",
-            "frequency": "monthly", "category": {"id": 6, "name": "Servicios"},
-            "account": {"id": 3, "name": "Bancolombia Ahorros"},
-            "day_of_month": 20, "next_due_date": "2026-08-20", "is_active": True
-        },
-        {
-            "id": 2, "name": "Netflix", "amount": "45900.00",
-            "frequency": "monthly", "category": {"id": 8, "name": "Netflix"},
-            "account": {"id": 5, "name": "TC Visa"},
-            "day_of_month": 15, "next_due_date": "2026-08-15", "is_active": True
+            "id": p.id,
+            "name": p.name,
+            "amount": p.amount.to_string(),
+            "frequency": p.frequency,
+            "category_id": p.category_id,
+            "account_id": p.account_id,
+            "day_of_month": p.day_of_month,
+            "next_due_date": p.next_due_date.to_date_string() if p.next_due_date else None,
+            "is_active": p.is_active,
         }
-    ]
-    return success_response(payments)
+        for p in payments
+    ])
 
 
 @router.post("/recurring-payments", status_code=201)
-async def create_recurring_payment(data: RecurringPaymentCreate):
-    amount = Money.from_string(data.amount, "COP", 2)
+async def create_recurring_payment(data: RecurringPaymentCreate, household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payment = use_case.create_recurring_payment(
+        household_id=household_id,
+        name=data.name,
+        amount=float(data.amount),
+        frequency=data.frequency,
+        category_id=data.category_id,
+        account_id=data.account_id,
+        day_of_month=data.day_of_month,
+        next_due_date=data.next_due_date,
+    )
     return success_response({
-        "id": 100,
-        "name": data.name,
-        "amount": money_to_string(amount),
-        "frequency": data.frequency,
-        "category": {"id": int(data.category_id)},
-        "account": {"id": int(data.account_id)},
-        "day_of_month": data.day_of_month,
-        "is_active": True
-    })
+        "id": payment.id,
+        "name": payment.name,
+        "amount": payment.amount.to_string(),
+        "frequency": payment.frequency,
+        "category_id": payment.category_id,
+        "account_id": payment.account_id,
+        "day_of_month": payment.day_of_month,
+        "next_due_date": payment.next_due_date.to_date_string() if payment.next_due_date else None,
+        "is_active": payment.is_active,
+    }, status_code=201)
 
 
 @router.get("/recurring-payments/{id}")
-async def get_recurring_payment(id: int):
+async def get_recurring_payment(id: str, household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payment = use_case.get_recurring_payment(id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Recurring payment not found")
     return success_response({
-        "id": id,
-        "name": "Arriendo",
-        "amount": "1200000.00",
-        "frequency": "monthly",
-        "category": {"id": 6, "name": "Servicios"},
-        "account": {"id": 3, "name": "Bancolombia Ahorros"},
-        "day_of_month": 20,
-        "next_due_date": "2026-08-20",
-        "is_active": True
+        "id": payment.id,
+        "name": payment.name,
+        "amount": payment.amount.to_string(),
+        "frequency": payment.frequency,
+        "category_id": payment.category_id,
+        "account_id": payment.account_id,
+        "day_of_month": payment.day_of_month,
+        "next_due_date": payment.next_due_date.to_date_string() if payment.next_due_date else None,
+        "is_active": payment.is_active,
     })
 
 
 @router.put("/recurring-payments/{id}")
-async def update_recurring_payment(id: int, data: RecurringPaymentUpdate):
+async def update_recurring_payment(id: str, data: RecurringPaymentUpdate, household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payment = use_case.get_recurring_payment(id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Recurring payment not found")
+    
+    update_data = {}
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.amount is not None:
+        update_data["amount"] = Money.from_string(data.amount, "COP", 2).value
+    if data.frequency is not None:
+        update_data["frequency"] = data.frequency
+    if data.category_id is not None:
+        update_data["category_id"] = data.category_id
+    if data.account_id is not None:
+        update_data["account_id"] = data.account_id
+    if data.day_of_month is not None:
+        update_data["day_of_month"] = data.day_of_month
+    if data.is_active is not None:
+        update_data["is_active"] = data.is_active
+    
+    updated = use_case._repo.update_recurring_payment(id, update_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Recurring payment not found")
+    
     return success_response({
-        "id": id,
-        "name": data.name or "Arriendo",
-        "amount": data.amount or "1200000.00",
-        "is_active": data.is_active if data.is_active is not None else True
+        "id": updated.id,
+        "name": updated.name,
+        "amount": updated.amount.to_string(),
+        "frequency": updated.frequency,
+        "category_id": updated.category_id,
+        "account_id": updated.account_id,
+        "day_of_month": updated.day_of_month,
+        "next_due_date": updated.next_due_date.to_date_string() if updated.next_due_date else None,
+        "is_active": updated.is_active,
     })
 
 
 @router.delete("/recurring-payments/{id}", status_code=204)
-async def delete_recurring_payment(id: int):
+async def delete_recurring_payment(id: str, household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payment = use_case.get_recurring_payment(id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Recurring payment not found")
+    use_case._repo.update_recurring_payment(id, {"is_active": False})
     return Response(status_code=204)
 
 
 @router.post("/recurring-payments/{id}/execute")
-async def execute_recurring_payment(id: int):
+async def execute_recurring_payment(id: str, household_id: str = Depends(get_household_id), use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    transaction = use_case.execute_recurring_payment(id, household_id)
     return success_response({
         "id": id,
         "executed": True,
         "transaction_created": True,
-        "amount": "1200000.00"
+        "amount": transaction.amount.to_string(),
+        "transaction_id": transaction.id,
     })
 
 
 @router.post("/recurring-payments/{id}/skip")
-async def skip_recurring_payment(id: int):
+async def skip_recurring_payment(id: str, use_case: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case)):
+    payment = use_case.skip_recurring_payment(id)
     return success_response({
         "id": id,
         "skipped": True,
-        "next_due_date": "2026-09-20"
+        "next_due_date": payment.next_due_date.to_date_string() if payment.next_due_date else None,
     })
 
 

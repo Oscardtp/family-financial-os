@@ -34,11 +34,13 @@ class TransactionUseCase:
         account_repo: AccountRepository,
         transfer_repo: TransferRepository,
         ledger_repo: LedgerEntryRepository,
+        budget_repo: BudgetRepository = None,
     ):
         self._transaction_repo = transaction_repo
         self._account_repo = account_repo
         self._transfer_repo = transfer_repo
         self._ledger_repo = ledger_repo
+        self._budget_repo = budget_repo
 
     def register_income(self, household_id: str, account_id: str, amount: float, category_id: str, description: str) -> Transaction:
         account = self._account_repo.get_by_id(account_id)
@@ -103,6 +105,15 @@ class TransactionUseCase:
             balance_after=new_balance,
             household_id=household_id,
         ))
+
+        if self._budget_repo and category_id:
+            budgets = self._budget_repo.get_budgets(household_id)
+            for budget in budgets:
+                if budget.category_id == category_id:
+                    new_spent = budget.spent + money_amount
+                    self._budget_repo.update(budget.id, {"spent": new_spent.value})
+                    break
+
         return transaction
 
     def register_transfer(self, household_id: str, from_account_id: str, to_account_id: str, amount: float, description: str = "") -> Transfer:

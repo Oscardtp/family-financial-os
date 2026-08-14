@@ -31,6 +31,7 @@ def get_transaction_use_case(
         account_repo=repo,
         transfer_repo=repo,
         ledger_repo=repo,
+        budget_repo=repo,
     )
 
 

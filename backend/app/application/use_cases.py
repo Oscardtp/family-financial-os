@@ -165,6 +165,9 @@ class TransactionUseCase:
 
         return transfer
 
+    def get_transfers(self, household_id: str) -> List[Transfer]:
+        return self._transfer_repo.get_by_household(household_id)
+
     def get_transactions(self, household_id: str) -> List[Transaction]:
         return self._transaction_repo.get_by_household(household_id)
 

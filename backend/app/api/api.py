@@ -520,6 +520,45 @@ class TransactionUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class QuickExpenseCreate(BaseModel):
+    amount: str
+    category_id: str
+    account_id: Optional[str] = None
+    description: Optional[str] = ""
+
+
+@router.post("/transactions/quick", status_code=201)
+async def quick_expense(
+    data: QuickExpenseCreate,
+    household_id: str = Depends(get_household_id),
+    use_case_tx: TransactionUseCase = Depends(get_transaction_use_case),
+    use_case_accounts: AccountUseCase = Depends(get_account_use_case),
+):
+    account_id = data.account_id
+    if not account_id:
+        accounts = use_case_accounts.get_accounts(household_id)
+        if not accounts:
+            raise HTTPException(status_code=400, detail="No accounts available")
+        account_id = accounts[0].id
+
+    tx = use_case_tx.register_expense(
+        household_id=household_id,
+        account_id=account_id,
+        amount=float(data.amount),
+        category_id=data.category_id,
+        description=data.description or "Gasto rápido",
+    )
+    return success_response({
+        "id": tx.id,
+        "type": tx.type,
+        "amount": tx.amount.to_string(),
+        "date": tx.date.to_date_string(),
+        "description": tx.description,
+        "account_id": tx.account_id,
+        "category_id": tx.category_id,
+    })
+
+
 @router.get("/transactions")
 async def list_transactions(
     from_date: Optional[str] = Query(None, alias="from"),
@@ -650,21 +689,22 @@ class TransferCreate(BaseModel):
 
 @router.get("/transfers")
 async def list_transfers(
-    from_date: Optional[str] = Query(None, alias="from"),
-    to: Optional[str] = Query(None),
-    account_id: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(25, ge=1, le=100),
+    household_id: str = Depends(get_household_id),
     use_case: TransactionUseCase = Depends(get_transaction_use_case)
 ):
-    # For now, return empty list since transfers are created via use case
-    # In a full implementation, we'd add a list_transfers method
-    return success_response([], meta={
-        "page": page,
-        "per_page": per_page,
-        "total": 0,
-        "total_pages": 0
-    })
+    transfers = use_case.get_transfers(household_id)
+    result = [
+        {
+            "id": t.id,
+            "from_account": {"id": t.from_account_id},
+            "to_account": {"id": t.to_account_id},
+            "amount": t.amount.to_string(),
+            "date": t.date.to_date_string(),
+            "description": t.description,
+        }
+        for t in transfers
+    ]
+    return success_response(result)
 
 
 @router.post("/transfers", status_code=201)
@@ -687,19 +727,23 @@ async def create_transfer(data: TransferCreate, household_id: str = Depends(get_
 
 
 @router.get("/transfers/{id}")
-async def get_transfer(id: str):
+async def get_transfer(id: str, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+    transfer = use_case._transfer_repo.get_by_id(id)
+    if not transfer or transfer.household_id != household_id:
+        raise HTTPException(status_code=404, detail="Transfer not found")
     return success_response({
-        "id": id,
-        "from_account": {"id": 3, "name": "Bancolombia Ahorros"},
-        "to_account": {"id": 2, "name": "Nequi"},
-        "amount": "500000.00",
-        "date": "2026-08-13",
-        "description": "Ahorro mensual"
+        "id": transfer.id,
+        "from_account": {"id": transfer.from_account_id},
+        "to_account": {"id": transfer.to_account_id},
+        "amount": transfer.amount.to_string(),
+        "date": transfer.date.to_date_string(),
+        "description": transfer.description,
     })
 
 
 @router.delete("/transfers/{id}", status_code=204)
-async def delete_transfer(id: int):
+async def delete_transfer(id: str, household_id: str = Depends(get_household_id), use_case: TransactionUseCase = Depends(get_transaction_use_case)):
+    use_case._transfer_repo.delete(id, household_id)
     return Response(status_code=204)
 
 
@@ -1552,6 +1596,7 @@ async def get_dashboard(
     use_case_goals: GoalUseCase = Depends(get_goal_use_case),
     use_case_assets: AssetUseCase = Depends(get_asset_use_case),
     use_case_liabilities: LiabilityUseCase = Depends(get_liability_use_case),
+    use_case_recurring: RecurringPaymentUseCase = Depends(get_recurring_payment_use_case),
 ):
     transactions = use_case_tx.get_transactions(household_id)
     accounts = use_case_accounts.get_accounts(household_id)
@@ -1560,6 +1605,7 @@ async def get_dashboard(
     goals = use_case_goals.get_goals(household_id)
     assets = use_case_assets.get_assets(household_id)
     liabilities = use_case_liabilities.get_liabilities(household_id)
+    recurring_payments = use_case_recurring.get_recurring_payments(household_id)
 
     income = sum(t.amount.value for t in transactions if t.type == TransactionType.INCOME)
     expenses = sum(t.amount.value for t in transactions if t.type == TransactionType.EXPENSE)
@@ -1569,6 +1615,37 @@ async def get_dashboard(
     total_liabilities_value = sum(l.amount.value for l in liabilities)
     total_account_assets = sum(a.balance.value for a in accounts if AccountType.get_nature(a.account_type) == "asset")
     net_worth_value = total_assets_value + total_account_assets - total_liabilities_value
+
+    from_map = {}
+    to_map = {}
+    for t in transactions:
+        month = t.date.to_iso()[:7]
+        if t.type == TransactionType.INCOME:
+            from_map[month] = from_map.get(month, 0) + t.amount.value
+        elif t.type == TransactionType.EXPENSE:
+            to_map[month] = to_map.get(month, 0) + t.amount.value
+
+    months = sorted(set(list(from_map.keys()) + list(to_map.keys())))
+    cash_flow = []
+    for m in months[-6:]:
+        cash_flow.append({
+            "month": m,
+            "income": Money(from_map.get(m, 0), "COP", 2).to_string(),
+            "expenses": Money(to_map.get(m, 0), "COP", 2).to_string(),
+        })
+
+    today = Timestamp(datetime.now())
+    upcoming = []
+    for p in recurring_payments:
+        if p.next_due_date and p.next_due_date.to_date_string() >= today.to_date_string():
+            upcoming.append({
+                "id": p.id,
+                "name": p.name,
+                "amount": p.amount.to_string(),
+                "next_due_date": p.next_due_date.to_date_string(),
+                "frequency": p.frequency,
+            })
+    upcoming.sort(key=lambda x: x["next_due_date"])
 
     return success_response({
         "period": {
@@ -1586,8 +1663,8 @@ async def get_dashboard(
             {"id": a.id, "name": a.name, "balance": a.balance.to_string(), "type": a.account_type}
             for a in accounts
         ],
-        "cash_flow": [],
-        "upcoming_payments": [],
+        "cash_flow": cash_flow,
+        "upcoming_payments": upcoming[:10],
         "budget_progress": [
             {
                 "category_id": b.category_id,

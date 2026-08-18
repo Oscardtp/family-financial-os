@@ -281,6 +281,15 @@ def init_db():
         FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
     );
     """)
+    conn.executescript("""
+    CREATE INDEX IF NOT EXISTS idx_transactions_household_date ON transactions(household_id, date);
+    CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
+    CREATE INDEX IF NOT EXISTS idx_transfers_household ON transfers(household_id);
+    CREATE INDEX IF NOT EXISTS idx_recurring_household_due ON recurring_payments(household_id, next_due_date);
+    CREATE INDEX IF NOT EXISTS idx_budgets_household ON budgets(household_id);
+    CREATE INDEX IF NOT EXISTS idx_debts_household ON debts(household_id);
+    """)
     conn.commit()
     conn.close()
 
@@ -654,6 +663,39 @@ class SQLiteRepository:
         conn.commit()
         conn.close()
         return transfer
+
+    def get_transfer(self, id: str) -> Optional[Transfer]:
+        conn = self._connect()
+        row = conn.execute("SELECT * FROM transfers WHERE id = ?", (id,)).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return Transfer(
+            id=row["id"], from_account_id=row["from_account_id"], to_account_id=row["to_account_id"],
+            amount=Money(row["amount"], row["currency"], 2), date=Timestamp(row["date"]),
+            household_id=row["household_id"], description=row["description"],
+            reference=row["reference"], created_at=Timestamp(row["created_at"]),
+        )
+
+    def get_transfers(self, household_id: str) -> List[Transfer]:
+        conn = self._connect()
+        rows = conn.execute("SELECT * FROM transfers WHERE household_id = ?", (household_id,)).fetchall()
+        conn.close()
+        return [
+            Transfer(
+                id=r["id"], from_account_id=r["from_account_id"], to_account_id=r["to_account_id"],
+                amount=Money(r["amount"], r["currency"], 2), date=Timestamp(r["date"]),
+                household_id=r["household_id"], description=r["description"],
+                reference=r["reference"], created_at=Timestamp(r["created_at"]),
+            )
+            for r in rows
+        ]
+
+    def delete_transfer(self, id: str, household_id: str) -> None:
+        conn = self._connect()
+        conn.execute("DELETE FROM transfers WHERE id = ? AND household_id = ?", (id, household_id))
+        conn.commit()
+        conn.close()
 
     def create_ledger_entry(self, entry: LedgerEntry) -> LedgerEntry:
         conn = self._connect()
@@ -1312,6 +1354,9 @@ class SQLiteRepository:
         result = self.get_recurring_payment(id)
         if result:
             return result
+        result = self.get_transfer(id)
+        if result:
+            return result
         result = self.get_user_by_id(id)
         if result:
             return result
@@ -1354,6 +1399,10 @@ class SQLiteRepository:
             recurring_payments = self.get_recurring_payments(household_id)
             if recurring_payments:
                 return recurring_payments
+        if type_hint == "transfer" or type_hint is None:
+            transfers = self.get_transfers(household_id)
+            if transfers:
+                return transfers
         return []
 
     def get_all(self):
@@ -1388,6 +1437,7 @@ class SQLiteRepository:
         self.delete_goal(id, household_id)
         self.delete_asset(id, household_id)
         self.delete_liability(id, household_id)
+        self.delete_transfer(id, household_id)
 
 
 # ── Repository initialization ────────────────────────────

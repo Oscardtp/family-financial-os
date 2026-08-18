@@ -221,3 +221,48 @@ class TestCategoryAPI:
         response = authenticated_client.get("/api/v1/categories")
         assert response.status_code == 200
         assert len(response.json()["data"]) >= 1
+
+
+class TestSmokeAPI:
+    def test_quick_expense(self, authenticated_client):
+        account = authenticated_client.post("/api/v1/accounts", json={
+            "name": "Quick Account",
+            "type": "bank",
+            "initial_balance": "1000000.00"
+        }).json()["data"]
+        category = authenticated_client.post("/api/v1/categories", json={
+            "name": "Comida", "type": "expense"
+        }).json()["data"]
+        response = authenticated_client.post("/api/v1/transactions/quick", json={
+            "amount": "25000.00",
+            "category_id": category["id"],
+            "account_id": account["id"]
+        })
+        assert response.status_code == 201
+        data = response.json()["data"]
+        assert data["amount"] == "25000.00"
+        assert data["type"] == "expense"
+
+    def test_dashboard(self, authenticated_client):
+        response = authenticated_client.get("/api/v1/dashboard")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert "summary" in data
+        assert "cash_flow" in data
+        assert "upcoming_payments" in data
+        assert isinstance(data["cash_flow"], list)
+        assert isinstance(data["upcoming_payments"], list)
+
+    def test_categories_tree(self, authenticated_client):
+        authenticated_client.post("/api/v1/categories", json={
+            "name": "Root", "type": "expense"
+        })
+        response = authenticated_client.get("/api/v1/categories/tree")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert isinstance(data, list)
+
+    def test_transfer_list(self, authenticated_client):
+        response = authenticated_client.get("/api/v1/transfers")
+        assert response.status_code == 200
+        assert "data" in response.json()

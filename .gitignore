@@ -40,3 +40,13 @@ htmlcov/
 .env
 .env.local
 .env.*.local
+
+# Kilo
+.kilo/
+.agents/
+
+# Exploration artifacts
+backend/check_routes.py
+backend/list_routes.py
+backend/mysql/
+backend/php/

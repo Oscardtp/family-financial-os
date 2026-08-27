@@ -41,7 +41,7 @@ async def get_recurring_payment(
     try:
         return await service.get(payment_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Recurring payment not found")
+        raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
 
 
 @router.put("/{payment_id}", response_model=RecurringPaymentResponse)
@@ -55,7 +55,7 @@ async def update_recurring_payment(
     try:
         return await service.update(payment_id, data, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Recurring payment not found")
+        raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
 
 
 @router.delete("/{payment_id}", status_code=204)
@@ -68,7 +68,7 @@ async def delete_recurring_payment(
     try:
         await service.delete(payment_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Recurring payment not found")
+        raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
 
 
 @router.post("/{payment_id}/pay", response_model=RecurringPaymentResponse)

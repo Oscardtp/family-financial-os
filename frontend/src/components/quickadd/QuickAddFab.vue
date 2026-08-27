@@ -131,7 +131,7 @@ async function handleTransactionSubmit(data) {
     step.value = 'source'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intentalo de nuevo.')
+    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intenta de nuevo.')
   } finally {
     submitting.value = false
   }
@@ -152,7 +152,7 @@ async function handleRecurringSubmit(data) {
     step.value = 'done'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intentalo de nuevo.')
+    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intenta de nuevo.')
   } finally {
     submitting.value = false
   }

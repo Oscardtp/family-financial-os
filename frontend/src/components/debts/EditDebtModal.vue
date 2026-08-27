@@ -150,7 +150,7 @@ async function submitEdit() {
     emit('updated')
     emit('close')
   } catch (e) {
-    editError.value = e.response?.data?.detail || 'Error al actualizar la deuda'
+    editError.value = e.response?.data?.detail || 'No pudimos guardar los cambios. Intenta de nuevo.'
   } finally {
     editing.value = false
   }

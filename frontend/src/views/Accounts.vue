@@ -291,7 +291,7 @@ async function loadAccounts() {
     const { data } = await api.get('/accounts')
     accounts.value = data
   } catch (e) {
-    error.value = 'Error al cargar las cuentas'
+    error.value = 'No pudimos cargar tus cuentas. Intenta de nuevo.'
     console.error(e)
   } finally {
     loading.value = false
@@ -309,7 +309,7 @@ async function createAccount() {
     form.balance = 0
     form.currency = 'COP'
   } catch (e) {
-    formError.value = e.response?.data?.detail || 'Error al crear la cuenta'
+    formError.value = e.response?.data?.detail || 'No pudimos crear la cuenta. Intenta de nuevo.'
   } finally {
     submitting.value = false
   }
@@ -332,7 +332,7 @@ async function editAccount() {
     if (idx !== -1) accounts.value[idx] = data
     showEditModal.value = false
   } catch (e) {
-    editError.value = e.response?.data?.detail || 'Error al actualizar la cuenta'
+    editError.value = e.response?.data?.detail || 'No pudimos guardar los cambios. Intenta de nuevo.'
   } finally {
     editing.value = false
   }

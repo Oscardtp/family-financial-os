@@ -12,7 +12,7 @@
         <button class="btn btn-sm btn-danger" @click="$emit('delete', tx.id)">X</button>
       </div>
     </div>
-    <p v-else class="empty-text">No hay transacciones para este filtro</p>
+    <p v-else class="empty-text">No hay transacciones con este filtro</p>
   </div>
 </template>
 

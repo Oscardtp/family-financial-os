@@ -52,7 +52,7 @@ async def get_goal(
     try:
         return await service.get_goal(goal_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Savings goal not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
 
 @router.put("/goals/{goal_id}", response_model=SavingsGoalResponse, summary="Update goal", description="Modify savings goal details")
@@ -66,7 +66,7 @@ async def update_goal(
     try:
         return await service.update_goal(goal_id, data, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Savings goal not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
 
 @router.delete("/goals/{goal_id}", status_code=204, summary="Delete goal", description="Remove a savings goal")
@@ -79,7 +79,7 @@ async def delete_goal(
     try:
         await service.delete_goal(goal_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Savings goal not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
 
 @router.post("/goals/{goal_id}/contributions", response_model=SavingsContributionResponse, status_code=201, summary="Record contribution", description="Add money toward a savings goal")
@@ -93,7 +93,7 @@ async def create_contribution(
     try:
         return await service.create_contribution(goal_id, data, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Savings goal not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
 
 @router.get("/goals/{goal_id}/contributions", response_model=list[SavingsContributionResponse], summary="List contributions", description="Returns all contributions made toward a savings goal")
@@ -108,7 +108,7 @@ async def list_contributions(
     try:
         return await service.list_contributions(goal_id, current_user["household_id"], skip, limit)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Savings goal not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
 
 @router.post(

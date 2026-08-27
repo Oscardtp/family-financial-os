@@ -36,7 +36,7 @@ class AuthService:
     async def register(self, data) -> TokenResponse:
         existing = await self.user_repo.get_by_email(data.email)
         if existing:
-            raise HTTPException(status_code=400, detail="Este correo ya esta registrado")
+            raise HTTPException(status_code=400, detail="Este correo ya está registrado")
 
         user = await self.user_repo.create({
             "email": data.email,
@@ -63,7 +63,7 @@ class AuthService:
     async def login(self, data) -> TokenResponse:
         user = await self.user_repo.get_by_email(data.email)
         if not user or not verify_password(data.password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
+            raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
 
         access = create_access_token({"sub": str(user["id"])})
         refresh = create_refresh_token({"sub": str(user["id"])})
@@ -72,12 +72,12 @@ class AuthService:
     async def refresh(self, token: str) -> TokenResponse:
         payload = decode_token(token)
         if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Token no valido")
+            raise HTTPException(status_code=401, detail="Sesión no válida")
 
         user_id = payload.get("sub")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+            raise HTTPException(status_code=401, detail="No encontramos tu cuenta")
 
         access = create_access_token({"sub": str(user["id"])})
         refresh = create_refresh_token({"sub": str(user["id"])})

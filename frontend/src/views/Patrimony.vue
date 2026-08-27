@@ -6,7 +6,7 @@
 
     <div v-if="loading" class="loading-state">
       <div class="spinner" />
-      <span>Cargando patrimonio...</span>
+      <span>Cargando lo que tenemos...</span>
     </div>
 
     <div v-else-if="error" class="error-state">
@@ -159,7 +159,7 @@ async function loadData() {
     assets.value = assetsRes.data
     liabilities.value = liabilitiesRes.data
   } catch {
-    error.value = 'Error al cargar el patrimonio'
+    error.value = 'No pudimos cargar tu patrimonio. Intenta de nuevo.'
   } finally {
     loading.value = false
   }

@@ -2,7 +2,7 @@
   <div class="audit-page">
     <div class="page-header">
       <h2 class="page-title">
-        Registro de Auditoria
+        Historial de actividad
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
       class="loading-state"
     >
       <div class="spinner" />
-      <span>Cargando registros...</span>
+      <span>Cargando tu historial...</span>
     </div>
 
     <div
@@ -61,7 +61,7 @@
           v-else
           class="empty-text"
         >
-          No hay registros de auditoría todavía
+          Aún no hay actividad registrada
         </p>
       </div>
     </template>
@@ -93,7 +93,7 @@ async function loadLogs() {
     const { data } = await api.get('/audit')
     logs.value = data
   } catch (e) {
-    error.value = 'Error al cargar los registros'
+    error.value = 'No pudimos cargar tu historial. Intenta de nuevo.'
     console.error(e)
   } finally {
     loading.value = false

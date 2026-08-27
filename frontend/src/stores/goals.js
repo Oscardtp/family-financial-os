@@ -69,7 +69,7 @@ export const useGoalsStore = defineStore('goals', () => {
       const res = await api.get('/savings/goals')
       goals.value = res.data
     } catch {
-      error.value = 'No pudimos cargar tus metas. Revisa tu conexion e intenta de nuevo.'
+      error.value = 'No pudimos cargar tus metas. Revisa tu conexión e intenta de nuevo.'
     } finally {
       loading.value = false
     }

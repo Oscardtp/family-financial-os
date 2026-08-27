@@ -87,7 +87,7 @@ async function handleSubmit() {
     await emit('submit', { ...form })
     Object.assign(form, buildInitial())
   } catch (e) {
-    formError.value = e?.message || 'Error al guardar'
+    formError.value = e?.message || 'No pudimos guardar. Intenta de nuevo.'
   } finally {
     submitting.value = false
   }

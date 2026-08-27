@@ -15,7 +15,7 @@
                 v-model="createForm.name"
                 type="text"
                 class="form-input"
-                placeholder="Ej: Tarjeta de credito Daviplata"
+                placeholder="Ej: Tarjeta de crédito Daviplata"
                 required
               />
             </div>
@@ -23,7 +23,7 @@
             <div class="form-group">
               <label class="form-label">Acreedor</label>
               <input
-                v-model="createForm.creditor"
+                v-model="createForm.créditor"
                 type="text"
                 class="form-input"
                 placeholder="Ej: Daviplata"
@@ -93,7 +93,7 @@
                 <label class="form-label">Tipo de Deuda</label>
                 <select v-model="createForm.debt_type" class="form-input">
                   <option value="loan">Prestamo</option>
-                  <option value="credit_card">Tarjeta de credito</option>
+                  <option value="credit_card">Tarjeta de crédito</option>
                   <option value="mortgage">Hipoteca</option>
                   <option value="personal">Personal</option>
                   <option value="other">Otro</option>
@@ -156,7 +156,7 @@ const emit = defineEmits(['close', 'created'])
 
 const createForm = reactive({
   name: '',
-  creditor: '',
+  créditor: '',
   interest_rate: 0,
   debt_type: 'loan',
   due_day: 1,
@@ -174,7 +174,7 @@ const fmtMinPay = useFormattedNumber(0, { prefix: '$' })
 watch(() => props.show, (val) => {
   if (val) {
     createForm.name = ''
-    createForm.creditor = ''
+    createForm.créditor = ''
     createForm.interest_rate = 0
     createForm.debt_type = 'loan'
     createForm.due_day = 1
@@ -194,7 +194,7 @@ async function submitCreate() {
   try {
     await api.post('/debts', {
       name: createForm.name,
-      creditor: createForm.creditor,
+      créditor: createForm.créditor,
       original_amount: fmtAmount.rawValue.value,
       current_balance: fmtBalance.rawValue.value || fmtAmount.rawValue.value,
       interest_rate: createForm.interest_rate,
@@ -207,7 +207,7 @@ async function submitCreate() {
     emit('created')
     emit('close')
   } catch (e) {
-    createError.value = e.response?.data?.detail || 'Error al crear la deuda'
+    createError.value = e.response?.data?.detail || 'No pudimos crear la deuda. Intenta de nuevo.'
   } finally {
     creating.value = false
   }

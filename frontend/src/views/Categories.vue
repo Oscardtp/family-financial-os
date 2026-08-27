@@ -2,7 +2,7 @@
   <div class="categories-page">
     <div class="page-header">
       <h2 class="page-title">
-        Categorias
+        Categorías
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
       class="loading-state"
     >
       <div class="spinner" />
-      <span>Cargando categorias...</span>
+      <span>Cargando categorías...</span>
     </div>
 
     <div
@@ -81,7 +81,7 @@
                 class="form-input"
                 type="text"
                 required
-                placeholder="Nombre de la categoria"
+                placeholder="Nombre de la categoría"
               >
             </div>
             <div class="form-group">
@@ -129,7 +129,7 @@
               type="submit"
               :disabled="submitting"
             >
-              {{ submitting ? 'Creando...' : 'Crear Categoria' }}
+              {{ submitting ? 'Creando...' : 'Crear Categoría' }}
             </button>
           </div>
         </form>
@@ -162,7 +162,7 @@ async function loadCategories() {
     const { data } = await api.get('/categories')
     categories.value = data
   } catch (e) {
-    error.value = 'Error al cargar las categorias'
+    error.value = 'No pudimos cargar tus categorías. Intenta de nuevo.'
     console.error(e)
   } finally {
     loading.value = false
@@ -183,14 +183,14 @@ async function createCategory() {
     form.icon = ''
     form.color = '#6366f1'
   } catch (e) {
-    formError.value = e.response?.data?.detail || 'Error al crear la categoria'
+    formError.value = e.response?.data?.detail || 'No pudimos crear la categoría. Intenta de nuevo.'
   } finally {
     submitting.value = false
   }
 }
 
 async function deleteCategory(id) {
-  if (!confirm('Eliminar esta categoria?')) return
+  if (!confirm('Eliminar esta categoría?')) return
   try {
     await api.delete(`/categories/${id}`)
     categories.value = categories.value.filter((c) => c.id !== id)

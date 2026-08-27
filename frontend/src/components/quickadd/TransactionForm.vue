@@ -15,7 +15,7 @@
           placeholder="0"
         >
       </div>
-      <span v-if="submitted && !amount" class="field-error">Debes indicar un monto</span>
+      <span v-if="submitted && !amount" class="field-error">Agrega un monto</span>
     </div>
 
     <div class="form-field">
@@ -33,8 +33,8 @@
           <span class="cat-name">{{ cat.name }}</span>
         </button>
       </div>
-      <p v-else class="empty-msg">No hay categorias disponibles</p>
-      <span v-if="submitted && !categoryId" class="field-error">Selecciona una categoria</span>
+      <p v-else class="empty-msg">No hay categorías disponibles</p>
+      <span v-if="submitted && !categoryId" class="field-error">Selecciona una categoría</span>
     </div>
 
     <div v-if="isDebtCategory" class="form-field">

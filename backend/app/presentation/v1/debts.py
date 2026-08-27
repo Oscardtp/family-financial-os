@@ -52,7 +52,7 @@ async def get_debt(
     try:
         return await service.get(debt_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
 
 @router.put("/{debt_id}", response_model=DebtResponse, summary="Update debt", description="Modify debt details")
@@ -66,7 +66,7 @@ async def update_debt(
     try:
         return await service.update(debt_id, data, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
 
 @router.delete("/{debt_id}", status_code=204, summary="Delete debt", description="Remove a debt record")
@@ -79,7 +79,7 @@ async def delete_debt(
     try:
         await service.delete(debt_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
 
 @router.post("/{debt_id}/payments", response_model=DebtPaymentResponse, status_code=201, summary="Record debt payment", description="Add a payment toward a debt")
@@ -137,7 +137,7 @@ async def list_debt_payments(
     try:
         return await service.list_payments(debt_id, current_user["household_id"], skip, limit)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
 
 @router.post("/{debt_id}/mark-paid", status_code=201, summary="Mark historical month as paid", description="Mark a past month as paid without recording a real payment")
@@ -164,7 +164,7 @@ async def get_payment_history(
     try:
         return await service.get_payment_history(debt_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
 
 @router.get("/{debt_id}/amortization", summary="Amortization schedule", description="Generate full amortization schedule for a debt")
@@ -177,4 +177,4 @@ async def get_amortization_schedule(
     try:
         return await service.get_amortization(debt_id, current_user["household_id"])
     except ValueError:
-        raise HTTPException(status_code=404, detail="Debt not found")
+        raise HTTPException(status_code=404, detail="No encontramos esta deuda")

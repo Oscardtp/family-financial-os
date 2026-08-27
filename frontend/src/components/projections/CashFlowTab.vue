@@ -12,7 +12,7 @@
           <span class="amount">${{ fmt(p.net_income) }}</span>
         </div>
       </div>
-      <p v-else class="empty">Sin datos de flujo de caja</p>
+      <p v-else class="empty">Sin movimientos de efectivo</p>
       <div class="summary-footer">
         <span>Ahorro proyectado: <strong>${{ fmt(cashFlow.projected_savings) }}</strong></span>
       </div>

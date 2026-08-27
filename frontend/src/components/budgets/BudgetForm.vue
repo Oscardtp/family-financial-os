@@ -52,7 +52,7 @@ async function handleSubmit() {
     form.category_id = 0
     form.amount = 0
   } catch (e) {
-    formError.value = e?.message || 'Error al crear el presupuesto'
+    formError.value = e?.message || 'No pudimos crear el presupuesto. Intenta de nuevo.'
   } finally {
     submitting.value = false
   }

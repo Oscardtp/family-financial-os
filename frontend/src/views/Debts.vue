@@ -176,9 +176,9 @@ const nextDueDay = computed(() => {
   const today = new Date()
   const active = activeDebts.value.filter(d => d.due_day).sort((a, b) => a.due_day - b.due_day)
   for (const d of active) {
-    if (d.due_day >= today.getDate()) return `Dia ${d.due_day}`
+    if (d.due_day >= today.getDate()) return `Día ${d.due_day}`
   }
-  return active.length ? `Dia ${active[0].due_day}` : '-'
+  return active.length ? `Día ${active[0].due_day}` : '-'
 })
 
 async function toggleDebt(debtId) {
@@ -207,7 +207,7 @@ async function loadPaymentHistory(debtId) {
 async function handleMonthClick(debt, monthData) {
   const confirmed = await confirm({
     title: 'Marcar como pagado',
-    message: `Marcar ${monthFullNames[monthData.month - 1]} ${monthData.year} como pagado? Se reducira el saldo en $${fmt(debt.minimum_payment)}.`,
+    message: `Marcar ${monthFullNames[monthData.month - 1]} ${monthData.year} como pagado? Se reducirá el saldo en $${fmt(debt.minimum_payment)}.`,
     type: 'info',
     confirmText: 'Marcar pagado',
   })
@@ -255,7 +255,7 @@ async function handleToggleStatus(debt) {
   const action = isActivating ? 'activar' : 'pausar'
   const confirmed = await confirm({
     title: `${isActivating ? 'Activar' : 'Pausar'} deuda`,
-    message: `Desea ${action} la deuda "${debt.name}"?${isActivating ? '' : ' No aparecera en alertas ni calendario.'}`,
+    message: `¿Quieres ${action} la deuda "${debt.name}"?${isActivating ? '' : ' No aparecerá en alertas ni calendario.'}`,
     type: isActivating ? 'info' : 'warning',
     confirmText: isActivating ? 'Activar' : 'Pausar',
   })
@@ -273,7 +273,7 @@ async function handleToggleStatus(debt) {
 async function handleReactivate(debt) {
   const confirmed = await confirm({
     title: 'Reactivar deuda',
-    message: `Desea reactivar la deuda "${debt.name}"? El saldo se reiniciara al monto original.`,
+    message: `¿Quieres reactivar la deuda "${debt.name}"? El saldo se reiniciará al monto original.`,
     type: 'info',
     confirmText: 'Reactivar',
   })
@@ -291,7 +291,7 @@ async function handleReactivate(debt) {
 async function deleteDebt(debt) {
   const confirmed = await confirm({
     title: 'Eliminar deuda',
-    message: 'Estas seguro de que deseas eliminar esta deuda? Esta accion no se puede deshacer.',
+    message: '¿Estás seguro de que quieres eliminar esta deuda? Esta acción no se puede deshacer.',
     type: 'danger',
     confirmText: 'Eliminar',
   })
@@ -346,7 +346,7 @@ async function loadDebts() {
     debts.value = debtsRes.data
     dueAlerts.value = alertsRes.data
   } catch (e) {
-    error.value = 'Error al cargar las deudas'
+    error.value = 'No pudimos cargar tus deudas. Intenta de nuevo.'
     console.error(e)
   } finally {
     loading.value = false

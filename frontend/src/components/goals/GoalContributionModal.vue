@@ -64,7 +64,7 @@ const amountField = ref(null)
 function validate(val) {
   const num = parseFloat(val)
   if (isNaN(num) || num <= 0) {
-    amountError.value = 'El monto debe ser mayor a $0'
+    amountError.value = 'Pon un monto mayor a $0'
   } else if (num > 100000000) {
     amountError.value = 'El monto es demasiado alto'
   } else {

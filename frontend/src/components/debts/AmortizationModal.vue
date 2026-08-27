@@ -4,7 +4,7 @@
       <div v-if="show" class="modal-overlay" @click="$emit('close')">
         <div class="modal-content modal-wide" @click.stop>
           <div class="modal-header">
-            <h3>Tabla de Amortizacion</h3>
+            <h3>Tabla de amortización</h3>
             <button class="modal-close" @click="$emit('close')">&times;</button>
           </div>
 
@@ -69,7 +69,7 @@
           </div>
 
           <div v-else class="empty-state">
-            <span>No hay datos de amortizacion disponibles.</span>
+            <span>No hay datos de amortización disponibles.</span>
           </div>
         </div>
       </div>

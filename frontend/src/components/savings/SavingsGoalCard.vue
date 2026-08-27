@@ -19,7 +19,7 @@
       Aporte mensual sugerido: <strong>${{ fmt(monthlySuggestion) }}</strong>
     </div>
     <div class="goal-actions">
-      <button class="btn btn-outline btn-sm" @click="$emit('contribute', goal)">Contribuir</button>
+      <button class="btn btn-outline btn-sm" @click="$emit('contribute', goal)">Aportar</button>
       <button class="btn btn-outline btn-sm" @click="$emit('edit', goal)">Editar</button>
       <button class="btn btn-danger btn-sm" @click="$emit('delete', goal.id)">Eliminar</button>
     </div>

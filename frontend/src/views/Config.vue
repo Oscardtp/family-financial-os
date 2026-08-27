@@ -1,6 +1,6 @@
 <template>
   <div class="config-page">
-    <h2 class="page-title">Configuracion</h2>
+    <h2 class="page-title">Configuración</h2>
 
     <div class="config-section card">
       <h3 class="section-title">Tu perfil</h3>
@@ -30,13 +30,13 @@
       <h3 class="section-title">Datos</h3>
       <div class="config-row">
         <span class="config-label">Exportar movimientos</span>
-        <button class="btn btn-sm btn-outline" @click="exportCSV">Descargar CSV</button>
+        <button class="btn btn-sm btn-outline" @click="exportCSV">Descargar movimientos</button>
       </div>
     </div>
 
     <div class="config-section card">
-      <h3 class="section-title">Sesion</h3>
-      <button class="btn btn-sm btn-danger" @click="handleLogout">Cerrar sesion</button>
+      <h3 class="section-title">Sesión</h3>
+      <button class="btn btn-sm btn-danger" @click="handleLogout">Cerrar sesión</button>
     </div>
   </div>
 </template>

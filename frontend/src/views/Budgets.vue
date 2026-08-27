@@ -45,7 +45,7 @@
       <div class="card chart-card card-hover">
         <h3 class="card-title">Comparamos: lo que podemos vs lo que gastamos</h3>
         <ChartCard v-if="chartData" type="bar" :data="chartData" :options="chartOptions" />
-        <p v-else class="empty-text">Aún no hay datos para mostrar</p>
+        <p v-else class="empty-text">Aún no hay presupuestos este mes</p>
       </div>
 
       <div class="budgets-grid">
@@ -138,7 +138,7 @@ async function handleEditBudget() {
     await editBudget(editingBudget.value.id, editForm.amount)
     showEditModal.value = false
   } catch (e) {
-    editError.value = e?.response?.data?.detail || 'Error al actualizar el presupuesto'
+    editError.value = e?.response?.data?.detail || 'No pudimos guardar el presupuesto. Intenta de nuevo.'
   } finally {
     editing.value = false
   }

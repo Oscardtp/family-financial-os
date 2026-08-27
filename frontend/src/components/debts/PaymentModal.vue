@@ -97,7 +97,7 @@ async function submitPayment() {
     emit('paid')
     emit('close')
   } catch (e) {
-    paymentError.value = e.response?.data?.detail || 'Error al registrar el pago'
+    paymentError.value = e.response?.data?.detail || 'No pudimos registrar el pago. Intenta de nuevo.'
   } finally {
     paying.value = false
   }

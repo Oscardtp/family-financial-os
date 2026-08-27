@@ -2,7 +2,7 @@
   <div class="transactions-page">
     <div class="page-header">
       <h2 class="page-title">Transacciones</h2>
-      <button class="btn btn-sm btn-outline" @click="exportCSV">Exportar CSV</button>
+      <button class="btn btn-sm btn-outline" @click="exportCSV">Exportar movimientos</button>
     </div>
 
     <div class="filters">

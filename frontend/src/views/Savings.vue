@@ -132,7 +132,7 @@ async function loadData() {
     goals.value = goalsRes.data
     summary.value = summaryRes.data
   } catch {
-    error.value = 'Error al cargar las metas'
+    error.value = 'No pudimos cargar tus metas. Intenta de nuevo.'
   } finally {
     loading.value = false
   }

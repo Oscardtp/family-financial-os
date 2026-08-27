@@ -54,7 +54,7 @@ async def update_budget(
     try:
         return await service.update(budget_id, data, current_user)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Budget not found")
+        raise HTTPException(status_code=404, detail="No encontramos este presupuesto")
 
 
 @router.delete("/{budget_id}", status_code=204, summary="Delete budget", description="Remove a budget limit")
@@ -67,4 +67,4 @@ async def delete_budget(
     try:
         await service.delete(budget_id, current_user)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Budget not found")
+        raise HTTPException(status_code=404, detail="No encontramos este presupuesto")

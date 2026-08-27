@@ -1,7 +1,7 @@
 <template>
   <div class="scenario-section">
     <div class="card">
-      <h3>Simulador de Escenarios</h3>
+      <h3>¿Qué pasaría si...?</h3>
       <form class="scenario-form" @submit.prevent="$emit('run')">
         <div class="form-row">
           <div class="form-group">
@@ -38,7 +38,7 @@
     </div>
 
     <div v-if="result" class="card">
-      <h3>Resultado del Escenario</h3>
+      <h3>Resultado</h3>
       <div class="scenario-summary">
         <div><span class="label">Deuda libre en</span><span class="value">{{ result.debt_free_date || 'N/A' }}</span></div>
         <div><span class="label">Patrimonio proyectado</span><span class="value income">${{ fmt(result.projected_net_worth) }}</span></div>

@@ -60,7 +60,7 @@ async function handleSubmit() {
   try {
     emit('saved', { ...form })
   } catch (e) {
-    formError.value = e?.message || 'Error al guardar'
+    formError.value = e?.message || 'No pudimos guardar. Intenta de nuevo.'
   } finally {
     submitting.value = false
   }

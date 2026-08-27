@@ -113,7 +113,7 @@ async function handleSubmit() {
 
   const amount = fmtAmount.rawValue.value
   if (!amount || amount <= 0) {
-    formError.value = 'Debes indicar un monto'
+    formError.value = 'Agrega un monto'
     submitting.value = false
     return
   }

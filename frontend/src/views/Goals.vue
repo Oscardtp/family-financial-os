@@ -135,8 +135,9 @@ const {
   loading, error, expandedGoal, highlightedGoalId,
   filterType, sortBy,
   activeGoals, completedGoals, totalCurrent, totalTarget, overallProgress,
-  fmt,
 } = storeToRefs(goalsStore)
+
+const { fmt } = goalsStore
 
 const showContributionModal = ref(false)
 const selectedGoal = ref(null)

@@ -38,7 +38,15 @@
         <span class="summary-pct">{{ overallProgress }}% de tu meta total</span>
       </div>
 
-      <div v-if="activeGoals.length === 0" class="empty-state">
+      <GoalFilters
+        v-show="goalsStore.goals.length > 0"
+        :model-filter-type="filterType"
+        :model-sort-by="sortBy"
+        @update:model-filter-type="filterType = $event"
+        @update:model-sort-by="sortBy = $event"
+      />
+
+      <div v-if="activeGoals.length === 0 && goalsStore.goals.length === 0" class="empty-state">
         <Target :size="48" class="empty-icon" />
         <p class="empty-text">Todavía no tienes metas</p>
         <p class="empty-hint">Crea tu primera meta y empieza a ahorrar</p>
@@ -47,13 +55,11 @@
         </button>
       </div>
 
-      <GoalFilters
-        v-if="activeGoals.length > 0"
-        :model-filter-type="filterType"
-        :model-sort-by="sortBy"
-        @update:model-filter-type="filterType = $event"
-        @update:model-sort-by="sortBy = $event"
-      />
+      <div v-else-if="activeGoals.length === 0 && goalsStore.goals.length > 0" class="empty-state">
+        <Target :size="48" class="empty-icon" />
+        <p class="empty-text">No hay metas con este filtro</p>
+        <p class="empty-hint">Prueba con otro filtro o crea una nueva meta</p>
+      </div>
 
       <div class="goals-list">
         <GoalCard

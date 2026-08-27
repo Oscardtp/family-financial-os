@@ -79,7 +79,7 @@
         </div>
 
         <div v-if="!debts.length" class="empty-state">
-          <p class="empty-text">No hay deudas registradas</p>
+          <p class="empty-text">No tienes deudas registradas</p>
           <button class="btn btn-primary" @click="showNewDebtModal = true">
             Crear primera deuda
           </button>

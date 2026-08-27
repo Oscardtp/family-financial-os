@@ -76,7 +76,7 @@
           v-if="!accounts.length"
           class="empty-state"
         >
-          <p>No hay cuentas registradas</p>
+          <p>No tienes cuentas creadas</p>
         </div>
       </div>
 
@@ -521,6 +521,9 @@ onMounted(loadAccounts)
   }
   .accounts-page {
     padding: 0;
+  }
+  .accounts-grid {
+    grid-template-columns: 1fr;
   }
   .account-card {
     flex-wrap: wrap;

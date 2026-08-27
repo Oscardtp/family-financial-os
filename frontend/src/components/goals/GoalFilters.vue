@@ -88,4 +88,17 @@ defineEmits(['update:modelFilterType', 'update:modelSortBy'])
   outline: none;
   border-color: var(--color-primary-400);
 }
+
+@media (max-width: 480px) {
+  .goals-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-group {
+    justify-content: center;
+  }
+  .sort-select {
+    align-self: center;
+  }
+}
 </style>

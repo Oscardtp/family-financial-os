@@ -45,7 +45,7 @@
       <div class="card chart-card card-hover">
         <h3 class="card-title">Comparamos: lo que podemos vs lo que gastamos</h3>
         <ChartCard v-if="chartData" type="bar" :data="chartData" :options="chartOptions" />
-        <p v-else class="empty-text">Sin datos para graficar</p>
+        <p v-else class="empty-text">Aún no hay datos para mostrar</p>
       </div>
 
       <div class="budgets-grid">
@@ -190,4 +190,23 @@ onMounted(() => { loadBudgets(); loadCategories() })
 .btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); background: var(--color-neutral-100); color: var(--color-neutral-700); }
 .btn-primary { background: var(--color-primary-600); color: white; }
 .btn-primary:hover:not(:disabled) { background: var(--color-primary-700); }
+
+@media (max-width: 640px) {
+  .budgets-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .month-nav {
+    align-self: center;
+  }
+  .unbudgeted-item {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
 </style>

@@ -61,7 +61,7 @@
           v-else
           class="empty-text"
         >
-          No hay registros de auditoria
+          No hay registros de auditoría todavía
         </p>
       </div>
     </template>

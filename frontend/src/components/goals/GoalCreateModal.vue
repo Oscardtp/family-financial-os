@@ -241,4 +241,11 @@ function handleSubmit() {
   transform: none;
   box-shadow: none;
 }
+
+@media (max-width: 640px) {
+  .modal-content {
+    padding: 16px;
+    margin: 16px;
+  }
+}
 </style>

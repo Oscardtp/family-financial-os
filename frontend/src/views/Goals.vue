@@ -364,4 +364,20 @@ onUnmounted(() => {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
+
+@media (max-width: 480px) {
+  .summary-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .page-header .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
 </style>

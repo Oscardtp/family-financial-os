@@ -549,4 +549,23 @@ const monthsLeft = computed(() => {
   font-size: 0.8rem;
   color: var(--color-neutral-500);
 }
+
+@media (max-width: 480px) {
+  .projection-details {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .goal-actions {
+    flex-direction: column;
+  }
+  .action-btn {
+    width: 100%;
+  }
+  .expanded-actions {
+    flex-direction: column;
+  }
+  .expanded-btn {
+    width: 100%;
+  }
+}
 </style>

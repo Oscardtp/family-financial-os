@@ -61,7 +61,7 @@
           v-if="!categories.length"
           class="empty-state"
         >
-          <p>No hay categorias registradas</p>
+          <p>No tienes categorías creadas</p>
         </div>
       </div>
 
@@ -303,6 +303,9 @@ onMounted(loadCategories)
   }
   .categories-page {
     padding: 0;
+  }
+  .categories-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -55,7 +55,7 @@
           @delete="deleteGoal"
         />
         <div v-if="!goals.length" class="empty-state">
-          <p>No hay metas de ahorro registradas</p>
+          <p>No tienes metas de ahorro todavía</p>
         </div>
       </div>
 

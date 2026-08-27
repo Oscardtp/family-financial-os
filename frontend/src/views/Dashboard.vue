@@ -1,0 +1,403 @@
+<template>
+  <div class="dashboard">
+    <div v-if="error" class="error-state">
+      <span>{{ error }}</span>
+      <button class="btn btn-sm btn-click" @click="loadData">Reintentar</button>
+    </div>
+
+    <template v-else-if="!loading">
+      <div class="dash-header">
+        <h1 class="dash-greeting">Hola, {{ greeting }}</h1>
+        <div v-if="d.financial_alert && !alertDismissed" class="dash-alert" :class="'alert-' + d.financial_alert.type">
+          <div class="alert-content">
+            <div class="alert-header">
+              <AlertTriangle :size="14" />
+              <span>{{ d.financial_alert.message }}</span>
+              <button class="alert-close" @click="alertDismissed = true" aria-label="Cerrar">
+                <X :size="12" />
+              </button>
+            </div>
+            <div v-if="d.financial_alert.options?.length" class="alert-actions">
+              <button v-for="opt in d.financial_alert.options" :key="opt" class="alert-action-btn" @click="handleAlertOption(opt)">
+                {{ opt }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-layout">
+        <aside class="dash-sidebar">
+          <div class="side-card card">
+            <h3 class="side-title">Lo que tenemos</h3>
+            <div class="side-rows">
+              <div class="side-row">
+                <span class="side-label">Total</span>
+                <span class="side-value">${{ fmt(d.net_worth) }}</span>
+              </div>
+              <div class="side-row">
+                <span class="side-label">Lo que debemos</span>
+                <span class="side-value expense">${{ fmt(d.total_debt) }}</span>
+              </div>
+              <div class="side-row">
+                <span class="side-label">Lo que hemos ahorrado</span>
+                <span class="side-value income">${{ fmt(d.total_savings) }}</span>
+              </div>
+              <div class="side-divider"></div>
+              <div class="side-row">
+                <span class="side-label">Pagamos al mes</span>
+                <span class="side-value">${{ fmt(totalMonthlyPayment) }}</span>
+              </div>
+              <div class="side-row">
+                <span class="side-label">Ya pagamos</span>
+                <span class="side-value">{{ paidCount }}/{{ totalDebts }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-card card card-por-pagar">
+            <h3 class="side-title">Por pagar</h3>
+            <div v-if="upcomingPayments.length" class="side-list">
+              <div v-for="p in upcomingPayments.slice(0, 3)" :key="p.id" class="side-list-item">
+                <div class="side-list-info">
+                  <span class="side-list-name">{{ p.name }}</span>
+                  <span class="side-list-date">{{ p.due_date }}</span>
+                </div>
+                <span class="side-list-amount">${{ fmt(p.amount) }}</span>
+              </div>
+            </div>
+            <div v-else class="empty-state-inline">
+              <p class="side-empty">No tienes pagos próximos</p>
+              <span class="empty-hint">Crea un pago recurrente con el botón +</span>
+            </div>
+          </div>
+
+          <div v-if="d.savings_summary?.goals?.length" class="side-card card card-metas">
+            <h3 class="side-title">Nuestras metas</h3>
+            <div class="side-list">
+              <div v-for="g in d.savings_summary.goals.slice(0, 3)" :key="g.name" class="side-list-item">
+                <div class="side-list-info">
+                  <span class="side-list-name">{{ g.name }}</span>
+                  <div class="side-mini-bar">
+                    <div class="side-mini-fill" :style="{ width: Math.min((g.current / g.target) * 100, 100) + '%' }" />
+                  </div>
+                </div>
+                <span class="side-list-value">{{ Math.round((g.current / g.target) * 100) }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-card card card-como-vamos">
+            <h3 class="side-title">Cómo vamos este mes</h3>
+            <div class="side-rows">
+              <div class="side-row">
+                <span class="side-label">Entró</span>
+                <span class="side-value income">${{ fmt(d.monthly_income) }}</span>
+              </div>
+              <div class="side-row">
+                <span class="side-label">Gastos</span>
+                <span class="side-value expense">${{ fmt(d.monthly_expenses) }}</span>
+              </div>
+              <div class="side-row">
+                <span class="side-label">Nos queda</span>
+                <span class="side-value" :class="d.net_monthly >= 0 ? 'income' : 'expense'">${{ fmt(d.net_monthly) }}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="dash-main">
+          <div class="main-card card">
+            <h3 class="main-title">¿En qué se fue el dinero?</h3>
+            <div v-if="topCategories.length" class="cat-bars">
+              <div v-for="cat in topCategories.slice(0, showFull ? topCategories.length : 4)" :key="cat.name" class="cat-row">
+                <div class="cat-info">
+                  <span class="cat-emoji">{{ cat.icon }}</span>
+                  <span class="cat-name">{{ cat.name }}</span>
+                </div>
+                <div class="cat-track">
+                  <div class="cat-fill" :style="{ width: cat.pct + '%', background: cat.color }" />
+                </div>
+                <span class="cat-amount">${{ fmt(cat.amount) }}</span>
+              </div>
+              <button v-if="topCategories.length > 4" class="btn-expand" @click="showFull = !showFull">
+                {{ showFull ? 'Ver menos' : `Ver todas (${topCategories.length})` }}
+              </button>
+            </div>
+            <div v-else class="empty-state-inline">
+              <p class="empty-text">Todavía no hay gastos este mes</p>
+              <span class="empty-hint">Registra tu primer movimiento con el botón +</span>
+            </div>
+          </div>
+
+          <div class="main-card card">
+            <h3 class="main-title">Últimos movimientos</h3>
+            <div v-if="d.recent_transactions?.length" class="tx-list">
+              <div v-for="tx in d.recent_transactions.slice(0, showFullTx ? d.recent_transactions.length : 5)" :key="tx.id" class="tx-item">
+                <div class="tx-info">
+                  <span class="tx-desc">{{ tx.description || 'Sin detalle' }}</span>
+                  <span class="tx-date">{{ tx.date }}</span>
+                </div>
+                <span class="tx-amount" :class="tx.type">
+                  {{ tx.type === 'income' ? '+' : '-' }}${{ fmt(tx.amount) }}
+                </span>
+              </div>
+              <button v-if="d.recent_transactions?.length > 5" class="btn-expand" @click="showFullTx = !showFullTx">
+                {{ showFullTx ? 'Ver menos' : `Ver todos (${d.recent_transactions.length})` }}
+              </button>
+            </div>
+            <div v-else class="empty-state-inline">
+              <p class="empty-text">No hay movimientos aún</p>
+              <span class="empty-hint">Registra ingresos y gastos con el botón +</span>
+            </div>
+          </div>
+
+          <div v-if="d.budget_status?.length" class="main-card card card-presupuesto">
+            <h3 class="main-title">Cómo vamos con el presupuesto</h3>
+            <div class="budget-grid">
+              <div v-for="b in d.budget_status.slice(0, showFullBd ? d.budget_status.length : 3)" :key="b.category" class="budget-item">
+                <div class="budget-header">
+                  <span class="budget-name">{{ b.category }}</span>
+                  <span class="budget-badge" :class="'badge-' + b.status">
+                    {{ b.status === 'ok' ? '✅' : b.status === 'warning' ? '⚠️' : '🚫' }}
+                  </span>
+                </div>
+                <div class="budget-bar">
+                  <div class="budget-fill" :class="'fill-' + b.status"
+                    :style="{ width: Math.min((b.spent / b.budgeted) * 100, 100) + '%' }" />
+                </div>
+                <span class="budget-detail">${{ fmt(b.spent) }} / ${{ fmt(b.budgeted) }}</span>
+              </div>
+              <button v-if="d.budget_status.length > 3" class="btn-expand" @click="showFullBd = !showFullBd">
+                {{ showFullBd ? 'Ver menos' : `Ver todos (${d.budget_status.length})` }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="d.monthly_payments?.length" class="main-card card">
+            <h3 class="main-title">Lo que pagamos este mes</h3>
+            <div class="payment-list">
+              <div v-for="p in d.monthly_payments.slice(0, 3)" :key="p.id" class="payment-item">
+                <span class="payment-name">{{ p.name }}</span>
+                <span class="payment-amount">${{ fmt(p.amount) }}</span>
+              </div>
+            </div>
+            <div class="payment-summary">
+              <span class="payment-total">${{ fmt(totalMonthlyPaid) }}</span>
+              <span class="payment-count">{{ monthlyPayments.length }} pago{{ monthlyPayments.length > 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </template>
+
+    <div v-if="loading" class="loading-state">
+      <div class="dash-layout">
+        <aside class="dash-sidebar">
+          <div class="side-card card"><SkeletonLoader variant="text" width="100%" height="120px" /></div>
+          <div class="side-card card"><SkeletonLoader variant="text" width="100%" height="80px" /></div>
+          <div class="side-card card"><SkeletonLoader variant="text" width="100%" height="60px" /></div>
+          <div class="side-card card"><SkeletonLoader variant="text" width="100%" height="80px" /></div>
+        </aside>
+        <main class="dash-main">
+          <div class="main-card card"><SkeletonLoader variant="text" width="100%" height="120px" /></div>
+          <div class="main-card card"><SkeletonLoader variant="text" width="100%" height="100px" /></div>
+          <div class="main-card card"><SkeletonLoader variant="text" width="100%" height="80px" /></div>
+          <div class="main-card card"><SkeletonLoader variant="text" width="100%" height="60px" /></div>
+        </main>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { AlertTriangle, X } from 'lucide-vue-next'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { useCurrency } from '@/composables/useCurrency'
+import { useDashboard } from '@/composables/useDashboard'
+
+const { fmt } = useCurrency()
+const router = useRouter()
+
+const {
+  loading, error, d,
+  topCategories, upcomingPayments, monthlyPayments,
+  totalMonthlyPaid, totalMonthlyPayment, totalDebts, paidCount,
+  loadData,
+} = useDashboard()
+
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+})
+
+const showFull = ref(false)
+const showFullTx = ref(false)
+const showFullBd = ref(false)
+const alertDismissed = ref(false)
+
+function handleAlertOption(option) {
+  const opt = option.toLowerCase()
+  if (opt.includes('pago extra') || opt.includes('pago')) router.push('/payments')
+  else if (opt.includes('deuda') || opt.includes('reduci')) router.push('/debts')
+  else if (opt.includes('gasto') || opt.includes('presupuesto')) router.push('/budgets')
+  else if (opt.includes('ingreso') || opt.includes('ingres')) router.push('/transactions')
+}
+
+function handleGoalCreated() {
+  loadData()
+}
+
+onMounted(() => {
+  loadData()
+  window.addEventListener('goal-created', handleGoalCreated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('goal-created', handleGoalCreated)
+})
+</script>
+
+<style scoped>
+.dashboard { max-width: 1100px; margin: 0 auto; }
+.dash-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--spacing-md); gap: var(--spacing-md);
+}
+.dash-greeting { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--color-neutral-900); margin: 0; }
+.dash-alert {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border-radius: var(--radius-md); font-size: 0.75rem; font-weight: 500; animation: fadeIn 200ms ease;
+}
+.dash-alert.alert-critical { background: var(--color-error-50); color: var(--color-error-600); }
+.dash-alert.alert-warning { background: var(--color-warning-50); color: var(--color-warning-600); }
+.dash-alert.alert-info { background: var(--color-info-50); color: var(--color-info-600); }
+.alert-content { display: flex; flex-direction: column; gap: 6px; }
+.alert-header { display: flex; align-items: center; gap: 6px; }
+.alert-close {
+  background: none; border: none; cursor: pointer; padding: 2px; margin-left: auto;
+  color: inherit; opacity: 0.6; transition: opacity 150ms;
+}
+.alert-close:hover { opacity: 1; }
+.alert-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.alert-action-btn {
+  padding: 3px 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-weight: 500;
+  border: 1px solid currentColor; background: transparent; cursor: pointer;
+  transition: background 150ms;
+}
+.alert-action-btn:hover { background: rgba(0,0,0,0.05); }
+.dash-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--spacing-md); align-items: start; }
+.dash-sidebar { display: flex; flex-direction: column; gap: var(--spacing-md); position: sticky; top: var(--spacing-md); }
+.dash-main { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.card {
+  background: var(--color-neutral-0); border-radius: var(--radius-lg);
+  padding: var(--spacing-lg); box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-neutral-100);
+}
+.card-metas {
+  background: var(--color-surface-tinted-blue);
+  border-color: var(--color-primary-100);
+}
+.card-por-pagar {
+  background: var(--color-surface-tinted-yellow);
+  border-color: var(--color-warning-100);
+}
+.card-como-vamos {
+  background: var(--color-surface-tinted-teal);
+  border-color: var(--color-neutral-200);
+}
+.card-presupuesto {
+  background: var(--color-surface-tinted-yellow);
+  border-color: var(--color-warning-100);
+}
+.side-title, .main-title { font-family: var(--font-display); font-size: 0.9rem; font-weight: 600; color: var(--color-neutral-900); margin-bottom: var(--spacing-md); }
+.side-rows { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.side-row { display: flex; justify-content: space-between; align-items: center; }
+.side-label { font-size: 0.8rem; color: var(--color-neutral-500); }
+.side-value { font-size: 0.9rem; font-weight: 600; font-family: var(--font-mono); color: var(--color-neutral-900); }
+.side-value.income { color: var(--color-success-600); }
+.side-value.expense { color: var(--color-error-600); }
+.side-divider { height: 1px; background: var(--color-neutral-100); margin: var(--spacing-xs) 0; }
+.side-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.side-list-item { display: flex; justify-content: space-between; align-items: center; }
+.side-list-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.side-list-name { font-size: 0.8rem; font-weight: 500; color: var(--color-neutral-700); }
+.side-list-date { font-size: 0.7rem; color: var(--color-neutral-400); }
+.side-list-amount { font-size: 0.8rem; font-weight: 600; font-family: var(--font-mono); }
+.side-list-value { font-size: 0.75rem; font-weight: 600; color: var(--color-primary-600); }
+.side-mini-bar { width: 100%; height: 4px; background: var(--color-neutral-100); border-radius: 2px; overflow: hidden; }
+.side-mini-fill { height: 100%; background: var(--color-primary-500); border-radius: 2px; transition: width 300ms ease; }
+.empty-state-inline { text-align: center; padding: var(--spacing-sm) 0; }
+.side-empty { font-size: 0.8rem; color: var(--color-neutral-500); margin: 0; }
+.empty-hint { font-size: 0.7rem; color: var(--color-neutral-400); }
+.empty-text { font-size: 0.85rem; color: var(--color-neutral-400); margin: 0; }
+.cat-bars { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.cat-row { display: grid; grid-template-columns: 140px 1fr 80px; align-items: center; gap: var(--spacing-sm); }
+.cat-info { display: flex; align-items: center; gap: var(--spacing-xs); min-width: 0; }
+.cat-emoji { font-size: 1rem; }
+.cat-name { font-size: 0.8rem; font-weight: 500; color: var(--color-neutral-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-track { height: 8px; background: var(--color-neutral-100); border-radius: 4px; overflow: hidden; }
+.cat-fill { height: 100%; border-radius: 4px; transition: width 500ms ease; }
+.cat-amount { font-size: 0.8rem; font-weight: 600; font-family: var(--font-mono); text-align: right; }
+.tx-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.tx-item { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-neutral-100); }
+.tx-item:last-child { border-bottom: none; }
+.tx-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tx-desc { font-size: 0.85rem; font-weight: 500; color: var(--color-neutral-800); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-date { font-size: 0.7rem; color: var(--color-neutral-400); }
+.tx-amount { font-size: 0.85rem; font-weight: 600; font-family: var(--font-mono); }
+.tx-amount.income { color: var(--color-success-600); }
+.tx-amount.expense { color: var(--color-error-600); }
+.budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--spacing-sm); }
+.budget-item { padding: var(--spacing-sm); border: 1px solid var(--color-neutral-100); border-radius: var(--radius-md); }
+.budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.budget-name { font-size: 0.8rem; font-weight: 500; color: var(--color-neutral-700); }
+.budget-badge { font-size: 0.75rem; }
+.budget-bar { height: 6px; background: var(--color-neutral-100); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.budget-fill { height: 100%; border-radius: 3px; transition: width 300ms ease; }
+.fill-ok { background: var(--color-success-500); }
+.fill-warning { background: var(--color-warning-500); }
+.fill-over { background: var(--color-error-500); }
+.budget-detail { font-size: 0.7rem; color: var(--color-neutral-500); }
+.payment-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.payment-item { display: flex; justify-content: space-between; align-items: center; }
+.payment-name { font-size: 0.85rem; color: var(--color-neutral-700); }
+.payment-amount { font-size: 0.85rem; font-weight: 600; font-family: var(--font-mono); }
+.payment-summary { display: flex; justify-content: space-between; align-items: center; margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--color-neutral-100); }
+.payment-total { font-size: 0.9rem; font-weight: 700; font-family: var(--font-mono); color: var(--color-neutral-900); }
+.payment-count { font-size: 0.75rem; color: var(--color-neutral-500); }
+.btn-expand {
+  background: none; border: none; color: var(--color-primary-600); font-size: 0.8rem;
+  font-weight: 500; cursor: pointer; padding: var(--spacing-xs) 0; margin-top: var(--spacing-xs);
+}
+.btn-expand:hover { color: var(--color-primary-700); }
+.loading-state { padding: var(--spacing-md) 0; }
+.error-state { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-md); padding: var(--spacing-2xl); color: var(--color-error-500); }
+.btn { padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; }
+.btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); background: var(--color-neutral-100); color: var(--color-neutral-700); }
+.btn-click { cursor: pointer; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 768px) {
+  .dash-layout { grid-template-columns: 1fr; }
+  .dash-sidebar { position: static; }
+  .cat-row { grid-template-columns: 120px 1fr 70px; }
+}
+@media (max-width: 640px) {
+  .dash-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .cat-row {
+    grid-template-columns: 100px 1fr 60px;
+    font-size: 0.8rem;
+  }
+  .budget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

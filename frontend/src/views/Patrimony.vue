@@ -41,7 +41,7 @@
           :items="assets"
           :value-accessor="a => a.value"
           value-class="income"
-          empty-text="No hay activos registrados"
+          empty-text="No tienes activos registrados"
           @edit="openEditAsset"
           @delete="deleteAsset"
         />
@@ -50,7 +50,7 @@
           :items="liabilities"
           :value-accessor="l => l.current_balance"
           value-class="expense"
-          empty-text="No hay pasivos registrados"
+          empty-text="No tienes pasivos registrados"
           @edit="openEditLiability"
           @delete="deleteLiability"
         />
@@ -246,5 +246,13 @@ onMounted(loadData)
 @media (max-width: 768px) {
   .summary-cards { grid-template-columns: 1fr; }
   .patrimony-grid, .forms-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .summary-card.net {
+    grid-column: 1 / -1;
+  }
 }
 </style>

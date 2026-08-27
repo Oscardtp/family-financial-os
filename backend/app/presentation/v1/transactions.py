@@ -40,7 +40,9 @@ async def create_transaction(
 ):
     service = TransactionService(db)
     try:
-        return await service.create(data, current_user)
+        result = await service.create(data, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -54,5 +56,6 @@ async def delete_transaction(
     service = TransactionService(db)
     try:
         await service.delete(transaction_id, current_user)
+        await db.commit()
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

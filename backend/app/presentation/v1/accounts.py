@@ -37,6 +37,7 @@ async def create_account(
         db, current_user["household_id"], current_user["id"], current_user["email"],
         "create", "account", result["id"], result["name"],
     )
+    await db.commit()
     return result
 
 
@@ -71,6 +72,7 @@ async def update_account(
         db, current_user["household_id"], current_user["id"], current_user["email"],
         "update", "account", result["id"], result["name"],
     )
+    await db.commit()
     return result
 
 
@@ -84,8 +86,9 @@ async def delete_account(
     account = await repo.get_by_id(account_id)
     if not account or account["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos esta cuenta")
-    await repo.delete(account_id)
     await log_action(
         db, current_user["household_id"], current_user["id"], current_user["email"],
         "delete", "account", account_id, account["name"],
     )
+    await repo.delete(account_id)
+    await db.commit()

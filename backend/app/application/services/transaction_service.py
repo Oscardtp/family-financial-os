@@ -47,6 +47,8 @@ class TransactionService:
 
         self._check_balance(account, data.type, data.amount)
 
+        await self._adjust_balances(data)
+
         transaction = await self.tx_repo.create({
             "account_id": data.account_id,
             "category_id": data.category_id,
@@ -58,12 +60,6 @@ class TransactionService:
             "to_account_id": data.to_account_id,
         })
 
-        try:
-            await self._adjust_balances(data)
-        except ValueError:
-            await self.tx_repo.delete(transaction["id"])
-            raise
-
         await log_action(
             self.db, household_id, user["id"], user["email"],
             "create", "transaction", transaction["id"], data.description,
@@ -73,11 +69,11 @@ class TransactionService:
     async def delete(self, transaction_id: str, user: dict):
         transaction = await self.tx_repo.get_by_id(transaction_id)
         if not transaction:
-            raise ValueError("Transaccion no encontrada")
+            raise ValueError("Movimiento no encontrado")
 
         account = await self.account_repo.get_by_id(transaction["account_id"])
         if not account or account["household_id"] != user["household_id"]:
-            raise ValueError("Transaccion no encontrada")
+            raise ValueError("Movimiento no encontrado")
 
         await self._reverse_balances(transaction)
 
@@ -105,12 +101,12 @@ class TransactionService:
             return
         category = await self.category_repo.get_by_id(data.category_id)
         if not category or category.get("household_id") != household_id:
-            raise ValueError("Categoria no encontrada")
+            raise ValueError("Categoría no encontrada")
         if category["type"] != data.type:
             raise ValueError(
-                f"La categoria '{category['name']}' es de tipo '{category['type']}', "
+                f"La categoría '{category['name']}' es de tipo '{category['type']}', "
                 f"pero estás intentando registrar un movimiento tipo '{data.type}'. "
-                f"Usa la categoria correcta."
+                f"Usa la categoría correcta."
             )
 
     def _check_balance(self, account: dict, tx_type: str, amount):

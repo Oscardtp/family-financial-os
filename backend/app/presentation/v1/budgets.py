@@ -38,7 +38,9 @@ async def create_budget(
 ):
     service = BudgetService(db)
     try:
-        return await service.create(data, current_user)
+        result = await service.create(data, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -52,7 +54,9 @@ async def update_budget(
 ):
     service = BudgetService(db)
     try:
-        return await service.update(budget_id, data, current_user)
+        result = await service.update(budget_id, data, current_user)
+        await db.commit()
+        return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este presupuesto")
 
@@ -66,5 +70,6 @@ async def delete_budget(
     service = BudgetService(db)
     try:
         await service.delete(budget_id, current_user)
+        await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este presupuesto")

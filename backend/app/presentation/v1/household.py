@@ -64,6 +64,7 @@ async def invite_member(
 
     household_repo = SQLAlchemyHouseholdRepository(db)
     await household_repo.add_member(current_user["household_id"], target["id"], data.role)
+    await db.commit()
 
     return {"message": f"{data.email} se unió como {data.role}"}
 
@@ -92,6 +93,7 @@ async def update_member_role(
         raise HTTPException(status_code=400, detail="No puedes quitarle el rol de dueño al último dueño")
 
     await user_repo.update({**target, "role": data.role})
+    await db.commit()
     return {"message": f"Rol actualizado a {data.role}"}
 
 
@@ -118,4 +120,5 @@ async def remove_member(
         raise HTTPException(status_code=400, detail="No puedes eliminar al último dueño")
 
     await user_repo.update({**target, "household_id": None, "role": "member"})
+    await db.commit()
     return {"message": "Miembro eliminado"}

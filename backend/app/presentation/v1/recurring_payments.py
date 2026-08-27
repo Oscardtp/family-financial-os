@@ -28,7 +28,9 @@ async def create_recurring_payment(
     db: AsyncSession = Depends(get_db),
 ):
     service = RecurringPaymentService(db)
-    return await service.create(data, current_user["household_id"], current_user["id"])
+    result = await service.create(data, current_user["household_id"], current_user["id"])
+    await db.commit()
+    return result
 
 
 @router.get("/{payment_id}", response_model=RecurringPaymentResponse)
@@ -53,7 +55,9 @@ async def update_recurring_payment(
 ):
     service = RecurringPaymentService(db)
     try:
-        return await service.update(payment_id, data, current_user["household_id"])
+        result = await service.update(payment_id, data, current_user["household_id"])
+        await db.commit()
+        return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
 
@@ -67,6 +71,7 @@ async def delete_recurring_payment(
     service = RecurringPaymentService(db)
     try:
         await service.delete(payment_id, current_user["household_id"])
+        await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
 
@@ -79,7 +84,9 @@ async def mark_as_paid(
 ):
     service = RecurringPaymentService(db)
     try:
-        return await service.pay(payment_id, current_user)
+        result = await service.pay(payment_id, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -90,4 +97,6 @@ async def process_due_payments(
     db: AsyncSession = Depends(get_db),
 ):
     service = RecurringPaymentService(db)
-    return await service.process_due(current_user["household_id"], current_user["id"])
+    result = await service.process_due(current_user["household_id"], current_user["id"])
+    await db.commit()
+    return result

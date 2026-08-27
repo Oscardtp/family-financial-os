@@ -39,7 +39,9 @@ async def create_debt(
     db: AsyncSession = Depends(get_db),
 ):
     service = DebtService(db)
-    return await service.create(data, current_user["household_id"])
+    result = await service.create(data, current_user["household_id"])
+    await db.commit()
+    return result
 
 
 @router.get("/{debt_id}", response_model=DebtResponse, summary="Get debt details", description="Returns full details of a specific debt")
@@ -64,7 +66,9 @@ async def update_debt(
 ):
     service = DebtService(db)
     try:
-        return await service.update(debt_id, data, current_user["household_id"])
+        result = await service.update(debt_id, data, current_user["household_id"])
+        await db.commit()
+        return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
@@ -78,6 +82,7 @@ async def delete_debt(
     service = DebtService(db)
     try:
         await service.delete(debt_id, current_user["household_id"])
+        await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta deuda")
 
@@ -91,7 +96,9 @@ async def create_debt_payment(
 ):
     service = DebtService(db)
     try:
-        return await service.create_payment(debt_id, data, current_user)
+        result = await service.create_payment(debt_id, data, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -106,6 +113,7 @@ async def reverse_debt_payment(
     service = DebtService(db)
     try:
         await service.reverse_payment(debt_id, payment_id, current_user["household_id"])
+        await db.commit()
     except ValueError as e:
         detail = str(e)
         status = 400 if "already reversed" in detail else 404
@@ -120,7 +128,9 @@ async def toggle_debt_status(
 ):
     service = DebtService(db)
     try:
-        return await service.toggle_status(debt_id, current_user)
+        result = await service.toggle_status(debt_id, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -149,7 +159,9 @@ async def mark_month_paid(
 ):
     service = DebtService(db)
     try:
-        return await service.mark_month_paid(debt_id, data, current_user)
+        result = await service.mark_month_paid(debt_id, data, current_user)
+        await db.commit()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -24,10 +24,12 @@ async def create_category(
     db: AsyncSession = Depends(get_db),
 ):
     repo = SQLAlchemyCategoryRepository(db)
-    return await repo.create({
+    result = await repo.create({
         "household_id": current_user["household_id"],
         **data.model_dump(),
     })
+    await db.commit()
+    return result
 
 
 @router.put("/{category_id}", response_model=CategoryResponse, summary="Update category", description="Modify category name, icon, or color")
@@ -42,7 +44,9 @@ async def update_category(
     if not category or category["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos esta categoría")
     update_data = data.model_dump(exclude_unset=True)
-    return await repo.update({**category, **update_data})
+    result = await repo.update({**category, **update_data})
+    await db.commit()
+    return result
 
 
 @router.delete("/{category_id}", status_code=204, summary="Delete category", description="Remove a transaction category")
@@ -56,3 +60,4 @@ async def delete_category(
     if not category or category["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos esta categoría")
     await repo.delete(category_id)
+    await db.commit()

@@ -30,10 +30,12 @@ async def create_asset(
     db: AsyncSession = Depends(get_db),
 ):
     repo = SQLAlchemyAssetRepository(db)
-    return await repo.create({
+    result = await repo.create({
         "household_id": current_user["household_id"],
         **data.model_dump(),
     })
+    await db.commit()
+    return result
 
 
 @router.put("/assets/{asset_id}", response_model=AssetResponse, summary="Update asset", description="Modify asset details")
@@ -52,7 +54,9 @@ async def update_asset(
     if "value" in update_data:
         update_data["value"] = float(update_data["value"])
 
-    return await repo.update({**asset, **update_data})
+    result = await repo.update({**asset, **update_data})
+    await db.commit()
+    return result
 
 
 @router.delete("/assets/{asset_id}", status_code=204, summary="Delete asset", description="Remove an asset record")
@@ -66,6 +70,7 @@ async def delete_asset(
     if not asset or asset["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos este activo")
     await repo.delete(asset_id)
+    await db.commit()
 
 
 @router.get("/liabilities", response_model=list[LiabilityResponse], summary="List liabilities", description="Returns all registered liabilities")
@@ -86,10 +91,12 @@ async def create_liability(
     db: AsyncSession = Depends(get_db),
 ):
     repo = SQLAlchemyLiabilityRepository(db)
-    return await repo.create({
+    result = await repo.create({
         "household_id": current_user["household_id"],
         **data.model_dump(),
     })
+    await db.commit()
+    return result
 
 
 @router.put("/liabilities/{liability_id}", response_model=LiabilityResponse, summary="Update liability", description="Modify liability details")
@@ -109,7 +116,9 @@ async def update_liability(
         if key in update_data:
             update_data[key] = float(update_data[key])
 
-    return await repo.update({**liability, **update_data})
+    result = await repo.update({**liability, **update_data})
+    await db.commit()
+    return result
 
 
 @router.delete("/liabilities/{liability_id}", status_code=204, summary="Delete liability", description="Remove a liability record")
@@ -123,3 +132,4 @@ async def delete_liability(
     if not liability or liability["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos este pasivo")
     await repo.delete(liability_id)
+    await db.commit()

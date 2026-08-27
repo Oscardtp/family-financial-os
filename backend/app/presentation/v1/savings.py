@@ -39,7 +39,9 @@ async def create_goal(
     db: AsyncSession = Depends(get_db),
 ):
     service = SavingsService(db)
-    return await service.create_goal(data, current_user["household_id"])
+    result = await service.create_goal(data, current_user["household_id"])
+    await db.commit()
+    return result
 
 
 @router.get("/goals/{goal_id}", response_model=SavingsGoalResponse, summary="Get goal details", description="Returns full details of a specific savings goal")
@@ -64,7 +66,9 @@ async def update_goal(
 ):
     service = SavingsService(db)
     try:
-        return await service.update_goal(goal_id, data, current_user["household_id"])
+        result = await service.update_goal(goal_id, data, current_user["household_id"])
+        await db.commit()
+        return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
@@ -78,6 +82,7 @@ async def delete_goal(
     service = SavingsService(db)
     try:
         await service.delete_goal(goal_id, current_user["household_id"])
+        await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta meta")
 
@@ -91,7 +96,9 @@ async def create_contribution(
 ):
     service = SavingsService(db)
     try:
-        return await service.create_contribution(goal_id, data, current_user["household_id"])
+        result = await service.create_contribution(goal_id, data, current_user["household_id"])
+        await db.commit()
+        return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta meta")
 

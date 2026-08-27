@@ -97,16 +97,6 @@ function handleSubmit() {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
 .modal-content {
   background: var(--color-neutral-0);
   border-radius: var(--radius-lg);
@@ -129,30 +119,7 @@ function handleSubmit() {
   gap: 16px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
-.form-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-neutral-600);
-}
-
-.form-input {
-  padding: 10px 12px;
-  border: 1px solid var(--color-neutral-200);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.form-input:focus {
-  border-color: var(--color-primary-500);
-}
 
 .form-row {
   display: grid;

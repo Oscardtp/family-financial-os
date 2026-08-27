@@ -24,16 +24,6 @@ defineEmits(['close', 'confirm'])
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
 .modal-content {
   background: var(--color-neutral-0);
   border-radius: var(--radius-lg);

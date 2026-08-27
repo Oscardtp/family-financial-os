@@ -1,0 +1,1481 @@
+<template>
+  <div class="goals-page">
+    <div class="page-header">
+      <h2 class="page-title">Mis Metas</h2>
+      <button class="btn btn-primary" @click="openCreateModal">
+        + Nueva Meta
+      </button>
+    </div>
+
+    <div v-if="loading" class="loading-state">
+      <SkeletonLoader v-for="n in 2" :key="n" variant="card" />
+    </div>
+
+    <div v-else-if="error" class="error-state">
+      <span>{{ error }}</span>
+      <button class="btn btn-sm" @click="loadData">Reintentar</button>
+    </div>
+
+    <template v-else>
+      <div class="summary-hero card">
+        <div class="summary-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ activeGoals.length }}</span>
+            <span class="stat-label">activas</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">${{ formatMoney(totalCurrent) }}</span>
+            <span class="stat-label">acumulado</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">${{ formatMoney(totalTarget) }}</span>
+            <span class="stat-label">objetivo</span>
+          </div>
+        </div>
+        <div class="summary-bar-track">
+          <div class="summary-bar-fill" :style="{ width: `${overallProgress}%` }"></div>
+        </div>
+        <span class="summary-pct">{{ overallProgress }}% del objetivo total</span>
+      </div>
+
+      <div v-if="activeGoals.length === 0" class="empty-state">
+        <Target :size="48" class="empty-icon" />
+        <p class="empty-text">Todavía no tienes metas</p>
+        <p class="empty-hint">Crea tu primera meta para empezar a ahorrar</p>
+        <button class="btn btn-primary empty-cta" @click="openCreateModal">
+          + Crear mi primera meta
+        </button>
+      </div>
+
+      <div v-if="activeGoals.length > 0" class="goals-toolbar">
+        <div class="filter-group">
+          <button class="filter-btn" :class="{ active: filterType === 'all' }" @click="filterType = 'all'">Todas</button>
+          <button class="filter-btn" :class="{ active: filterType === 'savings' }" @click="filterType = 'savings'">Ahorro</button>
+          <button class="filter-btn" :class="{ active: filterType === 'investment' }" @click="filterType = 'investment'">Inversión</button>
+        </div>
+        <select v-model="sortBy" class="sort-select">
+          <option value="name">Nombre</option>
+          <option value="priority">Prioridad</option>
+          <option value="progress">Progreso</option>
+          <option value="date">Fecha</option>
+        </select>
+      </div>
+
+      <div class="goals-list">
+        <div v-for="goal in activeGoals" :key="goal.id" :data-goal-id="goal.id" class="goal-card card" :class="{ expanded: expandedGoal?.id === goal.id, 'highlight-new': highlightedGoalId === goal.id }">
+          <div class="goal-header">
+            <span class="goal-icon">{{ goal.goal_type === 'investment' ? '📈' : '🎯' }}</span>
+            <div class="goal-title">
+              <h3 class="goal-name">{{ goal.name }}</h3>
+              <span class="goal-type-badge" :class="goal.goal_type">
+                {{ goal.goal_type === 'investment' ? 'Inversión' : 'Ahorro' }}
+              </span>
+              <span v-if="goal.priority" class="priority-badge" :class="goal.priority">
+                {{ goal.priority === 'high' ? 'Alta' : goal.priority === 'medium' ? 'Media' : 'Baja' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="goal-amounts">
+            <div class="amount-row">
+              <span class="amount-label">Tienes</span>
+              <span class="amount-current">${{ formatMoney(goal.current_amount) }}</span>
+            </div>
+            <div class="amount-row">
+              <span class="amount-label">Necesitas</span>
+              <span class="amount-target">${{ formatMoney(goal.target_amount) }}</span>
+            </div>
+            <div class="amount-row highlight">
+              <span class="amount-label">Faltan</span>
+              <span class="amount-remaining">${{ formatMoney(goal.target_amount - goal.current_amount) }}</span>
+            </div>
+          </div>
+
+          <div class="goal-progress">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" :style="{ width: `${goalProgress(goal)}%` }"></div>
+            </div>
+            <span class="progress-pct">{{ goalProgress(goal) }}%</span>
+          </div>
+
+          <div v-if="goal.monthly_contribution" class="goal-monthly">
+            <span class="monthly-label">Aporte mensual:</span>
+            <span class="monthly-value">${{ formatMoney(goal.monthly_contribution) }}</span>
+          </div>
+
+          <div v-if="goal.target_date" class="goal-timeline">
+            <Calendar :size="14" />
+            <span>Para: {{ formatDate(goal.target_date) }}</span>
+            <span v-if="monthsRemaining(goal)" class="months-remaining">
+              ({{ monthsRemaining(goal) }} meses)
+            </span>
+          </div>
+
+          <div v-if="goal.goal_type === 'investment' && goal.expected_return_rate" class="goal-projection">
+            <div class="projection-header">
+              <TrendingUp :size="14" />
+              <span>Proyección</span>
+            </div>
+            <div class="projection-details">
+              <span>Rendimiento: {{ goal.expected_return_rate }}% EA</span>
+              <span v-if="goal.horizon_months">Horizonte: {{ goal.horizon_months }} meses</span>
+            </div>
+            <div v-if="goal.projected_value" class="projection-result">
+              <span class="projection-label">Valor proyectado:</span>
+              <span class="projection-amount">${{ formatMoney(goal.projected_value) }}</span>
+            </div>
+          </div>
+
+          <div class="goal-actions">
+            <button class="action-btn primary" @click="openContribution(goal)">
+              + Aportar
+            </button>
+            <button class="action-btn secondary" @click="toggleDetails(goal)">
+              {{ expandedGoal?.id === goal.id ? 'Cerrar' : 'Ver detalles' }}
+            </button>
+          </div>
+
+          <div v-if="expandedGoal?.id === goal.id" class="goal-expanded">
+            <div class="expanded-section">
+              <h4 class="expanded-title">Acciones</h4>
+              <div class="expanded-actions">
+                <button class="expanded-btn" @click="openEditModal(goal)">
+                  ✏️ Editar
+                </button>
+                <button class="expanded-btn danger" @click="confirmDelete(goal)">
+                  🗑️ Eliminar
+                </button>
+              </div>
+            </div>
+            <div v-if="goal.history?.length" class="expanded-section">
+              <h4 class="expanded-title">Historial de aportes</h4>
+              <div class="history-list">
+                <div v-for="entry in goal.history" :key="entry.id" class="history-item">
+                  <span class="history-date">{{ formatDate(entry.contribution_date) }}</span>
+                  <span class="history-amount">${{ formatMoney(entry.amount) }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="expanded-section">
+              <p class="expanded-empty">Aún no hay aportes registrados</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="completedGoals.length" class="completed-section">
+        <h3 class="section-title">Completadas</h3>
+        <div class="goals-list">
+          <div v-for="goal in completedGoals" :key="goal.id" class="goal-card card completed">
+            <div class="goal-header">
+              <span class="goal-icon">🎉</span>
+              <div class="goal-title">
+                <h3 class="goal-name">{{ goal.name }}</h3>
+                <span class="goal-type-badge completed">Lograda</span>
+              </div>
+            </div>
+            <div class="completed-details">
+              <span class="completed-amount">${{ formatMoney(goal.target_amount) }} ahorrados</span>
+              <span v-if="goal.target_date" class="completed-date">Meta: {{ formatDate(goal.target_date) }}</span>
+            </div>
+            <div class="goal-progress">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill full"></div>
+              </div>
+              <span class="progress-pct">100%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div v-if="showContributionModal" class="modal-overlay" @click="closeContribution" @keydown.escape="closeContribution" role="dialog" aria-modal="true" :aria-label="`Aportar a ${selectedGoal?.name}`">
+      <div class="modal-content" @click.stop ref="contributionInput">
+        <h3 class="modal-title">Aportar a "{{ selectedGoal?.name }}"</h3>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="contribution-amount">Monto a aportar</label>
+            <div class="modal-amount-input" :class="{ error: contributionError }">
+              <span class="modal-currency">$</span>
+              <input
+                id="contribution-amount"
+                ref="contributionField"
+                v-model="contributionAmount"
+                type="number"
+                class="modal-amount-field"
+                placeholder="0"
+                min="1"
+                @input="validateContribution"
+              />
+            </div>
+            <span v-if="contributionError" class="form-error">{{ contributionError }}</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="contribution-date">Fecha del aporte</label>
+            <input
+              id="contribution-date"
+              v-model="contributionDate"
+              type="date"
+              class="form-input"
+            />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="closeContribution">Cancelar</button>
+          <button
+            class="btn-confirm"
+            @click="submitContribution"
+            :disabled="!contributionAmount || contributing || !!contributionError"
+          >
+            {{ contributing ? 'Guardando...' : 'Confirmar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal" @keydown.escape="closeCreateModal" role="dialog" aria-modal="true" aria-label="Crear nueva meta">
+      <div class="modal-content modal-wide" @click.stop>
+        <h3 class="modal-title">Nueva meta</h3>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="goal-name">¿Qué estás juntando?</label>
+            <input id="goal-name" v-model="newGoal.name" type="text" class="form-input" placeholder="Ej: Viaje, Fondo de emergencia, Nuevo carro" maxlength="100" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="goal-target">¿Cuánto necesitas?</label>
+              <div class="modal-amount-input">
+                <span class="modal-currency">$</span>
+                <input id="goal-target" v-model="newGoal.target_amount" type="number" class="modal-amount-field" placeholder="0" min="1" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="goal-monthly">¿Cuánto puedes ahorrar al mes?</label>
+              <div class="modal-amount-input">
+                <span class="modal-currency">$</span>
+                <input id="goal-monthly" v-model="newGoal.monthly_contribution" type="number" class="modal-amount-field" placeholder="0" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="goal-date">¿Para cuándo?</label>
+              <input id="goal-date" v-model="newGoal.target_date" type="date" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="goal-type">Tipo</label>
+              <select id="goal-type" v-model="newGoal.goal_type" class="form-input">
+                <option value="savings">Ahorro</option>
+                <option value="investment">Inversión</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="newGoal.goal_type === 'investment'" class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="goal-return">Rendimiento esperado (% EA)</label>
+              <input id="goal-return" v-model="newGoal.expected_return_rate" type="number" class="form-input" placeholder="Ej: 9" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="goal-horizon">Horizonte (meses)</label>
+              <input id="goal-horizon" v-model="newGoal.horizon_months" type="number" class="form-input" placeholder="Ej: 24" min="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="goal-priority">Prioridad</label>
+            <select id="goal-priority" v-model="newGoal.priority" class="form-input">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="closeCreateModal">Cancelar</button>
+          <button
+            class="btn-confirm"
+            @click="submitCreateGoal"
+            :disabled="!newGoal.name || !newGoal.target_amount || creating"
+          >
+            {{ creating ? 'Creando...' : 'Crear meta' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal" @keydown.escape="closeEditModal" role="dialog" aria-modal="true" aria-label="Editar meta">
+      <div class="modal-content modal-wide" @click.stop>
+        <h3 class="modal-title">Editar "{{ editingGoal?.name }}"</h3>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="edit-name">Nombre</label>
+            <input id="edit-name" v-model="editForm.name" type="text" class="form-input" maxlength="100" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-target">Monto objetivo</label>
+              <div class="modal-amount-input">
+                <span class="modal-currency">$</span>
+                <input id="edit-target" v-model="editForm.target_amount" type="number" class="modal-amount-field" min="1" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-monthly">Aporte mensual</label>
+              <div class="modal-amount-input">
+                <span class="modal-currency">$</span>
+                <input id="edit-monthly" v-model="editForm.monthly_contribution" type="number" class="modal-amount-field" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-date">Fecha objetivo</label>
+              <input id="edit-date" v-model="editForm.target_date" type="date" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-priority">Prioridad</label>
+              <select id="edit-priority" v-model="editForm.priority" class="form-input">
+                <option value="low">Baja</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-type">Tipo de meta</label>
+            <select id="edit-type" v-model="editForm.goal_type" class="form-input">
+              <option value="savings">Ahorro</option>
+              <option value="investment">Inversión</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="closeEditModal">Cancelar</button>
+          <button class="btn-confirm" @click="submitEditGoal" :disabled="editing">
+            {{ editing ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click="showDeleteConfirm = false" @keydown.escape="showDeleteConfirm = false" role="alertdialog" aria-modal="true" aria-label="Confirmar eliminación">
+      <div class="modal-content modal-small" @click.stop>
+        <h3 class="modal-title">¿Eliminar "{{ deletingGoal?.name }}"?</h3>
+        <p class="delete-warning">Esta acción no se puede deshacer. Se perderán todos los aportes registrados.</p>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="showDeleteConfirm = false">Cancelar</button>
+          <button class="btn-confirm btn-danger" @click="submitDeleteGoal" :disabled="deleting">
+            {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import api from '@/services/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { Target, Calendar, TrendingUp } from 'lucide-vue-next'
+
+const loading = ref(true)
+const error = ref(null)
+const goals = ref([])
+const filterType = ref('all')
+const sortBy = ref('name')
+
+const showContributionModal = ref(false)
+const selectedGoal = ref(null)
+const contributionAmount = ref('')
+const contributionDate = ref(new Date().toISOString().split('T')[0])
+const contributionError = ref('')
+const contributing = ref(false)
+const contributionField = ref(null)
+
+const showCreateModal = ref(false)
+const creating = ref(false)
+const newGoal = ref({
+  name: '',
+  target_amount: '',
+  monthly_contribution: '',
+  target_date: '',
+  goal_type: 'savings',
+  expected_return_rate: '',
+  horizon_months: '',
+  priority: 'medium',
+})
+
+const expandedGoal = ref(null)
+const highlightedGoalId = ref(null)
+
+const showEditModal = ref(false)
+const editingGoal = ref(null)
+const editing = ref(false)
+const editForm = ref({
+  name: '',
+  target_amount: '',
+  monthly_contribution: '',
+  target_date: '',
+  priority: 'medium',
+  goal_type: 'savings',
+})
+
+const showDeleteConfirm = ref(false)
+const deletingGoal = ref(null)
+const deleting = ref(false)
+
+const activeGoals = computed(() => {
+  let filtered = goals.value.filter(g => g.current_amount < g.target_amount)
+
+  if (filterType.value !== 'all') {
+    filtered = filtered.filter(g => g.goal_type === filterType.value)
+  }
+
+  const priorityOrder = { high: 0, medium: 1, low: 2 }
+  return filtered.sort((a, b) => {
+    switch (sortBy.value) {
+      case 'priority': return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1)
+      case 'progress': return goalProgress(b) - goalProgress(a)
+      case 'date': return (a.target_date || 'z').localeCompare(b.target_date || 'z')
+      default: return a.name.localeCompare(b.name)
+    }
+  })
+})
+
+const completedGoals = computed(() =>
+  goals.value.filter(g => g.current_amount >= g.target_amount)
+)
+
+const totalCurrent = computed(() =>
+  goals.value.reduce((sum, g) => sum + (g.current_amount || 0), 0)
+)
+
+const totalTarget = computed(() =>
+  goals.value.reduce((sum, g) => sum + (g.target_amount || 0), 0)
+)
+
+const overallProgress = computed(() => {
+  if (!totalTarget.value) return 0
+  return Math.round((totalCurrent.value / totalTarget.value) * 100)
+})
+
+function goalProgress(goal) {
+  if (!goal.target_amount) return 0
+  return Math.round((goal.current_amount / goal.target_amount) * 100)
+}
+
+function monthsRemaining(goal) {
+  if (!goal.target_date) return null
+  const target = new Date(goal.target_date)
+  const now = new Date()
+  const months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth())
+  return months > 0 ? months : null
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
+}
+
+function formatMoney(amount) {
+  if (!amount && amount !== 0) return '0'
+  return new Intl.NumberFormat('es-CO').format(amount)
+}
+
+function openContribution(goal) {
+  selectedGoal.value = goal
+  contributionAmount.value = ''
+  contributionDate.value = new Date().toISOString().split('T')[0]
+  contributionError.value = ''
+  showContributionModal.value = true
+  nextTick(() => contributionField.value?.focus())
+}
+
+function closeContribution() {
+  showContributionModal.value = false
+  selectedGoal.value = null
+  contributionAmount.value = ''
+  contributionError.value = ''
+}
+
+function validateContribution() {
+  const val = parseFloat(contributionAmount.value)
+  if (isNaN(val) || val <= 0) {
+    contributionError.value = 'El monto debe ser mayor a $0'
+  } else if (val > 100000000) {
+    contributionError.value = 'El monto es demasiado alto'
+  } else {
+    contributionError.value = ''
+  }
+}
+
+function openCreateModal() {
+  newGoal.value = {
+    name: '',
+    target_amount: '',
+    monthly_contribution: '',
+    target_date: '',
+    goal_type: 'savings',
+    expected_return_rate: '',
+    horizon_months: '',
+    priority: 'medium',
+  }
+  showCreateModal.value = true
+}
+
+function closeCreateModal() {
+  showCreateModal.value = false
+}
+
+async function submitCreateGoal() {
+  if (!newGoal.value.name || !newGoal.value.target_amount) return
+  creating.value = true
+  try {
+    const payload = {
+      name: newGoal.value.name,
+      target_amount: parseFloat(newGoal.value.target_amount),
+      priority: newGoal.value.priority,
+      goal_type: newGoal.value.goal_type,
+    }
+    if (newGoal.value.monthly_contribution) payload.monthly_contribution = parseFloat(newGoal.value.monthly_contribution)
+    if (newGoal.value.target_date) payload.target_date = newGoal.value.target_date
+    if (newGoal.value.goal_type === 'investment') {
+      if (newGoal.value.expected_return_rate) payload.expected_return_rate = parseFloat(newGoal.value.expected_return_rate)
+      if (newGoal.value.horizon_months) payload.horizon_months = parseInt(newGoal.value.horizon_months)
+    }
+    await api.post('/savings/goals', payload)
+    closeCreateModal()
+    await loadData()
+    window.$toast?.success('Meta creada')
+  } catch (e) {
+    window.$toast?.error('No pudimos crear la meta. Intenta de nuevo.')
+  } finally {
+    creating.value = false
+  }
+}
+
+function toggleDetails(goal) {
+  if (expandedGoal.value?.id === goal.id) {
+    expandedGoal.value = null
+  } else {
+    expandedGoal.value = goal
+    if (!goal.history) loadGoalHistory(goal)
+  }
+}
+
+async function loadGoalHistory(goal) {
+  try {
+    const res = await api.get(`/savings/goals/${goal.id}/contributions`)
+    goal.history = res.data
+  } catch {
+    goal.history = []
+  }
+}
+
+function openEditModal(goal) {
+  editingGoal.value = goal
+  editForm.value = {
+    name: goal.name,
+    target_amount: goal.target_amount,
+    monthly_contribution: goal.monthly_contribution || '',
+    target_date: goal.target_date || '',
+    priority: goal.priority || 'medium',
+    goal_type: goal.goal_type || 'savings',
+  }
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingGoal.value = null
+}
+
+async function submitEditGoal() {
+  if (!editingGoal.value) return
+  editing.value = true
+  try {
+    const payload = {
+      name: editForm.value.name,
+      target_amount: parseFloat(editForm.value.target_amount),
+      priority: editForm.value.priority,
+      goal_type: editForm.value.goal_type,
+    }
+    if (editForm.value.monthly_contribution) payload.monthly_contribution = parseFloat(editForm.value.monthly_contribution)
+    if (editForm.value.target_date) payload.target_date = editForm.value.target_date
+    await api.put(`/savings/goals/${editingGoal.value.id}`, payload)
+    closeEditModal()
+    await loadData()
+    window.$toast?.success('Meta actualizada')
+  } catch {
+    window.$toast?.error('No pudimos guardar los cambios. Intenta de nuevo.')
+  } finally {
+    editing.value = false
+  }
+}
+
+function confirmDelete(goal) {
+  deletingGoal.value = goal
+  showDeleteConfirm.value = true
+}
+
+async function submitDeleteGoal() {
+  if (!deletingGoal.value) return
+  deleting.value = true
+  try {
+    await api.delete(`/savings/goals/${deletingGoal.value.id}`)
+    showDeleteConfirm.value = false
+    deletingGoal.value = null
+    expandedGoal.value = null
+    await loadData()
+    window.$toast?.success('Meta eliminada')
+  } catch {
+    window.$toast?.error('No pudimos eliminar la meta. Intenta de nuevo.')
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function submitContribution() {
+  if (!selectedGoal.value || !contributionAmount.value || contributionError.value) return
+  contributing.value = true
+  try {
+    const amount = parseFloat(contributionAmount.value)
+    await api.post(`/savings/goals/${selectedGoal.value.id}/contributions`, {
+      amount,
+      contribution_date: contributionDate.value,
+    })
+    const goal = goals.value.find(g => g.id === selectedGoal.value.id)
+    if (goal) goal.current_amount += amount
+    closeContribution()
+    window.$toast?.success('Aporte registrado')
+    setTimeout(() => loadData(), 600)
+  } catch {
+    window.$toast?.error('No pudimos registrar el aporte. Intenta de nuevo.')
+  } finally {
+    contributing.value = false
+  }
+}
+
+async function loadData() {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await api.get('/savings/goals')
+    goals.value = res.data
+  } catch {
+    error.value = 'No pudimos cargar tus metas. Comprueba tu conexión.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleGoalCreated() {
+  const prevIds = goals.value.map(g => g.id)
+  await loadData()
+  const newGoal = goals.value.find(g => !prevIds.includes(g.id))
+  if (newGoal) {
+    highlightedGoalId.value = newGoal.id
+    setTimeout(() => {
+      const el = document.querySelector(`[data-goal-id="${newGoal.id}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+    setTimeout(() => { highlightedGoalId.value = null }, 2000)
+  }
+}
+
+onMounted(() => {
+  loadData()
+  window.addEventListener('goal-created', handleGoalCreated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('goal-created', handleGoalCreated)
+})
+</script>
+
+<style scoped>
+.goals-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-neutral-900);
+}
+
+.summary-hero {
+  text-align: center;
+  padding: 24px;
+  margin-bottom: 24px;
+  background: var(--color-surface-tinted-blue);
+  border: 1px solid var(--color-primary-100);
+  border-radius: var(--radius-lg);
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-neutral-900);
+  font-family: var(--font-mono);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--color-neutral-500);
+  text-transform: uppercase;
+}
+
+.summary-bar-track {
+  height: 8px;
+  background: var(--color-neutral-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.summary-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-400));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.summary-pct {
+  font-size: 0.8125rem;
+  color: var(--color-neutral-500);
+}
+
+.goals-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 4px;
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.filter-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-neutral-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+  color: var(--color-neutral-900);
+}
+
+.filter-btn.active {
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-900);
+  box-shadow: var(--shadow-xs);
+}
+
+.sort-select {
+  padding: 6px 12px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  color: var(--color-neutral-700);
+  background: var(--color-neutral-0);
+  cursor: pointer;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--color-primary-400);
+}
+
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.goal-card {
+  padding: 20px;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  border-left: 3px solid var(--color-primary-400);
+}
+
+.goal-card.highlight-new {
+  animation: highlightPulse 2s ease;
+  border-left-color: var(--color-success-400);
+  box-shadow: 0 0 0 3px var(--color-success-100), var(--shadow-md);
+}
+
+@keyframes highlightPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--color-success-200); }
+  25% { transform: scale(1.02); box-shadow: 0 0 0 8px var(--color-success-100); }
+  50% { transform: scale(1); box-shadow: 0 0 0 4px var(--color-success-50); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+.goal-card.expanded {
+  box-shadow: var(--shadow-md);
+}
+
+.goal-card.completed {
+  opacity: 0.7;
+}
+
+.goal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.goal-icon {
+  font-size: 24px;
+}
+
+.goal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.goal-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-800);
+}
+
+.goal-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.goal-type-badge.investment {
+  background: var(--color-info-100);
+  color: var(--color-info-700);
+}
+
+.goal-type-badge.completed {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+}
+
+.priority-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 9999px;
+}
+
+.priority-badge.high {
+  background: var(--color-error-50);
+  color: var(--color-error-600);
+}
+
+.priority-badge.medium {
+  background: var(--color-warning-50);
+  color: var(--color-warning-600);
+}
+
+.priority-badge.low {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-600);
+}
+
+.goal-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.amount-row.highlight {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+.amount-label {
+  font-size: 0.875rem;
+  color: var(--color-neutral-500);
+}
+
+.amount-current {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-success-600);
+}
+
+.amount-target {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-neutral-700);
+}
+
+.amount-remaining {
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-error-600);
+}
+
+.goal-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--color-neutral-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-400));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.progress-bar-fill.full {
+  background: linear-gradient(90deg, var(--color-success-500), var(--color-success-400));
+  width: 100%;
+}
+
+.progress-pct {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary-600);
+  min-width: 36px;
+  text-align: right;
+}
+
+.goal-monthly {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+
+.monthly-label {
+  font-size: 0.8125rem;
+  color: var(--color-neutral-500);
+}
+
+.monthly-value {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-neutral-700);
+}
+
+.goal-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--color-neutral-500);
+  margin-bottom: 8px;
+}
+
+.months-remaining {
+  font-weight: 500;
+  color: var(--color-primary-600);
+}
+
+.goal-projection {
+  padding: 12px;
+  background: var(--color-info-50);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.projection-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-info-700);
+  margin-bottom: 6px;
+}
+
+.projection-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: var(--color-info-600);
+}
+
+.projection-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-info-100);
+}
+
+.projection-label {
+  font-size: 0.75rem;
+  color: var(--color-info-600);
+}
+
+.projection-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-info-700);
+}
+
+.goal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.action-btn.primary {
+  background: var(--color-primary-500);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: var(--color-primary-600);
+}
+
+.action-btn.secondary {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.action-btn.secondary:hover {
+  background: var(--color-neutral-200);
+}
+
+.goal-expanded {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-neutral-100);
+  animation: slideDown 200ms ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.expanded-section {
+  margin-bottom: 16px;
+}
+
+.expanded-section:last-child {
+  margin-bottom: 0;
+}
+
+.expanded-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-neutral-600);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.expanded-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.expanded-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.expanded-btn:hover {
+  background: var(--color-neutral-50);
+  border-color: var(--color-neutral-300);
+}
+
+.expanded-btn.danger {
+  color: var(--color-error-600);
+  border-color: var(--color-error-200);
+}
+
+.expanded-btn.danger:hover {
+  background: var(--color-error-50);
+  border-color: var(--color-error-300);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-sm);
+}
+
+.history-date {
+  font-size: 0.8rem;
+  color: var(--color-neutral-600);
+}
+
+.history-amount {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-success-600);
+}
+
+.expanded-empty {
+  font-size: 0.8rem;
+  color: var(--color-neutral-400);
+  text-align: center;
+  padding: 12px;
+  margin: 0;
+}
+
+.completed-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.completed-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-success-600);
+}
+
+.completed-date {
+  font-size: 0.8rem;
+  color: var(--color-neutral-500);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-700);
+  margin-bottom: 12px;
+}
+
+.completed-section {
+  margin-top: 32px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px;
+  text-align: center;
+}
+
+.empty-icon {
+  color: var(--color-neutral-300);
+}
+
+.empty-text {
+  font-weight: 600;
+  color: var(--color-neutral-600);
+  margin: 0;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: var(--color-neutral-400);
+  margin: 0;
+}
+
+.empty-cta {
+  margin-top: 8px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--color-neutral-0);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-content.modal-wide {
+  max-width: 520px;
+}
+
+.modal-content.modal-small {
+  max-width: 360px;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--color-neutral-900);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-neutral-600);
+}
+
+.form-input {
+  padding: 10px 12px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.form-input:focus {
+  border-color: var(--color-primary-500);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-amount-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  transition: border-color var(--transition-fast);
+}
+
+.modal-amount-input:focus-within {
+  border-color: var(--color-primary-500);
+}
+
+.modal-amount-input.error {
+  border-color: var(--color-error-500);
+}
+
+.modal-currency {
+  font-size: 18px;
+  color: var(--color-neutral-400);
+}
+
+.modal-amount-field {
+  flex: 1;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-mono);
+}
+
+.form-error {
+  font-size: 0.75rem;
+  color: var(--color-error-600);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.btn-cancel {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.btn-cancel:hover {
+  background: var(--color-neutral-200);
+}
+
+.btn-confirm {
+  background: var(--color-primary-500);
+  color: white;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  border: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-confirm:hover {
+  background: var(--color-primary-600);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-confirm:hover {
+  background: var(--color-primary-600);
+}
+
+.btn-confirm:disabled {
+  background: var(--color-primary-300);
+  cursor: not-allowed;
+}
+
+.btn-confirm.btn-danger {
+  background: var(--color-error-500);
+}
+
+.btn-confirm.btn-danger:hover {
+  background: var(--color-error-600);
+}
+
+.delete-warning {
+  font-size: 0.875rem;
+  color: var(--color-neutral-600);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background: var(--color-primary-500);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-600);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px;
+  color: var(--color-error-500);
+}
+</style>

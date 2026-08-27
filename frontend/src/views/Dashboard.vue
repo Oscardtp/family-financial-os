@@ -211,15 +211,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, X } from 'lucide-vue-next'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useCurrency } from '@/composables/useCurrency'
 import { useDashboard } from '@/composables/useDashboard'
+import { useGoalsStore } from '@/stores/goals'
 
 const { fmt } = useCurrency()
 const router = useRouter()
+const goalsStore = useGoalsStore()
 
 const {
   loading, error, d,
@@ -248,17 +250,12 @@ function handleAlertOption(option) {
   else if (opt.includes('ingreso') || opt.includes('ingres')) router.push('/transactions')
 }
 
-function handleGoalCreated() {
+watch(() => goalsStore.goals.length, () => {
   loadData()
-}
+})
 
 onMounted(() => {
   loadData()
-  window.addEventListener('goal-created', handleGoalCreated)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('goal-created', handleGoalCreated)
 })
 </script>
 

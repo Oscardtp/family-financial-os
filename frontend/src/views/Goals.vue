@@ -13,7 +13,7 @@
 
     <div v-else-if="error" class="error-state">
       <span>{{ error }}</span>
-      <button class="btn btn-sm" @click="loadData">Reintentar</button>
+      <button class="btn btn-sm" @click="goalsStore.fetchGoals">Reintentar</button>
     </div>
 
     <template v-else>
@@ -118,9 +118,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Target } from 'lucide-vue-next'
-import { useGoals } from '@/composables/useGoals'
+import { useGoalsStore } from '@/stores/goals'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import GoalCard from '@/components/goals/GoalCard.vue'
 import GoalFilters from '@/components/goals/GoalFilters.vue'
@@ -129,13 +130,13 @@ import GoalCreateModal from '@/components/goals/GoalCreateModal.vue'
 import GoalEditModal from '@/components/goals/GoalEditModal.vue'
 import GoalDeleteConfirm from '@/components/goals/GoalDeleteConfirm.vue'
 
+const goalsStore = useGoalsStore()
 const {
-  goals, loading, error, expandedGoal, highlightedGoalId,
+  loading, error, expandedGoal, highlightedGoalId,
   filterType, sortBy,
   activeGoals, completedGoals, totalCurrent, totalTarget, overallProgress,
-  loadData, createGoal, editGoal, deleteGoal, contributeGoal, loadGoalHistory,
   fmt,
-} = useGoals()
+} = storeToRefs(goalsStore)
 
 const showContributionModal = ref(false)
 const selectedGoal = ref(null)
@@ -154,6 +155,8 @@ const showDeleteConfirm = ref(false)
 const deletingGoal = ref(null)
 const deleting = ref(false)
 
+let prevGoalIds = []
+
 function openContribution(goal) {
   selectedGoal.value = goal
   contributionAmount.value = ''
@@ -169,7 +172,7 @@ function closeContribution() {
 async function submitContribution() {
   if (!selectedGoal.value || !contributionAmount.value) return
   contributing.value = true
-  const { error: err } = await contributeGoal(selectedGoal.value.id, contributionAmount.value, contributionDate.value)
+  const { error: err } = await goalsStore.contributeGoal(selectedGoal.value.id, contributionAmount.value, contributionDate.value)
   contributing.value = false
   if (err) {
     window.$toast?.error(err)
@@ -181,14 +184,14 @@ async function submitContribution() {
 
 async function handleCreateGoal(data) {
   creating.value = true
-  const { error: err } = await createGoal(data)
+  prevGoalIds = goalsStore.goals.map(g => g.id)
+  const { error: err } = await goalsStore.createGoal(data)
   creating.value = false
   if (err) {
     window.$toast?.error(err)
   } else {
     showCreateModal.value = false
     window.$toast?.success('Meta creada')
-    highlightNewGoal()
   }
 }
 
@@ -205,7 +208,7 @@ function closeEditModal() {
 async function handleEditGoal(data) {
   if (!editingGoal.value) return
   editing.value = true
-  const { error: err } = await editGoal(editingGoal.value.id, data)
+  const { error: err } = await goalsStore.editGoal(editingGoal.value.id, data)
   editing.value = false
   if (err) {
     window.$toast?.error(err)
@@ -223,7 +226,7 @@ function confirmDelete(goal) {
 async function submitDeleteGoal() {
   if (!deletingGoal.value) return
   deleting.value = true
-  const { error: err } = await deleteGoal(deletingGoal.value.id)
+  const { error: err } = await goalsStore.deleteGoal(deletingGoal.value.id)
   deleting.value = false
   if (err) {
     window.$toast?.error(err)
@@ -239,14 +242,13 @@ function toggleDetails(goal) {
     expandedGoal.value = null
   } else {
     expandedGoal.value = goal
-    if (!goal.history) loadGoalHistory(goal)
+    if (!goal.history) goalsStore.loadGoalHistory(goal)
   }
 }
 
-function highlightNewGoal() {
-  const prevIds = goals.value.map(g => g.id)
-  loadData().then(() => {
-    const newGoal = goals.value.find(g => !prevIds.includes(g.id))
+watch(() => goalsStore.goals.length, (newLen, oldLen) => {
+  if (newLen > oldLen) {
+    const newGoal = goalsStore.goals.find(g => !prevGoalIds.includes(g.id))
     if (newGoal) {
       highlightedGoalId.value = newGoal.id
       setTimeout(() => {
@@ -255,20 +257,13 @@ function highlightNewGoal() {
       }, 100)
       setTimeout(() => { highlightedGoalId.value = null }, 2000)
     }
-  })
-}
-
-function handleGoalCreated() {
-  highlightNewGoal()
-}
-
-onMounted(() => {
-  loadData()
-  window.addEventListener('goal-created', handleGoalCreated)
+  }
+  prevGoalIds = goalsStore.goals.map(g => g.id)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('goal-created', handleGoalCreated)
+onMounted(() => {
+  prevGoalIds = goalsStore.goals.map(g => g.id)
+  goalsStore.fetchGoals()
 })
 </script>
 

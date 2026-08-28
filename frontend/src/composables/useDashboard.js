@@ -33,8 +33,16 @@ export function useDashboard() {
 
   const upcomingPayments = computed(() => d.value.upcoming_payments || [])
   const monthlyPayments = computed(() => d.value.monthly_payments || [])
-  const totalMonthlyPaid = computed(() => monthlyPayments.value.reduce((sum, p) => sum + (p.amount || 0), 0))
-  const totalMonthlyPayment = computed(() => debts.value.filter(x => x.status === 'active').reduce((sum, x) => sum + (x.minimum_payment || 0), 0))
+  const totalMonthlyPaid = computed(() => monthlyPayments.value.reduce((sum, p) => {
+    const val = Number(p.amount)
+    return sum + (Number.isFinite(val) ? val : 0)
+  }, 0))
+  const totalMonthlyPayment = computed(() => debts.value
+    .filter(x => x.status === 'active')
+    .reduce((sum, x) => {
+      const val = Number(x.minimum_payment)
+      return sum + (Number.isFinite(val) ? val : 0)
+    }, 0))
   const totalDebts = computed(() => debts.value.filter(x => x.status === 'active').length)
   const paidCount = computed(() => debts.value.filter(x => x.status === 'active' && x.current_balance <= 0).length)
 

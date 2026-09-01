@@ -63,6 +63,11 @@ class DebtService:
         new_status = "paid_off" if new_balance == 0 else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})
 
+        from app.application.services.calendar_debt_sync_service import CalendarDebtSyncService
+        sync = CalendarDebtSyncService(self.db)
+        payment_date = data.payment_date if hasattr(data.payment_date, "year") else data.payment_date
+        await sync.on_debt_payment(debt_id, payment_date, payment_amount, user["household_id"])
+
         return payment
 
     async def reverse_payment(self, debt_id: str, payment_id: str, household_id: str):
@@ -79,6 +84,10 @@ class DebtService:
         new_balance = debt["current_balance"] + payment["amount"]
         new_status = "active" if debt["status"] == "paid_off" else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})
+
+        from app.application.services.calendar_debt_sync_service import CalendarDebtSyncService
+        sync = CalendarDebtSyncService(self.db)
+        await sync.on_debt_payment_reversed(debt_id, payment["payment_date"], household_id)
 
     async def toggle_status(self, debt_id: str, user: dict) -> dict:
         debt = await self.get(debt_id, user["household_id"])
@@ -118,6 +127,10 @@ class DebtService:
         new_balance = max(Decimal("0"), Decimal(str(debt["current_balance"])) - min_payment)
         new_status = "paid_off" if new_balance == 0 else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})
+
+        from app.application.services.calendar_debt_sync_service import CalendarDebtSyncService
+        sync = CalendarDebtSyncService(self.db)
+        await sync.on_debt_month_marked_paid(debt_id, data.year, data.month, user["household_id"])
 
         return {"status": "ok", "year": data.year, "month": data.month}
 

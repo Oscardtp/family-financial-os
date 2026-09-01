@@ -3,8 +3,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.presentation.deps import require_viewer, require_member
 from app.infrastructure.repositories.notification_repository import SQLAlchemyNotificationRepository
+from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
+from app.application.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+
+@router.get("/upcoming", summary="Upcoming notifications", description="Get actionable upcoming notifications grouped by today/this week")
+async def upcoming_notifications(
+    days: int = 7,
+    current_user: dict = Depends(require_viewer),
+    db: AsyncSession = Depends(get_db),
+):
+    event_repo = SQLAlchemyFinancialEventRepository(db)
+    service = NotificationService(event_repo)
+    return await service.get_upcoming(
+        household_id=current_user["household_id"],
+        days=days,
+    )
 
 
 @router.get("", summary="List notifications", description="Get all notifications for the current user")

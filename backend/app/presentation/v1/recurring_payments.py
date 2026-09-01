@@ -6,6 +6,7 @@ from app.presentation.schemas.schemas import (
     RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentResponse,
 )
 from app.application.services.recurring_payment_service import RecurringPaymentService
+from app.application.services.obligation_sync_service import ObligationSyncService
 
 router = APIRouter(prefix="/recurring-payments", tags=["Recurring Payments"])
 
@@ -29,6 +30,8 @@ async def create_recurring_payment(
 ):
     service = RecurringPaymentService(db)
     result = await service.create(data, current_user["household_id"], current_user["id"])
+    sync = ObligationSyncService(db)
+    await sync.sync_recurring(result, current_user["household_id"])
     await db.commit()
     return result
 
@@ -56,6 +59,8 @@ async def update_recurring_payment(
     service = RecurringPaymentService(db)
     try:
         result = await service.update(payment_id, data, current_user["household_id"])
+        sync = ObligationSyncService(db)
+        await sync.sync_recurring(result, current_user["household_id"])
         await db.commit()
         return result
     except ValueError:
@@ -71,6 +76,8 @@ async def delete_recurring_payment(
     service = RecurringPaymentService(db)
     try:
         await service.delete(payment_id, current_user["household_id"])
+        sync = ObligationSyncService(db)
+        await sync.remove_for_source(current_user["household_id"], payment_id)
         await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")

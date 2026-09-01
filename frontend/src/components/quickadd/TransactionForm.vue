@@ -20,9 +20,9 @@
 
     <div class="form-field">
       <label class="form-question">¿En qué?</label>
-      <div v-if="categories.length" class="category-grid">
+      <div v-if="filteredCategories.length" class="category-grid">
         <button
-          v-for="cat in categories"
+          v-for="cat in filteredCategories"
           :key="cat.id"
           type="button"
           class="category-btn"
@@ -90,15 +90,16 @@ let fmt = useFormattedNumber(0, { prefix: '$' })
 const amount = computed(() => fmt.rawValue.value)
 const displayAmount = computed(() => fmt.displayValue.value)
 
-const onAmountInput = () => fmt.onInput()
-const onAmountFocus = () => fmt.onFocus()
+const onAmountInput = (event) => fmt.onInput(event)
+const onAmountFocus = (event) => fmt.onFocus(event)
 
 const filteredCategories = computed(() =>
   props.categories.filter(c => c.type === props.type)
 )
 
 const isDebtCategory = computed(() => {
-  const debtCat = props.categories.find(c => c.name?.toLowerCase() === 'deudas')
+  if (props.type !== 'expense') return false
+  const debtCat = filteredCategories.value.find(c => c.name?.toLowerCase() === 'deudas')
   return debtCat && categoryId.value === debtCat.id
 })
 

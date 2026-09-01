@@ -114,9 +114,17 @@
                 </span>
                 <span class="notif-level">{{ item.level }}</span>
               </div>
-              <button class="btn-pay" @click="handlePay(item.event_id)">
-                Registrar pago
-              </button>
+              <div class="notif-actions">
+                <button class="btn-pay" @click="handlePay(item.event_id)">
+                  Registrar pago
+                </button>
+                <button v-if="item.obligation_id" class="btn-ghost" @click="handleViewObligation(item.obligation_id)">
+                  Ver obligación
+                </button>
+                <button v-else class="btn-ghost" @click="handleMakeRecurrent(item)">
+                  Recurrente
+                </button>
+              </div>
             </div>
           </div>
         </template>
@@ -168,6 +176,8 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { Bell, BellOff, AlertCircle, CheckCircle, Info, Clock, AlertTriangle, Calendar, CalendarCheck, Lightbulb } from 'lucide-vue-next'
 import { useNotifications } from '@/composables/useNotifications'
 import { useCurrency } from '@/composables/useCurrency'
+import { useToast } from '@/composables/useToast'
+import { eventsService } from '@/services/events'
 
 const {
   notifications,
@@ -189,7 +199,8 @@ const {
   useClickOutside,
 } = useNotifications()
 
-const { fmtDate } = useCurrency()
+const { fmtDate, fmtFull } = useCurrency()
+const toast = useToast()
 
 const bellRef = ref(null)
 const isOpen = ref(false)
@@ -239,6 +250,7 @@ function toggleDropdown() {
 async function handleAccept(s) {
   try {
     await acceptSuggestion(s)
+    toast?.success('Obligación creada')
   } catch (e) {
     console.error('No pudimos aceptar la sugerencia', e)
   }
@@ -252,6 +264,22 @@ async function handlePay(eventId) {
   }
 }
 
+function handleViewObligation(obligationId) {
+  toast?.info('Función en desarrollo')
+}
+
+async function handleMakeRecurrent(item) {
+  try {
+    await eventsService.createObligationFromEvent({
+      event_id: item.event_id,
+    })
+    toast?.success('Obligación recurrente creada')
+    await loadUpcoming()
+  } catch (e) {
+    console.error('No pudimos crear la obligación', e)
+  }
+}
+
 function handleNotification(notif) {
   markRead(notif)
   isOpen.value = false
@@ -260,6 +288,7 @@ function handleNotification(notif) {
 function formatTime(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
   const now = new Date()
   const diff = now - date
   const minutes = Math.floor(diff / 60000)
@@ -438,6 +467,31 @@ onMounted(load)
 
 .upcoming-item {
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notif-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-ghost {
+  border: 1px solid var(--color-neutral-200);
+  background: transparent;
+  color: var(--color-neutral-700);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  background: var(--color-neutral-50);
 }
 
 .notif-icon {

@@ -1,89 +1,90 @@
 {
   "version": 1,
   "skills": {
-    "application-security": {
-      "source": "custom",
-      "sourceType": "internal",
-      "skillPath": ".kilo/skills/application-security/SKILL.md",
-      "version": "1.0.0"
-    },
-    "architecture-patterns": {
-      "source": "secondsky/claude-skills",
+    "xlsx": {
+      "source": "HKUDS/DeepTutor",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/architecture-patterns/SKILL.md",
-      "version": "1.0.0"
+      "skillPath": "deeptutor/skills/builtin/xlsx/SKILL.md"
     },
-    "conventional-commits": {
-      "source": "conventional-commits",
-      "sourceType": "spec",
-      "skillPath": ".kilo/skills/conventional-commits/SKILL.md",
-      "version": "1.0.0"
-    },
-    "e2e-testing": {
-      "source": "custom",
-      "sourceType": "internal",
-      "skillPath": ".kilo/skills/e2e-testing/SKILL.md",
-      "version": "1.0.0"
-    },
-    "nextjs-app-router-patterns": {
-      "source": "vercel/next.js",
+    "fastapi-patterns": {
+      "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/nextjs-app-router-patterns/SKILL.md",
-      "version": "latest"
+      "skillPath": "skills/fastapi-patterns/SKILL.md"
     },
-    "playwright": {
-      "source": "microsoft/playwright",
+    "python-patterns": {
+      "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/playwright/SKILL.md",
-      "version": "latest"
+      "skillPath": "skills/python-patterns/SKILL.md"
     },
-    "postgresql-table-design": {
-      "source": "custom",
-      "sourceType": "internal",
-      "skillPath": ".kilo/skills/postgresql-table-design/SKILL.md",
-      "version": "1.0.0"
-    },
-    "prisma-client-api": {
-      "source": "prisma/prisma",
+    "vue-patterns": {
+      "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/prisma-client-api/SKILL.md",
-      "version": "7.9.1"
+      "skillPath": "skills/vue-patterns/SKILL.md"
     },
-    "prisma-database-setup": {
-      "source": "prisma/prisma",
+    "security-review": {
+      "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/prisma-database-setup/SKILL.md",
-      "version": "7.6.0"
+      "skillPath": ".agents/skills/security-review/SKILL.md"
+    },
+    "postgres-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/postgres-patterns/SKILL.md"
+    },
+    "database-migrations": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/database-migrations/SKILL.md"
+    },
+    "docker-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/docker-patterns/SKILL.md"
     },
     "python-testing": {
       "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": "skills/python-testing/SKILL.md",
-      "computedHash": "6e28d59012e98e0f8afe387807074730267047dddc1c1df2934fb5c061b21428"
+      "skillPath": "skills/python-testing/SKILL.md"
     },
-    "supabase": {
-      "source": "supabase/supabase",
+    "deployment-patterns": {
+      "source": "affaan-m/ECC",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/supabase/SKILL.md",
-      "version": "0.1.2"
+      "skillPath": "skills/deployment-patterns/SKILL.md"
     },
-    "supabase-postgres-best-practices": {
-      "source": "supabase/supabase",
+    "excel-author": {
+      "source": "NousResearch/hermes-agent",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/supabase-postgres-best-practices/SKILL.md",
-      "version": "1.1.1"
+      "skillPath": "optional-skills/finance/excel-author/SKILL.md"
     },
-    "vitest-testing": {
-      "source": "vitest-dev/vitest",
+    "fastapi-official": {
+      "source": "fastapi/fastapi",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/vitest-testing/SKILL.md",
-      "version": "latest"
+      "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md"
     },
-    "zod": {
-      "source": "colinhacks/zod",
+    "ai-process-lifecycle-manager": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/ai-process-lifecycle-manager/SKILL.md"
+    },
+    "systematic-debugging": {
+      "source": "obra/superpowers",
       "sourceType": "github",
-      "skillPath": ".kilo/skills/zod/SKILL.md",
-      "version": "latest"
+      "skillPath": "skills/systematic-debugging/SKILL.md"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/test-driven-development/SKILL.md"
+    },
+    "product-manager-ux-cx-acceptance": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/product-manager-ux-cx-acceptance/SKILL.md"
+    },
+    "friendly-fintech-voice": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/friendly-fintech-voice/SKILL.md"
     }
   }
 }

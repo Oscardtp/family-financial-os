@@ -8,6 +8,7 @@ from app.presentation.schemas.schemas import (
     MarkPaidRequest, PaymentMonthHistory,
 )
 from app.application.services.debt_service import DebtService
+from app.application.services.obligation_sync_service import ObligationSyncService
 
 router = APIRouter(prefix="/debts", tags=["Debts"])
 
@@ -40,6 +41,8 @@ async def create_debt(
 ):
     service = DebtService(db)
     result = await service.create(data, current_user["household_id"])
+    sync = ObligationSyncService(db)
+    await sync.sync_debt(result, current_user["household_id"])
     await db.commit()
     return result
 
@@ -67,6 +70,8 @@ async def update_debt(
     service = DebtService(db)
     try:
         result = await service.update(debt_id, data, current_user["household_id"])
+        sync = ObligationSyncService(db)
+        await sync.sync_debt(result, current_user["household_id"])
         await db.commit()
         return result
     except ValueError:
@@ -82,6 +87,8 @@ async def delete_debt(
     service = DebtService(db)
     try:
         await service.delete(debt_id, current_user["household_id"])
+        sync = ObligationSyncService(db)
+        await sync.remove_for_source(current_user["household_id"], debt_id)
         await db.commit()
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos esta deuda")

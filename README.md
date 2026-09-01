@@ -1,152 +1,103 @@
 # Family Financial OS
 
-Un sistema operativo financiero familiar para hogares colombianos.
+A comprehensive family financial management platform built with FastAPI (Python) and Vue.js 3.
 
-## Propósito
+## Features
 
-Ayudar a una familia a administrar su economía real de manera simple, privada y rápida.
+- **Accounts**: Manage bank accounts, cash, wallets, and credit cards
+- **Transactions**: Track income, expenses, and transfers with categories
+- **Budgets**: Set monthly spending limits per category with visual progress
+- **Debts**: Track debts with payments, interest rates, and payoff projections
+- **Savings**: Set savings goals with contributions and completion forecasts
+- **Patrimony**: Register assets and liabilities for net worth tracking
+- **Projections**: Cash flow forecasting, debt payoff timeline, scenario simulator
+- **Dashboard**: Financial overview with charts (income vs expenses, expense breakdown)
+- **Household**: Multi-user support with role-based access (Owner, Member, Viewer)
+- **Reports**: CSV export of transactions with date filters
+- **Audit Log**: Track who performed each operation
 
-## Tecnología
+## Tech Stack
 
-- Frontend: HTML5, CSS3, JavaScript moderno
-- Backend: Python, FastAPI
-- Base de datos: SQLite
-- Validación: Pydantic
-- Testing: pytest
-- Control de versiones: Git
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.12, FastAPI, SQLAlchemy (async), Alembic |
+| Database | SQLite (dev) / PostgreSQL (prod) |
+| Frontend | Vue.js 3, Vite, Pinia, Chart.js, Lucide Icons |
+| Auth | JWT (access + refresh tokens), bcrypt |
 
-## Requisitos previos
+## Quick Start
 
-- Python 3.10 o superior
-- pip (gestor de paquetes de Python)
-- Git
+### Backend
 
-## Instalación
-
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/<usuario>/family-financial-os.git
-   cd family-financial-os
-   ```
-
-2. Crea un entorno virtual:
-   ```bash
-   python -m venv venv
-   ```
-
-3. Activa el entorno virtual:
-   - Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. Instala dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-5. Configura variables de entorno (opcional):
-   ```bash
-   cp .env.example .env
-   # Edita .env con tus configuraciones
-   ```
-
-## Ejecución
-
-Inicia el servidor backend:
 ```bash
 cd backend
-python -m app.main
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
-Abre el navegador en:
+API docs available at: http://localhost:8000/docs
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
 ```
-http://localhost:8000
-```
+
+Frontend available at: http://localhost:5173
+
+## API Endpoints
+
+| Module | Endpoints |
+|--------|-----------|
+| Auth | `POST /register`, `POST /login`, `POST /refresh`, `GET /me` |
+| Accounts | CRUD at `/accounts` |
+| Transactions | CRUD at `/transactions` |
+| Categories | CRUD at `/categories` |
+| Budgets | CRUD at `/budgets` |
+| Debts | CRUD at `/debts`, `POST /debts/{id}/payments` |
+| Savings | CRUD at `/savings/goals`, `POST /savings/goals/{id}/contributions` |
+| Patrimony | CRUD at `/patrimony/assets`, `/patrimony/liabilities` |
+| Dashboard | `GET /dashboard` |
+| Projections | `GET /cash-flow`, `GET /debts`, `GET /savings`, `POST /scenario` |
+| Household | `GET /household`, `POST /invite`, `PUT /members/{id}/role`, `DELETE /members/{id}` |
+| Reports | `GET /reports/transactions/csv` |
+| Audit | `GET /audit` |
+
+## Roles
+
+| Role | Permissions |
+|------|------------|
+| **Owner** | Full access: manage household, invite/remove members, all CRUD |
+| **Member** | View data, create/update transactions, manage budgets |
+| **Viewer** | Read-only access to all data and reports |
 
 ## Testing
 
-Ejecuta la suite de pruebas:
 ```bash
 cd backend
-python -m pytest tests/ -v
+pytest
 ```
 
-Para pruebas con coverage:
-```bash
-python -m pytest tests/ --cov=app --cov-report=term-missing
-```
-
-## Estructura del proyecto
+## Project Structure
 
 ```
 family-financial-os/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # Endpoints FastAPI
-│   │   ├── application/   # Casos de uso
-│   │   ├── domain/        # Entidades y modelos
-│   │   ├── infrastructure/# Repositorios y DB
-│   │   └── main.py        # Punto de entrada
-│   └── tests/             # Pruebas automatizadas
+│   │   ├── domain/           # Domain interfaces
+│   │   ├── application/      # Application services
+│   │   ├── infrastructure/   # SQLAlchemy models & repositories
+│   │   └── presentation/     # API routes, schemas, deps
+│   ├── alembic/              # Database migrations
+│   └── tests/                # Test suite
 ├── frontend/
-│   ├── assets/
-│   │   ├── css/           # Estilos
-│   │   └── js/            # Módulos JavaScript
-│   └── index.html         # Página principal
-└── README.md
+│   └── src/
+│       ├── components/       # Reusable UI components
+│       ├── views/            # Page views
+│       ├── stores/           # Pinia state management
+│       ├── services/         # API client
+│       └── router/           # Vue Router config
+└── .opencode/plans/          # Development plans
 ```
-
-## Características
-
-- Dashboard financiero con resumen del mes
-- Gestión de cuentas (bancarias, digitales, efectivo)
-- Registro rápido de gastos
-- Control de presupuestos por categoría
-- Seguimiento de deudas
-- Metas de ahorro
-- Pagos recurrentes
-- Reportes y análisis
-- Exportación de datos (JSON, CSV)
-
-## API
-
-La API sigue el formato:
-```json
-{
-  "success": true,
-  "data": {},
-  "meta": {},
-  "error": {}
-}
-```
-
-Base URL: `/api/v1`
-
-## Contribución
-
-1. Crea una rama para tu feature:
-   ```bash
-   git checkout -b feature/nueva-funcionalidad
-   ```
-
-2. Realiza tus cambios y commit:
-   ```bash
-   git add .
-   git commit -m "feat: descripción del cambio"
-   ```
-
-3. Push a la rama:
-   ```bash
-   git push origin feature/nueva-funcionalidad
-   ```
-
-4. Abre un Pull Request
-
-## Licencia
-
-MIT

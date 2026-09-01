@@ -1,19 +1,5 @@
 <template>
   <div class="calendar-page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">Calendario</h2>
-        <p class="page-subtitle">Lo que tienes que pagar, cuánto y cuándo.</p>
-      </div>
-      <div class="header-actions">
-        <select v-model="availabilityDays" @change="onAvailabilityDays" class="availability-select">
-          <option :value="7">7 días</option>
-          <option :value="30">30 días</option>
-        </select>
-        <button class="today-btn" @click="goToday">Hoy</button>
-      </div>
-    </div>
-
     <div v-if="store.availabilityLoading" class="availability-skeleton">
       <div v-for="n in 4" :key="n" class="skeleton-line"></div>
     </div>
@@ -54,9 +40,21 @@
     </div>
 
     <div class="cal-toolbar">
+      <div class="header-actions">
+        <select v-model="availabilityDays" @change="onAvailabilityDays" class="availability-select">
+          <option :value="7">7 días</option>
+          <option :value="30">30 días</option>
+        </select>
+        <button class="today-btn" @click="goToday">Hoy</button>
+      </div>
       <button class="nav-btn" @click="prevMonth" aria-label="Mes anterior"><ChevronLeft :size="20" /></button>
       <span class="cal-month">{{ monthLabel }}</span>
       <button class="nav-btn" @click="nextMonth" aria-label="Mes siguiente"><ChevronRight :size="20" /></button>
+      <button class="prepare-btn" @click="openPrepare">Preparar el mes</button>
+    </div>
+
+    <div class="cal-weekdays">
+      <span v-for="day in WEEKDAYS" :key="day" class="cal-weekday">{{ day }}</span>
     </div>
 
     <div v-if="store.loading" class="cal-grid">
@@ -69,18 +67,21 @@
         :key="i"
         class="cal-cell"
         :class="{ 'out-month': !cell.inMonth, 'is-today': cell.isToday }"
+        @click.self="openCreateOnDate(cell.dateStr)"
       >
-        <span class="cell-day" :class="{ 'today-pill': cell.isToday }">{{ cell.day }}</span>
+        <span class="cell-day" :class="{ 'today-pill': cell.isToday }" @click.stop>{{ cell.day }}</span>
         <div class="cell-events">
           <button
             v-for="ev in cell.events"
             :key="ev.id"
             class="ev-chip"
             :class="eventColor(ev)"
-            @click="openEvent(ev)"
+            @click.stop="openEvent(ev)"
           >
-            <component :is="typeIcon(ev.type)" :size="13" class="ev-icon" />
             <span class="ev-title">{{ ev.title }}</span>
+            <span v-if="ev.recommended_date && ev.due_date !== ev.recommended_date" class="ev-sub">{{ fmtDateShort(ev.recommended_date) }}</span>
+            <span v-if="isCutoffUrgent(ev)" class="ev-cutoff-badge">🔴</span>
+            <span v-if="ev.confidence < 100" class="ev-conf-badge">?</span>
             <span class="ev-amount">{{ fmt(ev.amount) }}</span>
           </button>
         </div>
@@ -91,49 +92,57 @@
       Este mes está tranquilo. Cuando agregues un pago o una obligación, aparecerá aquí.
     </p>
 
-    <button class="fab" @click="store.createOpen = true" aria-label="Nuevo evento">
-      <Plus :size="26" />
-    </button>
-
     <!-- Detalle del evento -->
     <div v-if="store.detailOpen" class="sheet-backdrop" @click.self="store.closeDetail">
       <div class="sheet">
         <button class="sheet-close" @click="store.closeDetail" aria-label="Cerrar"><X :size="20" /></button>
-        <div v-if="selectedEvent" class="sheet-body">
+        <div v-if="store.selectedEvent" class="sheet-body">
           <div class="sheet-head">
-            <component :is="typeIcon(selectedEvent.type)" :size="22" />
-            <h3>{{ selectedEvent.title }}</h3>
+            <component :is="typeIcon(store.selectedEvent.type)" :size="22" />
+            <h3>{{ store.selectedEvent.title }}</h3>
           </div>
-          <div class="sheet-amount">{{ fmtFull(selectedEvent.amount) }}</div>
+          <div class="sheet-amount">{{ fmtFull(store.selectedEvent.amount) }}</div>
 
           <div class="sheet-row">
             <Clock :size="16" /><span>Fecha límite</span>
-            <strong>{{ fmtDate(selectedEvent.due_date) }}</strong>
+            <strong>{{ fmtDate(store.selectedEvent.due_date) }}</strong>
           </div>
-          <div v-if="selectedEvent.recommended_date" class="sheet-row">
+          <div v-if="store.selectedEvent.recommended_date" class="sheet-row sheet-row-ok">
             <CalendarDays :size="16" /><span>Recomendado</span>
-            <strong>{{ fmtDate(selectedEvent.recommended_date) }}</strong>
+            <strong>{{ fmtDate(store.selectedEvent.recommended_date) }}</strong>
+          </div>
+          <div v-if="store.selectedEvent.cutoff_date" class="sheet-row sheet-row-warn">
+            <AlertTriangle :size="16" /><span>Fecha de corte</span>
+            <strong>{{ fmtDate(store.selectedEvent.cutoff_date) }}</strong>
           </div>
           <div class="sheet-row">
             <Check :size="16" /><span>Estado</span>
-            <strong :class="statusClass(selectedEvent)">{{ statusLabel(selectedEvent) }}</strong>
+            <strong :class="statusClass(store.selectedEvent)">{{ statusLabel(store.selectedEvent) }}</strong>
           </div>
-          <div v-if="selectedEvent.payment_method" class="sheet-row">
+          <div v-if="store.selectedEvent.payment_method" class="sheet-row">
             <Wallet :size="16" /><span>Forma de pago</span>
-            <strong>{{ methodLabel(selectedEvent.payment_method) }}</strong>
+            <strong>{{ methodLabel(store.selectedEvent.payment_method) }}</strong>
           </div>
-          <div v-if="selectedEvent.responsibility" class="sheet-row">
+          <div v-if="store.selectedEvent.account_id" class="sheet-row">
+            <PiggyBank :size="16" /><span>Cuenta</span>
+            <strong>{{ accountName(store.selectedEvent.account_id) }}</strong>
+          </div>
+          <div v-if="store.selectedEvent.responsible_member_id" class="sheet-row">
             <User :size="16" /><span>Responsable</span>
-            <strong>{{ selectedEvent.responsibility }}</strong>
+            <strong>{{ memberName(store.selectedEvent.responsible_member_id) }}</strong>
           </div>
-          <div v-if="selectedEvent.consequence_note" class="sheet-note">
-            {{ selectedEvent.consequence_note }}
+          <div v-if="store.selectedEvent.consequence_note" class="sheet-note">
+            {{ store.selectedEvent.consequence_note }}
+          </div>
+          <div v-if="store.selectedEvent.confidence < 100" class="sheet-row">
+            <Info :size="16" /><span>Origen</span>
+            <strong>{{ confidenceLabel(store.selectedEvent) }}</strong>
           </div>
 
           <button
-            v-if="selectedEvent.status !== 'paid'"
+            v-if="store.selectedEvent.status !== 'paid'"
             class="pay-btn"
-            @click="onPay(selectedEvent)"
+            @click="onPay(store.selectedEvent)"
           >
             <Check :size="18" /> Marcar como pagado
           </button>
@@ -142,7 +151,7 @@
           </button>
 
           <button
-            v-if="selectedEvent.obligation_id"
+            v-if="store.selectedEvent.obligation_id"
             class="link-btn"
             @click="showObligationInfo"
           >
@@ -173,23 +182,76 @@
           <label>Monto
             <input v-model="form.amount" type="number" min="1" required placeholder="85000" />
           </label>
-          <label>Fecha límite
-            <input v-model="form.due_date" type="date" required />
+          <div class="form-row">
+            <label>Fecha recomendada
+              <input v-model="form.recommended_date" type="date" />
+            </label>
+            <label>Fecha límite
+              <input v-model="form.cutoff_date" type="date" required />
+            </label>
+          </div>
+          <label>Cuenta
+            <select v-model="form.account_id">
+              <option :value="null">Sin especificar</option>
+              <option v-for="a in store.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+            </select>
           </label>
-          <label>Forma de pago
-            <select v-model="form.payment_method">
-              <option :value="null">No especificada</option>
-              <option value="card">Tarjeta</option>
-              <option value="cash">Efectivo</option>
-              <option value="transfer">Transferencia</option>
+          <label>Responsable
+            <select v-model="form.responsible_member_id">
+              <option :value="null">Sin asignar</option>
+              <option v-for="m in store.members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </label>
+          <label>Consecuencia
+            <textarea v-model="form.consequence_note" rows="2" placeholder="Solo si aplica..."></textarea>
+          </label>
+          <label>Origen
+            <select v-model="form.visibility">
+              <option value="confirmed">Confirmado</option>
+              <option value="scheduled">Programado</option>
+              <option value="estimated">Estimado</option>
             </select>
           </label>
           <p v-if="formError" class="form-error">{{ formError }}</p>
           <div class="form-actions">
-            <button type="button" class="ghost-btn" @click="createOpen = false">Cancelar</button>
+            <button type="button" class="ghost-btn" @click="store.createOpen = false">Cancelar</button>
             <button type="submit" class="pay-btn">Guardar</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Preparar el mes -->
+    <div v-if="prepareOpen" class="sheet-backdrop" @click.self="prepareOpen = false">
+      <div class="sheet">
+        <button class="sheet-close" @click="prepareOpen = false" aria-label="Cerrar"><X :size="20" /></button>
+        <h3 class="form-title">Preparar el mes</h3>
+        <div v-if="prepareLoading" class="loading-state">Cargando...</div>
+        <div v-else-if="prepareData" class="prepare-grid">
+          <div class="prepare-row">
+            <span>Pagos programados</span>
+            <strong>{{ prepareData.scheduled_payments_count }} · {{ fmtFull(prepareData.scheduled_payments_amount) }}</strong>
+          </div>
+          <div class="prepare-row">
+            <span>Ingresos previstos</span>
+            <strong class="income">{{ fmtFull(prepareData.expected_income) }}</strong>
+          </div>
+          <div class="prepare-row">
+            <span>Deudas activas</span>
+            <strong>{{ prepareData.new_debts_count }}</strong>
+          </div>
+          <div class="prepare-row">
+            <span>Pagos recurrentes</span>
+            <strong>{{ prepareData.new_recurring_count }}</strong>
+          </div>
+        </div>
+        <div v-else class="empty-state-inline">
+          <p>No pudimos cargar la preparación del mes.</p>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="ghost-btn" @click="prepareOpen = false">Cerrar</button>
+          <button type="button" class="pay-btn" @click="prepareOpen = false">Listo</button>
+        </div>
       </div>
     </div>
   </div>
@@ -197,26 +259,33 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
-  Plus, CreditCard, TrendingUp, Target, Wallet, Bell, Check,
+  CreditCard, TrendingUp, Target, Wallet, Bell, Check,
   ChevronLeft, ChevronRight, X, ArrowRight, CalendarDays, Clock, User,
+  AlertTriangle, PiggyBank, Info,
 } from 'lucide-vue-next'
 import { useCalendarStore } from '@/stores/useCalendar'
 import { useToast } from '@/composables/useToast'
+import { useCurrency } from '@/composables/useCurrency'
+import { eventsService } from '@/services/events'
 
 const store = useCalendarStore()
 const toast = useToast()
+const { fmt, fmtFull, fmtDate } = useCurrency()
+const router = useRouter()
+const route = useRoute()
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 const monthLabel = computed(() =>
-  new Date(store.year.value, store.month.value - 1, 1).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
+  new Date(store.year, store.month - 1, 1).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
 )
 
 const calendarDays = computed(() => {
   const now = new Date()
-  const y = Number.isFinite(store.year.value) ? store.year.value : now.getFullYear()
-  const m = Number.isFinite(store.month.value) ? store.month.value : now.getMonth() + 1
+  const y = Number.isFinite(store.year) ? store.year : now.getFullYear()
+  const m = Number.isFinite(store.month) ? store.month : now.getMonth() + 1
   const first = new Date(y, m - 1, 1)
   const offset = (first.getDay() + 6) % 7
   const start = new Date(y, m - 1, 1 - offset)
@@ -244,6 +313,7 @@ const calendarDays = computed(() => {
 })
 
 function daysUntil(dateStr) {
+  if (!dateStr) return null
   const d = new Date(dateStr + 'T00:00:00')
   const now = new Date()
   now.setHours(0, 0, 0, 0)
@@ -255,9 +325,32 @@ function eventColor(ev) {
   if (ev.type === 'income') return 'ev-blue'
   if (ev.type === 'goal') return 'ev-purple'
   const diff = daysUntil(ev.due_date)
+  if (diff === null) return 'ev-green'
   if (diff < 0) return 'ev-red'
+  if (ev.cutoff_date && daysUntil(ev.cutoff_date) <= 1) return 'ev-red'
   if (diff <= (ev.reminder_days_before || 3)) return 'ev-yellow'
   return 'ev-green'
+}
+
+function statusLabel(ev) {
+  if (ev.status === 'paid') return 'Pagado'
+  const diff = daysUntil(ev.due_date)
+  if (diff === null) return 'Pendiente'
+  if (diff < 0) return 'Atrasado'
+  if (diff === 0) return 'Vence hoy'
+  if (diff <= (ev.reminder_days_before || 3)) return 'Próximo'
+  return 'Pendiente'
+}
+
+function statusClass(ev) {
+  if (ev.status === 'paid') return 'st-green'
+  const diff = daysUntil(ev.due_date)
+  if (diff === null) return 'st-yellow'
+  return diff <= 0 ? 'st-red' : 'st-yellow'
+}
+
+function methodLabel(m) {
+  return { card: 'Tarjeta', cash: 'Efectivo', transfer: 'Transferencia' }[m] || m
 }
 
 function typeIcon(type) {
@@ -268,26 +361,62 @@ function typeIcon(type) {
   return Bell
 }
 
-function statusLabel(ev) {
-  if (ev.status === 'paid') return 'Pagado'
-  const diff = daysUntil(ev.due_date)
-  if (diff < 0) return 'Atrasado'
-  if (diff === 0) return 'Vence hoy'
-  if (diff <= (ev.reminder_days_before || 3)) return 'Próximo'
-  return 'Pendiente'
+function fmtDateShort(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const diff = Math.round((d - now) / 86400000)
+  if (isNaN(diff)) return ''
+  if (diff === 0) return 'hoy'
+  if (diff === 1) return 'mañana'
+  if (diff < 7) return `en ${diff} días`
+  return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
 }
 
-function statusClass(ev) {
-  return ev.status === 'paid' ? 'st-green' : daysUntil(ev.due_date) <= 0 ? 'st-red' : 'st-yellow'
+function isCutoffUrgent(ev) {
+  if (!ev.cutoff_date || ev.status === 'paid') return false
+  const diff = daysUntil(ev.cutoff_date)
+  if (diff === null) return false
+  return diff <= 1
 }
 
-function methodLabel(m) {
-  return { card: 'Tarjeta', cash: 'Efectivo', transfer: 'Transferencia' }[m] || m
+function confidenceLabel(ev) {
+  if (ev.confidence >= 100) return 'Confirmado'
+  if (ev.confidence >= 70) return 'Aprendido'
+  return 'Estimado'
 }
 
-const form = ref({ title: '', type: 'expense', amount: '', due_date: '', payment_method: null })
+function accountName(id) {
+  const a = store.accounts.find(x => x.id === id)
+  return a ? a.name : id
+}
+
+function memberName(id) {
+  const m = store.members.find(x => x.id === id)
+  return m ? m.name : id
+}
+
+const form = ref({ title: '', type: 'expense', amount: '', due_date: '', recommended_date: '', cutoff_date: '', account_id: null, responsible_member_id: null, consequence_note: '', visibility: 'confirmed' })
 const formError = ref(null)
 const availabilityDays = ref(7)
+
+const prepareOpen = ref(false)
+const prepareLoading = ref(false)
+const prepareData = ref(null)
+
+async function openPrepare() {
+  prepareOpen.value = true
+  prepareLoading.value = true
+  try {
+    const res = await eventsService.prepareMonth()
+    prepareData.value = res.data
+  } catch {
+    prepareData.value = null
+  } finally {
+    prepareLoading.value = false
+  }
+}
 
 async function onAvailabilityDays() {
   await store.fetchAvailability(availabilityDays.value)
@@ -300,24 +429,29 @@ function projectedClass() {
 }
 
 function prevMonth() {
-  let m = store.month.value - 1
-  let y = store.year.value
+  let m = store.month - 1
+  let y = store.year
   if (m < 1) { m = 12; y-- }
-  store.fetchMonth(y, m)
+  store.fetchRange(y, m)
 }
 function nextMonth() {
-  let m = store.month.value + 1
-  let y = store.year.value
+  let m = store.month + 1
+  let y = store.year
   if (m > 12) { m = 1; y++ }
-  store.fetchMonth(y, m)
+  store.fetchRange(y, m)
 }
 function goToday() {
   const now = new Date()
-  store.fetchMonth(now.getFullYear(), now.getMonth() + 1)
+  store.fetchRange(now.getFullYear(), now.getMonth() + 1)
 }
 
 function openEvent(ev) { store.openEvent(ev) }
-function closeDetail() { store.closeDetail() }
+
+function openCreateOnDate(dateStr) {
+  if (!dateStr) return
+  form.value.due_date = dateStr
+  store.createOpen = true
+}
 
 async function onPay(ev) {
   const res = await store.markPaid(ev)
@@ -332,30 +466,52 @@ function showObligationInfo() {
 async function onCreate() {
   formError.value = null
   if (!form.value.title || !form.value.amount || !form.value.due_date) {
-    formError.value = 'Completa título, monto y fecha.'
+    formError.value = 'Completa título, monto y fecha límite.'
     return
   }
-  const res = await store.createEvent({
+  const payload = {
     title: form.value.title,
     type: form.value.type,
     amount: parseFloat(form.value.amount),
     due_date: form.value.due_date,
-    payment_method: form.value.payment_method,
-  })
+    recommended_date: form.value.recommended_date || null,
+    cutoff_date: form.value.cutoff_date || null,
+    account_id: form.value.account_id,
+    responsible_member_id: form.value.responsible_member_id,
+    consequence_note: form.value.consequence_note || null,
+    visibility: form.value.visibility,
+  }
+  const res = await store.createEvent(payload)
   if (res.error) formError.value = res.error
   else toast.success('Evento agregado al calendario.')
 }
 
-onMounted(() => {
-  store.fetchMonth()
+onMounted(async () => {
+  await store.fetchRange()
   store.fetchObligations()
   store.fetchAvailability(7)
+  store.fetchAccounts()
+  store.fetchMembers()
+
+  const eventId = route.query.event_id
+  if (eventId) {
+    const ev = store.events.find(e => e.id === eventId)
+    if (ev) {
+      store.openEvent(ev)
+    } else {
+      try {
+        const res = await eventsService.get(eventId)
+        store.openEvent(res.data)
+      } catch {
+        // ignore
+      }
+    }
+  }
 })
 </script>
 
 <style scoped>
 .calendar-page { padding: 16px; max-width: 980px; margin: 0 auto; }
-.page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 .header-actions { display: flex; align-items: center; gap: 10px; }
 .availability-select {
   padding: 6px 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px;
@@ -391,8 +547,18 @@ onMounted(() => {
 .cal-month { text-transform: capitalize; font-weight: 700; font-size: 1.05rem; min-width: 170px; }
 .nav-btn { border: none; background: transparent; cursor: pointer; border-radius: 50%; padding: 6px; }
 .nav-btn:hover { background: var(--hover, #f3f4f6); }
+.prepare-btn {
+  border: 1px solid var(--border, #e5e7eb); background: var(--surface, #fff);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+}
+.prepare-btn:hover { background: var(--hover, #f3f4f6); }
 
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+.cal-weekday {
+  text-align: center; font-size: 0.75rem; font-weight: 700;
+  color: var(--text-muted, #6b7280); padding: 4px 0; text-transform: uppercase;
+}
 .cal-cell {
   background: var(--surface, #fff); border: 1px solid var(--border, #eef0f3);
   border-radius: 14px; min-height: 96px; padding: 6px; display: flex; flex-direction: column; gap: 4px;
@@ -411,6 +577,9 @@ onMounted(() => {
 }
 .ev-icon { flex-shrink: 0; }
 .ev-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-sub { font-size: 0.65rem; color: #6b7280; white-space: nowrap; }
+.ev-cutoff-badge { font-size: 0.6rem; }
+.ev-conf-badge { font-size: 0.6rem; background: #e5e7eb; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
 .ev-amount { margin-left: auto; font-weight: 700; }
 .ev-green { background: #dcfce7; }
 .ev-yellow { background: #fef9c3; }
@@ -421,12 +590,6 @@ onMounted(() => {
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 .empty-state { text-align: center; color: var(--text-muted, #6b7280); margin-top: 24px; }
-
-.fab {
-  position: fixed; right: 20px; bottom: 84px; width: 56px; height: 56px; border-radius: 50%;
-  border: none; background: var(--primary, #2563eb); color: #fff; cursor: pointer;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4); display: flex; align-items: center; justify-content: center;
-}
 
 .sheet-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
@@ -442,6 +605,8 @@ onMounted(() => {
 .sheet-amount { font-size: 1.6rem; font-weight: 800; margin: 6px 0 14px; }
 .sheet-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border, #f1f3f5); }
 .sheet-row span { color: var(--text-muted, #6b7280); margin-right: auto; }
+.sheet-row-ok { border-left: 3px solid #15803d; padding-left: 8px; }
+.sheet-row-warn { border-left: 3px solid #a16207; padding-left: 8px; }
 .sheet-note {
   background: var(--hover, #fff7ed); border-left: 3px solid #f59e0b; padding: 8px 10px;
   border-radius: 8px; margin: 10px 0; font-size: 0.82rem;
@@ -465,10 +630,15 @@ onMounted(() => {
 .form-title { margin: 0 0 12px; }
 .event-form { display: flex; flex-direction: column; gap: 12px; }
 .event-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
-.event-form input, .event-form select {
+.event-form input, .event-form select, .event-form textarea {
   padding: 10px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; font-size: 0.95rem;
 }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-error { color: #b91c1c; font-size: 0.82rem; margin: 0; }
 .form-actions { display: flex; gap: 10px; }
 .ghost-btn { flex: 1; border: 1px solid var(--border, #e5e7eb); background: var(--surface, #fff); border-radius: 12px; padding: 12px; font-weight: 600; cursor: pointer; }
+.prepare-grid { display: flex; flex-direction: column; gap: 10px; }
+.prepare-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding: 8px 0; border-bottom: 1px solid var(--border, #f1f3f5); }
+.prepare-row span { color: var(--text-muted, #6b7280); }
+.loading-state { text-align: center; padding: 24px; color: var(--text-muted, #6b7280); }
 </style>

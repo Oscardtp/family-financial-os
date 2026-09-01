@@ -1,71 +1,79 @@
-"""Main entry point for Family Financial OS.
-
-Starting the FastAPI server and loading the application.
-
-Usage:
-    python backend/app/main.py
-"""
-
-from __future__ import annotations
-import sys
-import os
-from datetime import datetime
-
-# ── Third-party ──────────────────────────────────
-from fastapi import FastAPI, Response
+import asyncio
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from fastapi.exceptions import RequestValidationError, HTTPException
+from contextlib import asynccontextmanager
+from alembic.config import Config
+from alembic import command
+from pathlib import Path
+from app.config import get_settings, DB_FILE
+from app.database import engine
+from app.presentation.v1 import (
+    auth, accounts, transactions, categories, budgets, debts, savings,
+    patrimony, dashboard, projections, household, reports, audit,
+    recurring_payments, notifications, preferences, events, obligations, coach, month,
+)
+from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler
 
-# ── Internal ─────────────────────────────────────
-from app.api.api import router as api_router
+settings = get_settings()
 
 
-# ── App ───────────────────────────────────────────
+def _run_migrations():
+    cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{DB_FILE}")
+    command.upgrade(cfg, "head")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting up: running database migrations...")
+    await asyncio.to_thread(_run_migrations)
+    print("Database migrations applied")
+    yield
+    await engine.dispose()
+
 
 app = FastAPI(
-    title="Family Financial OS",
-    version="0.1.0",
-    description="Sistema operativo financiero para hogares colombianos",
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
 )
 
-# ── CORS ──────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
-# ── Include API Router ───────────────────────────
-app.include_router(api_router, prefix="/api/v1")
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(HTTPException, http_error_handler)
+app.add_exception_handler(500, generic_error_handler)
+app.add_exception_handler(Exception, generic_error_handler)
+
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(accounts.router, prefix="/api/v1")
+app.include_router(transactions.router, prefix="/api/v1")
+app.include_router(categories.router, prefix="/api/v1")
+app.include_router(budgets.router, prefix="/api/v1")
+app.include_router(debts.router, prefix="/api/v1")
+app.include_router(savings.router, prefix="/api/v1")
+app.include_router(patrimony.router, prefix="/api/v1")
+app.include_router(dashboard.router, prefix="/api/v1")
+app.include_router(projections.router, prefix="/api/v1")
+app.include_router(household.router, prefix="/api/v1")
+app.include_router(reports.router, prefix="/api/v1")
+app.include_router(audit.router, prefix="/api/v1")
+app.include_router(recurring_payments.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(preferences.router, prefix="/api/v1")
+app.include_router(events.router, prefix="/api/v1")
+app.include_router(obligations.router, prefix="/api/v1")
+app.include_router(coach.router, prefix="/api/v1")
+app.include_router(month.router, prefix="/api/v1")
 
 
-# ── Root ──────────────────────────────────────────
-
-@app.get("/")
-async def root() -> dict:
-    return {
-        "message": "Family Financial OS",
-        "version": "0.1.0",
-        "status": "ready",
-        "api": "/api/v1",
-        "docs": "/docs",
-    }
-
-
-@app.get("/api/health")
-async def health() -> dict:
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
-
-
-# ── Run ──────────────────────────────────────────
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
-    )
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": settings.APP_VERSION}

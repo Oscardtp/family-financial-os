@@ -168,9 +168,9 @@ const markingPaid = ref(false)
 const currentYear = new Date().getFullYear()
 const monthFullNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + (d.current_balance || 0), 0))
-const totalMonthlyPayment = computed(() => debts.value.reduce((sum, d) => sum + (d.minimum_payment || 0), 0))
-const activeDebts = computed(() => debts.value.filter(d => d.status === 'active' && d.current_balance > 0))
+const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + Number(d.current_balance || 0), 0))
+const totalMonthlyPayment = computed(() => debts.value.reduce((sum, d) => sum + Number(d.minimum_payment || 0), 0))
+const activeDebts = computed(() => debts.value.filter(d => d.status === 'active' && Number(d.current_balance || 0) > 0))
 
 const nextDueDay = computed(() => {
   const today = new Date()

@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,47 +5,38 @@ __pycache__/
 .Python
 env/
 venv/
+.env
+.env.local
+.env.*.local
 .venv/
-env.bak/
-venv.bak/
 *.egg-info/
 dist/
 build/
-.eggs/
-*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# IDEs
+node_modules/
+frontend/dist/
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+
+# Database files
+*.db
+*.sqlite3
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
 # OS
-Thumbs.db
 .DS_Store
+Thumbs.db
 
-# Project data
-backend/app/data/
-*.db
-*.sqlite
-*.sqlite3
-
-# Testing
-.pytest_cache/
+# Coverage
 htmlcov/
 .coverage
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Kilo
-.kilo/
-.agents/
-
-# Exploration artifacts
-backend/check_routes.py
-backend/list_routes.py
-backend/mysql/
-backend/php/

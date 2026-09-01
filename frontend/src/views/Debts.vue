@@ -60,22 +60,7 @@
             @request-delete="deleteDebt"
           />
 
-          <Transition name="expand">
-            <div v-if="expandedDebt === debt.id" class="debt-expanded">
-              <div class="payment-calendar">
-                <div class="calendar-header-bar">
-                  <h4 class="calendar-title">Calendario de Pagos</h4>
-                  <span class="calendar-year">{{ currentYear }}</span>
-                </div>
-                <DebtCalendar
-                  :debt="debt"
-                  :payment-history="paymentHistory"
-                  :loading="loadingHistory"
-                  @month-click="handleMonthClick(debt, $event)"
-                />
-              </div>
-            </div>
-          </Transition>
+          
         </div>
 
         <div v-if="!debts.length" class="empty-state">
@@ -135,7 +120,6 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import DebtSummary from '@/components/debts/DebtSummary.vue'
 import DebtRow from '@/components/debts/DebtRow.vue'
-import DebtCalendar from '@/components/debts/DebtCalendar.vue'
 import NewDebtModal from '@/components/debts/NewDebtModal.vue'
 import EditDebtModal from '@/components/debts/EditDebtModal.vue'
 import PaymentModal from '@/components/debts/PaymentModal.vue'
@@ -161,12 +145,7 @@ const showAmortModal = ref(false)
 const amortDebtId = ref('')
 
 const expandedDebt = ref(null)
-const paymentHistory = ref([])
-const loadingHistory = ref(false)
 const markingPaid = ref(false)
-
-const currentYear = new Date().getFullYear()
-const monthFullNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + Number(d.current_balance || 0), 0))
 const totalMonthlyPayment = computed(() => debts.value.reduce((sum, d) => sum + Number(d.minimum_payment || 0), 0))
@@ -181,59 +160,11 @@ const nextDueDay = computed(() => {
   return active.length ? `Día ${active[0].due_day}` : '-'
 })
 
-async function toggleDebt(debtId) {
-  if (expandedDebt.value === debtId) {
-    expandedDebt.value = null
-    paymentHistory.value = []
-  } else {
-    expandedDebt.value = debtId
-    await loadPaymentHistory(debtId)
-  }
+function toggleDebt(debtId) {
+  expandedDebt.value = expandedDebt.value === debtId ? null : debtId
 }
 
-async function loadPaymentHistory(debtId) {
-  loadingHistory.value = true
-  try {
-    const { data } = await api.get(`/debts/${debtId}/payment-history`)
-    paymentHistory.value = data
-  } catch (e) {
-    console.error('Error loading payment history:', e)
-    paymentHistory.value = []
-  } finally {
-    loadingHistory.value = false
-  }
-}
 
-async function handleMonthClick(debt, monthData) {
-  const confirmed = await confirm({
-    title: 'Marcar como pagado',
-    message: `Marcar ${monthFullNames[monthData.month - 1]} ${monthData.year} como pagado? Se reducirá el saldo en $${fmt(debt.minimum_payment)}.`,
-    type: 'info',
-    confirmText: 'Marcar pagado',
-  })
-  if (!confirmed) return
-
-  markingPaid.value = true
-  try {
-    await api.post(`/debts/${debt.id}/mark-paid`, {
-      year: monthData.year,
-      month: monthData.month,
-    })
-    const idx = debts.value.findIndex((d) => d.id === debt.id)
-    if (idx !== -1) {
-      debts.value[idx] = {
-        ...debts.value[idx],
-        current_balance: Math.max(0, debts.value[idx].current_balance - debt.minimum_payment),
-      }
-    }
-    await loadPaymentHistory(debt.id)
-    await loadAlerts()
-  } catch (e) {
-    console.error('Error marking month as paid:', e)
-  } finally {
-    markingPaid.value = false
-  }
-}
 
 function openEdit(debt) {
   editDebtData.value = debt
@@ -255,7 +186,7 @@ async function handleToggleStatus(debt) {
   const action = isActivating ? 'activar' : 'pausar'
   const confirmed = await confirm({
     title: `${isActivating ? 'Activar' : 'Pausar'} deuda`,
-    message: `¿Quieres ${action} la deuda "${debt.name}"?${isActivating ? '' : ' No aparecerá en alertas ni calendario.'}`,
+    message: `¿Quieres ${action} la deuda "${debt.name}"?`,
     type: isActivating ? 'info' : 'warning',
     confirmText: isActivating ? 'Activar' : 'Pausar',
   })
@@ -301,7 +232,6 @@ async function deleteDebt(debt) {
     debts.value = debts.value.filter((d) => d.id !== debt.id)
     if (expandedDebt.value === debt.id) {
       expandedDebt.value = null
-      paymentHistory.value = []
     }
   } catch (e) {
     console.error(e)
@@ -321,9 +251,6 @@ async function onDebtUpdated() {
 async function onPaymentRecorded() {
   showPaymentModal.value = false
   await loadDebts()
-  if (expandedDebt.value) {
-    await loadPaymentHistory(expandedDebt.value)
-  }
 }
 
 async function loadAlerts() {
@@ -386,28 +313,6 @@ onMounted(loadDebts)
   border-color: var(--color-primary-300);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
-
-.debt-expanded {
-  padding: 0 var(--spacing-lg) var(--spacing-lg);
-  border-top: 1px solid var(--color-neutral-100);
-}
-
-.payment-calendar {
-  background: var(--color-neutral-0);
-  border: 1px solid var(--color-neutral-200);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-}
-.calendar-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-neutral-100);
-}
-.calendar-title { font-size: 0.85rem; font-weight: 600; color: var(--color-neutral-900); margin: 0; }
-.calendar-year { font-size: 0.75rem; color: var(--color-neutral-500); }
 
 .alerts-section { margin-bottom: var(--spacing-md); }
 .alerts-list { display: flex; flex-direction: column; gap: var(--spacing-xs); }

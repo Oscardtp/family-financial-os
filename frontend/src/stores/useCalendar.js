@@ -137,13 +137,38 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   }
 
+  async function editEvent(eventId, data) {
+    try {
+      const res = await eventsService.update(eventId, data)
+      const idx = events.value.findIndex((e) => e.id === eventId)
+      if (idx !== -1) events.value[idx] = res.data
+      if (selectedEvent.value && selectedEvent.value.id === eventId) {
+        selectedEvent.value = res.data
+      }
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos guardar los cambios. Intenta de nuevo.' }
+    }
+  }
+
+  async function deleteEvent(eventId) {
+    try {
+      await eventsService.remove(eventId)
+      events.value = events.value.filter((e) => e.id !== eventId)
+      closeDetail()
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos eliminar el evento. Intenta de nuevo.' }
+    }
+  }
+
   return {
     events, obligations, loading, error, year, month,
     selectedEvent, detailOpen, createOpen,
     availability, availabilityDays, availabilityLoading, availabilitySummary,
     accounts, members,
     fetchRange, fetchMonth, fetchObligations, fetchAvailability, fetchAccounts, fetchMembers,
-    openEvent, closeDetail, markPaid, createEvent,
+    openEvent, closeDetail, markPaid, createEvent, editEvent, deleteEvent,
     fmt, fmtFull, fmtDate,
   }
 })

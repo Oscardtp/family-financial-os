@@ -150,6 +150,21 @@
             <Check :size="18" /> Ya está pagado
           </button>
 
+          <div class="sheet-divider"></div>
+
+          <button
+            class="edit-btn"
+            @click="openEdit(store.selectedEvent)"
+          >
+            <Pencil :size="16" /> Editar
+          </button>
+          <button
+            class="delete-btn"
+            @click="openDelete(store.selectedEvent)"
+          >
+            <Trash2 :size="16" /> Eliminar
+          </button>
+
           <button
             v-if="store.selectedEvent.obligation_id"
             class="link-btn"
@@ -161,65 +176,24 @@
       </div>
     </div>
 
-    <!-- Crear evento -->
-    <div v-if="store.createOpen" class="sheet-backdrop" @click.self="store.createOpen = false">
-      <div class="sheet">
-        <button class="sheet-close" @click="store.createOpen = false" aria-label="Cerrar"><X :size="20" /></button>
-        <h3 class="form-title">Nuevo evento</h3>
-        <form class="event-form" @submit.prevent="onCreate">
-          <label>Título
-            <input v-model="form.title" type="text" required placeholder="Ej: Internet" />
-          </label>
-          <label>Tipo
-            <select v-model="form.type">
-              <option value="expense">Gasto</option>
-              <option value="payment">Pago</option>
-              <option value="debt">Deuda</option>
-              <option value="income">Ingreso</option>
-              <option value="goal">Meta</option>
-            </select>
-          </label>
-          <label>Monto
-            <input v-model="form.amount" type="number" min="1" required placeholder="85000" />
-          </label>
-          <div class="form-row">
-            <label>Fecha recomendada
-              <input v-model="form.recommended_date" type="date" />
-            </label>
-            <label>Fecha límite
-              <input v-model="form.cutoff_date" type="date" required />
-            </label>
-          </div>
-          <label>Cuenta
-            <select v-model="form.account_id">
-              <option :value="null">Sin especificar</option>
-              <option v-for="a in store.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-            </select>
-          </label>
-          <label>Responsable
-            <select v-model="form.responsible_member_id">
-              <option :value="null">Sin asignar</option>
-              <option v-for="m in store.members" :key="m.id" :value="m.id">{{ m.name }}</option>
-            </select>
-          </label>
-          <label>Consecuencia
-            <textarea v-model="form.consequence_note" rows="2" placeholder="Solo si aplica..."></textarea>
-          </label>
-          <label>Origen
-            <select v-model="form.visibility">
-              <option value="confirmed">Confirmado</option>
-              <option value="scheduled">Programado</option>
-              <option value="estimated">Estimado</option>
-            </select>
-          </label>
-          <p v-if="formError" class="form-error">{{ formError }}</p>
-          <div class="form-actions">
-            <button type="button" class="ghost-btn" @click="store.createOpen = false">Cancelar</button>
-            <button type="submit" class="pay-btn">Guardar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <!-- Crear evento: picker + forms dedicados -->
+    <EventTypePicker
+      v-if="activeSheet === 'typePicker'"
+      @select="handleTypeSelected"
+      @close="closeSheet"
+    />
+    <ExpenseFormSheet
+      v-if="activeSheet === 'expense'"
+      :date="selectedDate"
+      @created="onEventCreated"
+      @close="closeSheet"
+    />
+    <IncomeFormSheet
+      v-if="activeSheet === 'income'"
+      :date="selectedDate"
+      @created="onEventCreated"
+      @close="closeSheet"
+    />
 
     <!-- Preparar el mes -->
     <div v-if="prepareOpen" class="sheet-backdrop" @click.self="prepareOpen = false">
@@ -254,6 +228,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Editar evento -->
+    <EventEditSheet
+      v-if="editingEvent"
+      :event="editingEvent"
+      @updated="onEventUpdated"
+      @close="editingEvent = null"
+    />
+
+    <!-- Confirmar eliminación -->
+    <ConfirmDeleteModal
+      v-if="deleteTarget"
+      :title="deleteTarget.title"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
@@ -263,12 +254,17 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   CreditCard, TrendingUp, Target, Wallet, Bell, Check,
   ChevronLeft, ChevronRight, X, ArrowRight, CalendarDays, Clock, User,
-  AlertTriangle, PiggyBank, Info,
+  AlertTriangle, PiggyBank, Info, Pencil, Trash2,
 } from 'lucide-vue-next'
 import { useCalendarStore } from '@/stores/useCalendar'
 import { useToast } from '@/composables/useToast'
 import { useCurrency } from '@/composables/useCurrency'
 import { eventsService } from '@/services/events'
+import EventTypePicker from '@/components/calendar/EventTypePicker.vue'
+import ExpenseFormSheet from '@/components/calendar/ExpenseFormSheet.vue'
+import IncomeFormSheet from '@/components/calendar/IncomeFormSheet.vue'
+import EventEditSheet from '@/components/calendar/EventEditSheet.vue'
+import ConfirmDeleteModal from '@/components/calendar/ConfirmDeleteModal.vue'
 
 const store = useCalendarStore()
 const toast = useToast()
@@ -397,9 +393,13 @@ function memberName(id) {
   return m ? m.name : id
 }
 
-const form = ref({ title: '', type: 'expense', amount: '', due_date: '', recommended_date: '', cutoff_date: '', account_id: null, responsible_member_id: null, consequence_note: '', visibility: 'confirmed' })
-const formError = ref(null)
+const activeSheet = ref(null)
+const selectedDate = ref('')
 const availabilityDays = ref(7)
+
+const editingEvent = ref(null)
+const deleteTarget = ref(null)
+const deleteLoading = ref(false)
 
 const prepareOpen = ref(false)
 const prepareLoading = ref(false)
@@ -449,8 +449,61 @@ function openEvent(ev) { store.openEvent(ev) }
 
 function openCreateOnDate(dateStr) {
   if (!dateStr) return
-  form.value.due_date = dateStr
-  store.createOpen = true
+  selectedDate.value = dateStr
+  activeSheet.value = 'typePicker'
+}
+
+function handleTypeSelected(type) {
+  if (type === 'goal') {
+    activeSheet.value = null
+    toast.info('Para aportar a una meta, ve a la sección de Metas.')
+    return
+  }
+  activeSheet.value = type
+}
+
+function closeSheet() {
+  activeSheet.value = null
+  selectedDate.value = ''
+}
+
+function onEventCreated() {
+  activeSheet.value = null
+  selectedDate.value = ''
+  store.fetchRange()
+  toast.success('Listo, ya quedó registrado.')
+}
+
+function openEdit(ev) {
+  editingEvent.value = { ...ev }
+  store.closeDetail()
+}
+
+async function onEventUpdated() {
+  editingEvent.value = null
+  store.fetchRange()
+  toast.success('Listo, los cambios quedaron guardados.')
+}
+
+function openDelete(ev) {
+  deleteTarget.value = ev
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  deleteLoading.value = true
+  const res = await store.deleteEvent(deleteTarget.value.id)
+  deleteLoading.value = false
+  deleteTarget.value = null
+  if (res.error) toast.error(res.error)
+  else {
+    store.fetchRange()
+    toast.success('Listo, el evento se eliminó.')
+  }
+}
+
+function cancelDelete() {
+  deleteTarget.value = null
 }
 
 async function onPay(ev) {
@@ -461,29 +514,6 @@ async function onPay(ev) {
 
 function showObligationInfo() {
   toast.info('Este pago hace parte de una obligación recurrente: se crea automáticamente cada mes.')
-}
-
-async function onCreate() {
-  formError.value = null
-  if (!form.value.title || !form.value.amount || !form.value.due_date) {
-    formError.value = 'Completa título, monto y fecha límite.'
-    return
-  }
-  const payload = {
-    title: form.value.title,
-    type: form.value.type,
-    amount: parseFloat(form.value.amount),
-    due_date: form.value.due_date,
-    recommended_date: form.value.recommended_date || null,
-    cutoff_date: form.value.cutoff_date || null,
-    account_id: form.value.account_id,
-    responsible_member_id: form.value.responsible_member_id,
-    consequence_note: form.value.consequence_note || null,
-    visibility: form.value.visibility,
-  }
-  const res = await store.createEvent(payload)
-  if (res.error) formError.value = res.error
-  else toast.success('Evento agregado al calendario.')
 }
 
 onMounted(async () => {
@@ -623,6 +653,23 @@ onMounted(async () => {
   width: 100%; margin-top: 10px; border: none; background: transparent; color: var(--primary, #2563eb);
   cursor: pointer; font-weight: 600; display: flex; gap: 4px; justify-content: center; align-items: center;
 }
+.sheet-divider {
+  height: 1px; background: var(--border, #e5e7eb); margin: 12px 0;
+}
+.edit-btn {
+  width: 100%; margin-top: 4px; border: none; background: transparent; color: var(--primary, #2563eb);
+  padding: 10px; border-radius: 12px; font-weight: 600; cursor: pointer;
+  display: flex; gap: 6px; justify-content: center; align-items: center;
+  transition: background 0.15s ease;
+}
+.edit-btn:hover { background: #f0f5ff; }
+.delete-btn {
+  width: 100%; margin-top: 4px; border: none; background: transparent; color: #dc2626;
+  padding: 10px; border-radius: 12px; font-weight: 600; cursor: pointer;
+  display: flex; gap: 6px; justify-content: center; align-items: center;
+  transition: background 0.15s ease;
+}
+.delete-btn:hover { background: #fef2f2; }
 .st-green { color: #15803d; }
 .st-yellow { color: #a16207; }
 .st-red { color: #b91c1c; }

@@ -608,6 +608,7 @@ class EventCreate(BaseModel):
         None,
         description="Consequence note (only if provided by user or obligation terms)",
     )
+    category_id: Optional[UUID] = Field(None, description="Category UUID for expense categorization")
     visibility: str = Field(
         default="confirmed",
         pattern="^(confirmed|scheduled|estimated)$",
@@ -630,6 +631,7 @@ class EventUpdate(BaseModel):
     notes: Optional[str] = None
     payment_method: Optional[str] = Field(None, pattern="^(card|cash|transfer)$")
     consequence_note: Optional[str] = None
+    category_id: Optional[UUID] = None
     visibility: Optional[str] = Field(None, pattern="^(confirmed|scheduled|estimated)$")
     confidence: Optional[int] = Field(None, ge=0, le=100)
 
@@ -658,6 +660,7 @@ class EventResponse(BaseModel):
     paid_amount: Optional[Decimal] = Field(None, description="Paid amount")
     paid_by: Optional[UUID] = Field(None, description="Paid by user UUID")
     obligation_id: Optional[UUID] = Field(None, description="Obligation UUID")
+    category_id: Optional[UUID] = Field(None, description="Category UUID for expense categorization")
     visibility: str = Field(..., description="Visibility")
     confidence: int = Field(..., description="Confidence")
     payment_method: Optional[str] = Field(None, description="Payment method")

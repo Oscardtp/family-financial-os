@@ -174,6 +174,7 @@ class FinancialEvent:
     paid_amount: Money | None = None
     paid_by: uuid.UUID | None = None
     obligation_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
     visibility: str = "confirmed"
     confidence: int = 100
     payment_method: str | None = None

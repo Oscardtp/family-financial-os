@@ -193,6 +193,7 @@ class SQLAlchemyFinancialEventRepository:
             "paid_amount": model.paid_amount,
             "paid_by": model.paid_by,
             "obligation_id": model.obligation_id,
+            "category_id": model.category_id,
             "visibility": model.visibility,
             "confidence": model.confidence,
             "payment_method": model.payment_method,

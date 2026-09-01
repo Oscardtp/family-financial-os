@@ -273,6 +273,7 @@ class FinancialEventModel(Base):
     paid_amount = Column(Numeric(15, 2), nullable=True)
     paid_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     obligation_id = Column(String(36), nullable=True, index=True)
+    category_id = Column(String(36), ForeignKey("categories.id"), nullable=True)
     visibility = Column(String(12), default="confirmed")
     confidence = Column(Integer, default=100)
     payment_method = Column(String(12), nullable=True)

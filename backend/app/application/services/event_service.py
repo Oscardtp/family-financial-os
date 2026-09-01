@@ -56,6 +56,7 @@ class FinancialEventService:
             "confidence": data.confidence,
             "payment_method": data.payment_method,
             "consequence_note": data.consequence_note,
+            "category_id": str(data.category_id) if data.category_id else None,
         })
 
     async def update(self, event_id: str, data, household_id: str) -> dict:

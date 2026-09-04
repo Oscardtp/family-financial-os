@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -6,6 +7,8 @@ from app.infrastructure.repositories.financial_event_repository import SQLAlchem
 from app.infrastructure.repositories.debt_repository import SQLAlchemyDebtRepository
 from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDebtPaymentRepository
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
+
+logger = logging.getLogger(__name__)
 
 
 class CalendarDebtSyncService:
@@ -32,6 +35,10 @@ class CalendarDebtSyncService:
         if not debt or debt["household_id"] != household_id:
             return None
         if debt.get("status") == "paid_off":
+            logger.info(
+                "Calendar->Debt sync: skipping paid_off debt=%s for event=%s",
+                debt_id, event["id"]
+            )
             return None
 
         due = event.get("due_date")
@@ -41,6 +48,10 @@ class CalendarDebtSyncService:
             debt_id, due_date.year, due_date.month
         )
         if existing_payment and not existing_payment.get("is_reversed"):
+            logger.info(
+                "Calendar->Debt sync: payment already exists for debt=%s month=%s/%s",
+                debt_id, due_date.year, due_date.month
+            )
             return existing_payment
 
         payment_amount = Decimal(str(event.get("amount", 0)))
@@ -89,18 +100,30 @@ class CalendarDebtSyncService:
         if not payment or payment.get("is_reversed"):
             return None
 
-        await self.payment_repo.reverse(payment["id"])
-
-        new_balance = Decimal(str(debt["current_balance"])) + payment["amount"]
+        new_balance = Decimal(str(debt["current_balance"])) + Decimal(str(payment["amount"]))
         new_status = "active" if debt["status"] == "paid_off" else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})
+
+        await self.payment_repo.reverse(payment["id"])
 
         return payment["id"]
 
     async def on_debt_payment(self, debt_id: str, payment_date: date, amount: Decimal, household_id: str) -> dict | None:
         """Debt payment created → mark corresponding calendar event as paid."""
         event = await self._find_event_for_debt(debt_id, payment_date, household_id)
-        if not event or event["status"] == "paid":
+        if not event:
+            logger.warning(
+                "Debt payment sync: no calendar event found for debt=%s month=%s/%s household=%s",
+                debt_id, payment_date.year if hasattr(payment_date, 'year') else '?',
+                payment_date.month if hasattr(payment_date, 'month') else '?',
+                household_id
+            )
+            return None
+        if event["status"] == "paid":
+            logger.info(
+                "Debt payment sync: calendar event already paid event=%s debt=%s",
+                event["id"], debt_id
+            )
             return event
 
         updated = await self.event_repo.mark_as_paid(
@@ -108,6 +131,10 @@ class CalendarDebtSyncService:
             None,
             float(amount),
             payment_date,
+        )
+        logger.info(
+            "Debt payment sync: marked calendar event as paid event=%s debt=%s amount=%s",
+            event["id"], debt_id, amount
         )
         return updated
 
@@ -145,6 +172,10 @@ class CalendarDebtSyncService:
             household_id, "SYSTEM", debt_id
         )
         if not obligation:
+            logger.warning(
+                "Debt sync: no obligation found for debt=%s household=%s",
+                debt_id, household_id
+            )
             return None
 
         year, month = reference_date.year, reference_date.month
@@ -159,4 +190,9 @@ class CalendarDebtSyncService:
         for e in events:
             if e.get("obligation_id") == obligation["id"] and e.get("status") == "pending":
                 return e
+
+        logger.warning(
+            "Debt sync: no pending event found for obligation=%s month=%s/%s (events in month: %d)",
+            obligation["id"], year, month, len(events)
+        )
         return None

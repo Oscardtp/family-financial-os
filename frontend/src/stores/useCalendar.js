@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { eventsService, obligationsService } from '@/services/events'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -15,28 +15,9 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const selectedEvent = ref(null)
   const detailOpen = ref(false)
-  const createOpen = ref(false)
-
-  const availability = ref(null)
-  const availabilityDays = ref(7)
-  const availabilityLoading = ref(false)
 
   const accounts = ref([])
   const members = ref([])
-
-  const availabilitySummary = computed(() => {
-    const a = availability.value
-    if (!a) return null
-    return {
-      available: fmt(a.available),
-      upcoming: fmt(a.upcoming_payments),
-      projected: fmt(a.projected_available),
-      cashNeeded: fmt(a.cash_needed),
-      expectedIncome: fmt(a.expected_income),
-      expectedExpenses: fmt(a.expected_expenses),
-      budgetCommitted: fmt(a.budget_committed),
-    }
-  })
 
   async function fetchRange(y = year.value, m = month.value) {
     year.value = y
@@ -68,19 +49,6 @@ export const useCalendarStore = defineStore('calendar', () => {
       obligations.value = res.data
     } catch {
       obligations.value = []
-    }
-  }
-
-  async function fetchAvailability(days = 7) {
-    availabilityDays.value = days
-    availabilityLoading.value = true
-    try {
-      const res = await eventsService.availability(days)
-      availability.value = res.data
-    } catch {
-      availability.value = null
-    } finally {
-      availabilityLoading.value = false
     }
   }
 
@@ -126,11 +94,24 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   }
 
+  async function unpayEvent(event) {
+    try {
+      const res = await eventsService.unpay(event.id)
+      const idx = events.value.findIndex((e) => e.id === event.id)
+      if (idx !== -1) events.value[idx] = res.data
+      if (selectedEvent.value && selectedEvent.value.id === event.id) {
+        selectedEvent.value = res.data
+      }
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos anular el pago. Intenta de nuevo.' }
+    }
+  }
+
   async function createEvent(data) {
     try {
       await eventsService.create(data)
       await fetchRange()
-      createOpen.value = false
       return { error: null }
     } catch {
       return { error: 'No pudimos crear el evento. Revisa los datos e intenta de nuevo.' }
@@ -162,13 +143,46 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   }
 
+  async function toggleObligationActive(obligationId) {
+    const ob = obligations.value.find(o => o.id === obligationId)
+    if (!ob) return { error: 'No encontramos esta obligación.' }
+    try {
+      const res = await obligationsService.update(obligationId, { is_active: !ob.is_active })
+      const idx = obligations.value.findIndex(o => o.id === obligationId)
+      if (idx !== -1) obligations.value[idx] = res.data
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos cambiar el estado. Intenta de nuevo.' }
+    }
+  }
+
+  async function deleteObligation(obligationId) {
+    try {
+      await obligationsService.remove(obligationId)
+      obligations.value = obligations.value.filter(o => o.id !== obligationId)
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos eliminar la obligación. Intenta de nuevo.' }
+    }
+  }
+
+  async function createObligation(data) {
+    try {
+      const res = await obligationsService.create(data)
+      obligations.value.push(res.data)
+      return { error: null }
+    } catch {
+      return { error: 'No pudimos crear la obligación. Intenta de nuevo.' }
+    }
+  }
+
   return {
     events, obligations, loading, error, year, month,
-    selectedEvent, detailOpen, createOpen,
-    availability, availabilityDays, availabilityLoading, availabilitySummary,
+    selectedEvent, detailOpen,
     accounts, members,
-    fetchRange, fetchMonth, fetchObligations, fetchAvailability, fetchAccounts, fetchMembers,
-    openEvent, closeDetail, markPaid, createEvent, editEvent, deleteEvent,
+    fetchRange, fetchMonth, fetchObligations, fetchAccounts, fetchMembers,
+    openEvent, closeDetail, markPaid, unpayEvent, createEvent, editEvent, deleteEvent,
+    toggleObligationActive, deleteObligation, createObligation,
     fmt, fmtFull, fmtDate,
   }
 })

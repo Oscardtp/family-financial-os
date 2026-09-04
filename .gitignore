@@ -55,6 +55,12 @@ inspect_*.py
 seed_*.py
 verify_*.py
 check_pwd.py
+fix_*.py
+
+# Logs
+*.log
+backend/backend.log
+backend/backend_error.log
 
 # Tool output folders
 .firecrawl/

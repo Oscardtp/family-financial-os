@@ -67,6 +67,14 @@ class SQLAlchemyDebtPaymentRepository(DebtPaymentRepository):
         )
         await self.session.flush()
 
+    async def unreverse(self, payment_id: str) -> None:
+        await self.session.execute(
+            update(DebtPaymentModel)
+            .where(DebtPaymentModel.id == payment_id)
+            .values(is_reversed=False)
+        )
+        await self.session.flush()
+
     @staticmethod
     def _to_dict(model: DebtPaymentModel) -> dict:
         return {

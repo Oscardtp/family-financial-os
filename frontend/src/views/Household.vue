@@ -1,54 +1,36 @@
 <template>
   <div class="household">
-    <div
-      v-if="loading"
-      class="loading"
-    >
-      Cargando...
-    </div>
+    <div v-if="loading" class="loading">Cargando...</div>
 
     <template v-else>
       <div class="card">
         <h3>{{ household.name }}</h3>
-        <p class="subtitle">
-          {{ household.members?.length }} miembros
-        </p>
+        <p class="subtitle">{{ household.members?.length }} miembros</p>
       </div>
 
       <div class="card">
         <h3>Miembros</h3>
         <div class="members-list">
-          <div
-            v-for="m in household.members"
-            :key="m.id"
-            class="member-item"
-          >
+          <div v-for="m in household.members" :key="m.id" class="member-item">
             <div class="member-info">
               <span class="member-name">{{ m.name }}</span>
               <span class="member-email">{{ m.email }}</span>
             </div>
             <div class="member-actions">
-              <span
-                class="role-badge"
-                :class="'role-' + m.role"
-              >{{ m.role }}</span>
+              <span class="role-badge" :class="'role-' + m.role">{{ m.role }}</span>
               <select
                 v-if="isOwner && m.id !== currentUserId"
                 :value="m.role"
                 class="role-select"
                 @change="changeRole(m.id, $event.target.value)"
               >
-                <option value="member">
-                  Miembro
-                </option>
-                <option value="viewer">
-                  Observador
-                </option>
+                <option value="member">Miembro</option>
+                <option value="viewer">Observador</option>
               </select>
               <button
                 v-if="isOwner && m.id !== currentUserId"
                 class="btn-sm btn-danger"
-                @click="removeMember(m.id)"
+                @click="confirmRemove(m)"
               >
                 Eliminar
               </button>
@@ -57,62 +39,46 @@
         </div>
       </div>
 
-      <div
-        v-if="isOwner"
-        class="card"
-      >
+      <div v-if="isOwner" class="card">
         <h3>Invitar Miembro</h3>
-        <form
-          class="invite-form"
-          @submit.prevent="inviteMember"
-        >
+        <form class="invite-form" @submit.prevent="inviteMember">
           <div class="form-row">
-            <input
-              v-model="inviteEmail"
-              type="email"
-              placeholder="Correo de la persona"
-              required
-            >
+            <input v-model="inviteEmail" type="email" placeholder="Correo de la persona" required />
             <select v-model="inviteRole">
-              <option value="member">
-                Miembro
-              </option>
-              <option value="viewer">
-                Observador
-              </option>
+              <option value="member">Miembro</option>
+              <option value="viewer">Observador</option>
             </select>
-            <button
-              type="submit"
-              class="btn-primary"
-              :disabled="inviting"
-            >
+            <button type="submit" class="btn-primary" :disabled="inviting">
               {{ inviting ? 'Invitando...' : 'Invitar' }}
             </button>
           </div>
-          <p
-            v-if="inviteError"
-            class="error-text"
-          >
-            {{ inviteError }}
-          </p>
-          <p
-            v-if="inviteSuccess"
-            class="success-text"
-          >
-            {{ inviteSuccess }}
-          </p>
+          <p v-if="inviteError" class="error-text">{{ inviteError }}</p>
+          <p v-if="inviteSuccess" class="success-text">{{ inviteSuccess }}</p>
         </form>
       </div>
     </template>
+
+    <ConfirmDialog
+      v-model="showConfirm"
+      title="Eliminar miembro"
+      :message="`¿Seguro quieres eliminar a ${memberToRemove?.name || 'este miembro'} del hogar?`"
+      confirm-text="Eliminar"
+      type="danger"
+      :loading="removing"
+      @confirm="removeMember"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import api from '@/services/api'
 
 const auth = useAuthStore()
+const toast = useToast()
 const loading = ref(true)
 const household = ref({ name: '', members: [] })
 const inviteEmail = ref('')
@@ -120,6 +86,10 @@ const inviteRole = ref('member')
 const inviting = ref(false)
 const inviteError = ref('')
 const inviteSuccess = ref('')
+
+const showConfirm = ref(false)
+const memberToRemove = ref(null)
+const removing = ref(false)
 
 const isOwner = computed(() => auth.user?.role === 'owner')
 const currentUserId = computed(() => auth.user?.id)
@@ -129,7 +99,9 @@ async function loadHousehold() {
   try {
     const { data } = await api.get('/household')
     household.value = data
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    toast.error('No pudimos cargar la información del hogar')
+  }
   loading.value = false
 }
 
@@ -151,22 +123,33 @@ async function inviteMember() {
   inviting.value = false
 }
 
-async function removeMember(userId) {
-  if (!confirm('Eliminar este miembro del hogar?')) return
+function confirmRemove(member) {
+  memberToRemove.value = member
+  showConfirm.value = true
+}
+
+async function removeMember() {
+  if (!memberToRemove.value) return
+  removing.value = true
   try {
-    await api.delete(`/household/members/${userId}`)
+    await api.delete(`/household/members/${memberToRemove.value.id}`)
+    toast.success('Miembro eliminado del hogar')
+    showConfirm.value = false
+    memberToRemove.value = null
     await loadHousehold()
   } catch (e) {
-    alert(e.response?.data?.detail || 'No pudimos eliminar. Intenta de nuevo.')
+    toast.error(e.response?.data?.detail || 'No pudimos eliminar. Intenta de nuevo.')
   }
+  removing.value = false
 }
 
 async function changeRole(userId, role) {
   try {
     await api.put(`/household/members/${userId}/role`, { role })
+    toast.success('Rol actualizado')
     await loadHousehold()
   } catch (e) {
-    alert(e.response?.data?.detail || 'No pudimos cambiar el rol. Intenta de nuevo.')
+    toast.error(e.response?.data?.detail || 'No pudimos cambiar el rol. Intenta de nuevo.')
   }
 }
 

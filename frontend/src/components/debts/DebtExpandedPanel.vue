@@ -7,7 +7,7 @@
       </div>
       <div class="detail-item">
         <span class="detail-label">Total Original</span>
-        <span class="detail-value">${{ fmt(debt.original_amount) }}</span>
+        <span class="detail-value">${{ fmt(debt.total_amount) }}</span>
       </div>
       <div class="detail-item">
         <span class="detail-label">Pago Mínimo</span>
@@ -25,14 +25,6 @@
         <span class="detail-label">Fecha Inicio</span>
         <span class="detail-value">{{ fmtDate(debt.start_date) }}</span>
       </div>
-      <div class="detail-item">
-        <span class="detail-label">Tipo</span>
-        <span class="detail-value capitalize">{{ debt.debt_type || 'Préstamo' }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">Nota</span>
-        <span class="detail-value note-text">{{ debt.note || 'Sin nota' }}</span>
-      </div>
     </div>
 
     <div class="debt-progress-section">
@@ -49,11 +41,6 @@
       :debt="debt"
       @edit="$emit('edit', $event)"
       @pay="$emit('pay', $event)"
-      @amortization="$emit('amortization', $event)"
-      @deactivate="$emit('deactivate', $event)"
-      @activate="$emit('activate', $event)"
-      @reactivate="$emit('reactivate', $event)"
-      @request-delete="$emit('request-delete', $event)"
     />
   </div>
 </template>
@@ -69,11 +56,11 @@ const props = defineProps({
   debt: { type: Object, required: true },
 })
 
-defineEmits(['edit', 'pay', 'amortization', 'deactivate', 'activate', 'reactivate', 'request-delete'])
+defineEmits(['edit', 'pay'])
 
 const progressPercent = computed(() => {
-  const original = props.debt.original_amount || 0
-  const current = props.debt.current_balance || 0
+  const original = Number(props.debt.total_amount || 0)
+  const current = Number(props.debt.current_balance || 0)
   if (original <= 0) return 0
   return Math.round(((original - current) / original) * 100)
 })
@@ -115,16 +102,6 @@ const progressPercent = computed(() => {
 .detail-value.expense {
   color: var(--color-error-600);
   font-family: var(--font-mono);
-}
-
-.detail-value.capitalize {
-  text-transform: capitalize;
-}
-
-.detail-value.note-text {
-  font-weight: 400;
-  color: var(--color-neutral-600);
-  font-style: italic;
 }
 
 .debt-progress-section {

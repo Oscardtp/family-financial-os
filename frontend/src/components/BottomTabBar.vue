@@ -20,7 +20,7 @@ import { LayoutDashboard, Receipt, Calendar, Target, User } from 'lucide-vue-nex
 const route = useRoute()
 
 const tabs = [
-  { to: '/', label: 'Dinero', icon: LayoutDashboard },
+  { to: '/', label: 'Inicio', icon: LayoutDashboard },
   { to: '/debts', label: 'Deudas', icon: Receipt },
   { to: '/calendar', label: 'Pagos', icon: Calendar },
   { to: '/goals', label: 'Metas', icon: Target },

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 from calendar import month_name
@@ -9,6 +10,8 @@ from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDe
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
 from app.financial_engine.amortization import AmortizationEngine
 from app.domain.value_objects.money import Money
+
+logger = logging.getLogger(__name__)
 
 
 class DebtService:
@@ -44,6 +47,10 @@ class DebtService:
 
     async def create_payment(self, debt_id: str, data, user: dict) -> dict:
         debt = await self.get(debt_id, user["household_id"])
+        logger.info(
+            "Creating payment for debt=%s amount=%s date=%s household=%s",
+            debt_id, data.amount, data.payment_date, user["household_id"]
+        )
 
         monthly_rate = Decimal(str(debt["interest_rate"])) / Decimal("1200")
         interest_charge = (Decimal(str(debt["current_balance"])) * monthly_rate).quantize(Decimal("0.01"))
@@ -68,6 +75,7 @@ class DebtService:
         payment_date = data.payment_date if hasattr(data.payment_date, "year") else data.payment_date
         await sync.on_debt_payment(debt_id, payment_date, payment_amount, user["household_id"])
 
+        logger.info("Payment created successfully: debt=%s payment_id=%s", debt_id, payment["id"])
         return payment
 
     async def reverse_payment(self, debt_id: str, payment_id: str, household_id: str):

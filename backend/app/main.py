@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError, HTTPException
@@ -14,6 +15,10 @@ from app.presentation.v1 import (
     recurring_payments, notifications, preferences, events, obligations, coach, month,
 )
 from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
 
 settings = get_settings()
 

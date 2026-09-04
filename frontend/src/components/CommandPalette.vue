@@ -118,7 +118,7 @@ const commands = [
   { id: 'nav-config', name: 'Mi Perfil', icon: User, action: () => router.push('/config'), type: 'navigation' },
 
   { id: 'action-new-debt', name: 'Nueva Deuda', icon: Plus, shortcut: 'N', action: () => router.push('/debts/new'), type: 'action' },
-  { id: 'action-export', name: 'Exportar CSV', icon: Download, action: () => router.push('/transactions'), type: 'action' },
+  { id: 'action-export', name: 'Exportar CSV', icon: Download, action: () => router.push('/config'), type: 'action' },
 ]
 
 const filteredCommands = computed(() => {

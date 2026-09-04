@@ -1,9 +1,12 @@
+import logging
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import uuid
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
 from app.infrastructure.repositories.notification_repository import SQLAlchemyNotificationRepository
+
+logger = logging.getLogger(__name__)
 
 
 class FinancialEventService:
@@ -91,8 +94,9 @@ class FinancialEventService:
 
         return updated
 
-    async def unpay(self, event_id: str, household_id: str) -> dict:
-        event = await self.get(event_id, household_id)
+    async def unpay(self, event_id: str, user: dict) -> dict:
+        event = await self.get(event_id, user["household_id"])
+        logger.info("Anulando pago del evento %s (%s)", event["id"], event["title"])
         event["status"] = "pending"
         event["paid_at"] = None
         event["paid_amount"] = None
@@ -100,9 +104,24 @@ class FinancialEventService:
 
         from app.application.services.calendar_debt_sync_service import CalendarDebtSyncService
         sync = CalendarDebtSyncService(self.db)
-        await sync.on_event_unpaid(event, household_id)
+        await sync.on_event_unpaid(event, user["household_id"])
 
-        return await self.repo.update(event)
+        from app.presentation.audit_helper import log_action
+        await log_action(
+            self.db,
+            household_id=user["household_id"],
+            user_id=user["id"],
+            user_email=user.get("email", ""),
+            action="event_unpaid",
+            entity_type="financial_event",
+            entity_id=event["id"],
+            entity_name=event["title"],
+            details=f"Monto: ${Decimal(str(event['amount'])):,.0f}",
+        )
+
+        result = await self.repo.update(event)
+        logger.info("Pago anulado exitosamente para evento %s", event["id"])
+        return result
 
     async def _notify_family_payment(self, event: dict, user: dict):
         member_name = user.get("name") or "Alguien"

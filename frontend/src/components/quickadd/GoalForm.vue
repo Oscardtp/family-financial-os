@@ -1,15 +1,15 @@
 <template>
   <form class="goal-form" @submit.prevent="handleSubmit">
     <div class="form-field">
-      <label class="form-question">¿Qué meta quieres?</label>
+      <label class="form-question">¿Para qué estás ahorrando?</label>
       <input
         ref="nameRef"
         v-model="name"
         type="text"
         class="text-input"
-        placeholder="Ej: Fondo de emergencia, Vacaciones..."
+        placeholder="Viaje, carro, emergencia..."
       >
-      <span v-if="submitted && !name" class="field-error">Debes indicar un nombre</span>
+      <span v-if="submitted && !name" class="field-error">¿Para qué es?</span>
     </div>
 
     <div class="form-field">
@@ -22,29 +22,31 @@
           @input="onAmountInput"
           @focus="onAmountFocus"
           class="amount-field"
-          placeholder="0"
+          placeholder="Ej: 2.000.000"
+          aria-label="Monto objetivo"
         >
       </div>
-      <span v-if="submitted && !amount" class="field-error">Debes indicar un monto objetivo</span>
+      <span v-if="submitted && !amount" class="field-error">¿Cuánto necesitas?</span>
     </div>
 
     <div class="form-field">
-      <label class="form-question">¿Cuánto puedes guardar al mes?</label>
+      <label class="form-question">¿Cuánto puedes guardar cada mes?</label>
       <div class="amount-input-small">
         <span class="currency-small">$</span>
         <input
-          v-model.number="monthlyContribution"
-          type="number"
+          :value="displayContribution"
+          @input="onContributionInput"
+          @focus="onContributionFocus"
           class="amount-field-small"
           placeholder="0"
-          min="1"
+          aria-label="Ahorro mensual"
         >
       </div>
     </div>
 
     <div class="form-field">
       <label class="form-question">¿Para cuándo?</label>
-      <input v-model="targetDate" type="date" class="date-input">
+      <input v-model="targetDate" type="date" class="date-input" aria-label="Fecha objetivo">
     </div>
 
     <div v-if="smartSummary" class="smart-summary">
@@ -57,13 +59,13 @@
         v-model="description"
         type="text"
         class="text-input"
-        placeholder="¿Algo más? (opcional)"
+        placeholder="Nota rápida (si quieres)"
       >
     </div>
 
-    <button type="submit" class="submit-btn" :disabled="loading">
+    <button type="submit" class="submit-btn" :disabled="loading" aria-label="Empezar a ahorrar">
       <span v-if="loading" class="spinner"></span>
-      {{ loading ? 'Creando...' : 'Crear meta' }}
+      {{ loading ? 'Creando...' : 'Empezar a ahorrar' }}
     </button>
   </form>
 </template>
@@ -88,12 +90,21 @@ const description = ref('')
 const monthlyContribution = ref(0)
 const targetDate = ref('')
 
-let fmt = useFormattedNumber(0, { prefix: '$' })
+let fmt = useFormattedNumber(0, { prefix: '' })
 const amount = computed(() => fmt.rawValue.value)
 const displayAmount = computed(() => fmt.displayValue.value)
 
 const onAmountInput = (event) => fmt.onInput(event)
 const onAmountFocus = (event) => fmt.onFocus(event)
+
+let fmtContrib = useFormattedNumber(0, { prefix: '' })
+const displayContribution = computed(() => fmtContrib.displayValue.value)
+
+const onContributionInput = (event) => {
+  fmtContrib.onInput(event)
+  monthlyContribution.value = fmtContrib.rawValue.value
+}
+const onContributionFocus = (event) => fmtContrib.onFocus(event)
 
 const { calcSmartFields } = useSmartCalculator()
 
@@ -138,7 +149,7 @@ function handleSubmit() {
 
 .form-question {
   display: block;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-neutral-700);
   margin-bottom: var(--spacing-sm);
@@ -157,12 +168,12 @@ function handleSubmit() {
 .amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
-.currency { font-size: 24px; color: var(--color-neutral-400); }
+.currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
 
 .amount-field {
   flex: 1;
   border: none;
-  font-size: 32px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-neutral-900);
   outline: none;
@@ -183,12 +194,12 @@ function handleSubmit() {
 
 .amount-input-small:focus-within { border-color: var(--color-primary-500); }
 
-.currency-small { font-size: 16px; color: var(--color-neutral-400); }
+.currency-small { font-size: var(--font-size-base); color: var(--color-neutral-400); }
 
 .amount-field-small {
   flex: 1;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-neutral-900);
   outline: none;
@@ -201,7 +212,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: 2px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
 }
 
@@ -212,7 +223,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: 1px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
 }
 
@@ -220,7 +231,7 @@ function handleSubmit() {
 
 .field-error {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-error-500);
   margin-top: var(--spacing-xs);
 }
@@ -230,7 +241,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: white;
   background: var(--color-info-500);
@@ -252,7 +263,7 @@ function handleSubmit() {
   background: var(--color-surface-tinted-teal);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-success-700);
   line-height: 1.4;
 }

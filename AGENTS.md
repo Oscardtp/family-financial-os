@@ -34,6 +34,7 @@ Administrar economía real de manera simple, privada y rápida.
 | ai-process-lifecycle-manager | Procesos |
 | product-manager-ux-cx-acceptance | UX/CX/UAT |
 | friendly-fintech-voice | Brand Voice / UX Writing |
+| software-design-architect | Arquitectura de Software |
 | xlsx | Herramientas Excel |
 | excel-author | Excel financiero |
 
@@ -127,6 +128,18 @@ Administrar economía real de manera simple, privada y rápida.
 ```
 
 **REGLA**: Cada mensaje, botón, notificación y error debe pasar: 3-Second Test, WhatsApp Test, Bank Test.
+
+### Diseño / Arquitectura de Software
+
+```
+1. software-design-architect      ← SOLID, KISS, DRY, YAGNI, patrones, DDD, CQRS
+2. python-patterns                 ← Idiomático: type hints, EAFP, dataclasses
+3. fastapi-patterns                ← DI, service layer, response_model
+4. test-driven-development         ← Tests que validan contratos y comportamiento
+5. systematic-debugging             ← Si hay bugs de diseño: causa raíz primero
+```
+
+**REGLA**: La mejor arquitectura es la que resuelve el problema actual con la menor complejidad necesaria. No sobreingenierizar.
 
 ---
 

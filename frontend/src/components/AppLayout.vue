@@ -150,10 +150,10 @@ const navSections = [
     ]
   },
   {
-    label: 'HOGAR',
+    label: 'CUENTA',
     items: [
-      { to: '/household', label: 'Mi Familia', icon: Users },
       { to: '/config', label: 'Mi Perfil', icon: User },
+      { to: '/household', label: 'Mi Familia', icon: Users },
     ]
   },
 ]

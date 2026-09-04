@@ -12,8 +12,7 @@ import { createRouter, createWebHistory } from 'vue-router'
       component: () => import('@/components/AppLayout.vue'),
       meta: { requiresAuth: true },
       children: [
-        { path: '', name: 'Home', component: () => import('@/views/Home.vue') },
-        { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/Dashboard.vue') },
+        { path: '', name: 'Resumen', component: () => import('@/views/Resumen.vue') },
         { path: 'debts', name: 'Debts', component: () => import('@/views/Debts.vue') },
         { path: 'calendar', name: 'Calendar', component: () => import('@/views/Calendar.vue') },
         { path: 'goals', name: 'Goals', component: () => import('@/views/Goals.vue') },
@@ -31,7 +30,7 @@ const router = createRouter({
 router.beforeEach((to) => {
   const token = localStorage.getItem('access_token')
   if (to.meta.requiresAuth && !token) return { name: 'Login' }
-  if (to.meta.guest && token) return { name: 'Dashboard' }
+  if (to.meta.guest && token) return { name: 'Resumen' }
 })
 
 export default router

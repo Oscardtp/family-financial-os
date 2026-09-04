@@ -58,9 +58,8 @@
             @activate="handleToggleStatus"
             @reactivate="handleReactivate"
             @request-delete="deleteDebt"
+            @open-history="openPaymentHistory"
           />
-
-          
         </div>
 
         <div v-if="!debts.length" class="empty-state">
@@ -98,6 +97,13 @@
       @close="showAmortModal = false"
     />
 
+    <PaymentHistoryDropdown
+      :show="showHistoryDropdown"
+      :debt="historyDebt"
+      :trigger-rect="historyTriggerRect"
+      @close="showHistoryDropdown = false"
+    />
+
     <ConfirmDialog
       v-model="confirmState.show"
       :title="confirmState.title"
@@ -124,9 +130,8 @@ import NewDebtModal from '@/components/debts/NewDebtModal.vue'
 import EditDebtModal from '@/components/debts/EditDebtModal.vue'
 import PaymentModal from '@/components/debts/PaymentModal.vue'
 import AmortizationModal from '@/components/debts/AmortizationModal.vue'
-import { useCurrency } from '@/composables/useCurrency'
+import PaymentHistoryDropdown from '@/components/debts/PaymentHistoryDropdown.vue'
 
-const { fmt } = useCurrency()
 const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
 const debts = ref([])
@@ -144,8 +149,11 @@ const paymentDebt = ref(null)
 const showAmortModal = ref(false)
 const amortDebtId = ref('')
 
+const showHistoryDropdown = ref(false)
+const historyDebt = ref(null)
+const historyTriggerRect = ref(null)
+
 const expandedDebt = ref(null)
-const markingPaid = ref(false)
 
 const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + Number(d.current_balance || 0), 0))
 const totalMonthlyPayment = computed(() => debts.value.reduce((sum, d) => sum + Number(d.minimum_payment || 0), 0))
@@ -179,6 +187,20 @@ function openPayment(debt) {
 function openAmortization(debtId) {
   amortDebtId.value = debtId
   showAmortModal.value = true
+}
+
+function openPaymentHistory(debt, triggerEl) {
+  historyDebt.value = debt
+  if (triggerEl) {
+    const rect = triggerEl.getBoundingClientRect()
+    historyTriggerRect.value = {
+      top: rect.bottom,
+      right: rect.right,
+    }
+  } else {
+    historyTriggerRect.value = null
+  }
+  showHistoryDropdown.value = true
 }
 
 async function handleToggleStatus(debt) {

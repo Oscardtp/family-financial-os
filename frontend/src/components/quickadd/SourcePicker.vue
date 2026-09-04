@@ -4,7 +4,7 @@
       <CheckCircle :size="48" />
     </div>
     <p class="amount-display">${{ fmt(amount) }}</p>
-    <p class="question">¿De dónde salió?</p>
+    <p class="question">¿De cuál cuenta lo sacas?</p>
 
     <div class="source-grid">
       <button
@@ -13,30 +13,33 @@
         class="source-btn"
         :class="{ selected: selectedId === source.id }"
         @click="selectedId = source.id"
+        :aria-label="'Cuenta: ' + source.name"
       >
-        <span class="source-icon">{{ source.icon }}</span>
+        <span class="source-icon"><component :is="source.icon" :size="24" /></span>
         <span class="source-name">{{ source.name }}</span>
       </button>
     </div>
 
     <label class="remember-check">
       <input type="checkbox" v-model="remember">
-      Recordar para esta categoría
+      ¿Siempre de esta cuenta?
     </label>
 
     <button
+      ref="confirmBtn"
       class="confirm-btn"
       @click="handleConfirm"
       :disabled="!selectedId"
+      aria-label="Listo"
     >
-      Confirmar
+      Listo
     </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { CheckCircle } from 'lucide-vue-next'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { CheckCircle, Building2, Banknote, Smartphone } from 'lucide-vue-next'
 import { useCurrency } from '@/composables/useCurrency'
 
 const { fmt } = useCurrency()
@@ -44,20 +47,32 @@ const { fmt } = useCurrency()
 const props = defineProps({
   amount: { type: Number, required: true },
   accounts: { type: Array, default: () => [] },
+  preferredAccountId: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['confirm'])
 
 const selectedId = ref(0)
 const remember = ref(false)
+const confirmBtn = ref(null)
 
 const sources = computed(() =>
   props.accounts.map(a => ({
     id: a.id,
     name: a.name,
-    icon: a.type === 'bank' ? '🏦' : a.type === 'cash' ? '💵' : '📱',
+    icon: a.type === 'bank' ? Building2 : a.type === 'cash' ? Banknote : Smartphone,
   }))
 )
+
+onMounted(async () => {
+  if (props.preferredAccountId) {
+    selectedId.value = props.preferredAccountId
+  } else if (props.accounts.length === 1) {
+    selectedId.value = props.accounts[0].id
+  }
+  await nextTick()
+  confirmBtn.value?.focus()
+})
 
 function handleConfirm() {
   if (!selectedId.value) return
@@ -71,14 +86,14 @@ function handleConfirm() {
 .success-icon { color: var(--color-success-500); margin-bottom: var(--spacing-md); }
 
 .amount-display {
-  font-size: 28px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-neutral-900);
   margin: 0 0 var(--spacing-xs);
 }
 
 .question {
-  font-size: 16px;
+  font-size: var(--font-size-base);
   color: var(--color-neutral-600);
   margin: 0 0 var(--spacing-lg);
 }
@@ -106,15 +121,15 @@ function handleConfirm() {
 .source-btn:hover { border-color: var(--color-primary-300); }
 .source-btn.selected { border-color: var(--color-primary-500); background: var(--color-primary-50); }
 
-.source-icon { font-size: 24px; }
-.source-name { font-size: 12px; font-weight: 500; color: var(--color-neutral-700); }
+.source-icon { font-size: var(--font-size-xl); }
+.source-name { font-size: var(--font-size-xs); font-weight: 500; color: var(--color-neutral-700); }
 
 .remember-check {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-600);
   margin-bottom: var(--spacing-lg);
   cursor: pointer;
@@ -125,7 +140,7 @@ function handleConfirm() {
   padding: var(--spacing-md);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: white;
   background: var(--color-primary-500);

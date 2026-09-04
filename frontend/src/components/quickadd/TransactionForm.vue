@@ -2,7 +2,7 @@
   <form class="transaction-form" @submit.prevent="handleSubmit">
     <div class="form-field">
       <label class="form-question">
-        {{ type === 'expense' ? '¿Cuánto gastaste?' : '¿Cuánto recibiste?' }}
+        {{ type === 'expense' ? '¿Cuánto pagaste?' : '¿Cuánto recibiste?' }}
       </label>
       <div class="amount-input" :class="{ error: submitted && !amount }">
         <span class="currency">$</span>
@@ -12,34 +12,43 @@
           @input="onAmountInput"
           @focus="onAmountFocus"
           class="amount-field"
-          placeholder="0"
+          :placeholder="type === 'expense' ? 'Ej: 45.000' : 'Ej: 800.000'"
+          aria-label="Monto"
         >
       </div>
-      <span v-if="submitted && !amount" class="field-error">Agrega un monto</span>
+      <span v-if="submitted && !amount" class="field-error">¿Cuánto fue?</span>
     </div>
 
     <div class="form-field">
       <label class="form-question">¿En qué?</label>
-      <div v-if="filteredCategories.length" class="category-grid">
+      <input
+        v-if="filteredCategories.length > 4"
+        v-model="catSearch"
+        type="text"
+        class="cat-search"
+        placeholder="Buscar categoría..."
+      >
+      <div v-if="displayCategories.length" class="category-grid">
         <button
-          v-for="cat in filteredCategories"
+          v-for="cat in displayCategories"
           :key="cat.id"
           type="button"
           class="category-btn"
           :class="{ selected: categoryId === cat.id }"
           @click="categoryId = cat.id"
+          :aria-label="'Categoría: ' + cat.name"
         >
           <span class="cat-emoji">{{ cat.icon || '📦' }}</span>
           <span class="cat-name">{{ cat.name }}</span>
         </button>
       </div>
-      <p v-else class="empty-msg">No hay categorías disponibles</p>
-      <span v-if="submitted && !categoryId" class="field-error">Selecciona una categoría</span>
+      <p v-else class="empty-msg">{{ catSearch ? 'No encontré esa categoría' : 'Primero crea categorías en ajustes' }}</p>
+      <span v-if="submitted && !categoryId" class="field-error">¿En qué te gastaste?</span>
     </div>
 
     <div v-if="isDebtCategory" class="form-field">
       <label class="form-question">¿Qué deuda?</label>
-      <select v-model="debtId" class="form-select">
+      <select v-model="debtId" class="form-select" aria-label="Seleccionar deuda">
         <option :value="0" disabled>Seleccionar deuda</option>
         <option v-for="d in debts" :key="d.id" :value="d.id">
           {{ d.name }} (${{ fmtCurrency(d.current_balance ?? 0) }})
@@ -53,13 +62,13 @@
         v-model="description"
         type="text"
         class="text-input"
-        placeholder="¿Algo más? (opcional)"
+        placeholder="Nota rápida (si quieres)"
       >
     </div>
 
-    <button type="submit" class="submit-btn" :class="type" :disabled="loading">
+    <button type="submit" class="submit-btn" :class="type" :disabled="loading" :aria-label="type === 'expense' ? 'Guardar gasto' : 'Guardar ingreso'">
       <span v-if="loading" class="spinner"></span>
-      {{ loading ? 'Guardando...' : type === 'expense' ? 'Guardar pago' : 'Guardar ingreso' }}
+      {{ loading ? 'Guardando...' : type === 'expense' ? 'Guardar gasto' : 'Guardar ingreso' }}
     </button>
   </form>
 </template>
@@ -85,8 +94,9 @@ const submitted = ref(false)
 const description = ref('')
 const categoryId = ref(0)
 const debtId = ref(0)
+const catSearch = ref('')
 
-let fmt = useFormattedNumber(0, { prefix: '$' })
+let fmt = useFormattedNumber(0, { prefix: '' })
 const amount = computed(() => fmt.rawValue.value)
 const displayAmount = computed(() => fmt.displayValue.value)
 
@@ -96,6 +106,12 @@ const onAmountFocus = (event) => fmt.onFocus(event)
 const filteredCategories = computed(() =>
   props.categories.filter(c => c.type === props.type)
 )
+
+const displayCategories = computed(() => {
+  if (!catSearch.value) return filteredCategories.value
+  const q = catSearch.value.toLowerCase()
+  return filteredCategories.value.filter(c => c.name?.toLowerCase().includes(q))
+})
 
 const isDebtCategory = computed(() => {
   if (props.type !== 'expense') return false
@@ -124,7 +140,7 @@ function handleSubmit() {
 
 .form-question {
   display: block;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-neutral-700);
   margin-bottom: var(--spacing-sm);
@@ -143,12 +159,12 @@ function handleSubmit() {
 .amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
-.currency { font-size: 24px; color: var(--color-neutral-400); }
+.currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
 
 .amount-field {
   flex: 1;
   border: none;
-  font-size: 32px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-neutral-900);
   outline: none;
@@ -168,34 +184,64 @@ function handleSubmit() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm);
   border: 2px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
   background: var(--color-neutral-0);
   cursor: pointer;
   transition: all var(--transition-fast);
+  position: relative;
 }
 
 .category-btn:hover { border-color: var(--color-primary-300); }
 .category-btn.selected { border-color: var(--color-primary-500); background: var(--color-primary-50); }
+.category-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--color-primary-500);
+  color: white;
+  border-radius: var(--radius-full);
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
 
 .cat-emoji { font-size: 20px; }
-.cat-name { font-size: 11px; color: var(--color-neutral-600); text-align: center; }
+.cat-name { font-size: var(--font-size-xs); color: var(--color-neutral-600); text-align: center; }
 
 .empty-msg {
   text-align: center;
   color: var(--color-neutral-400);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   padding: var(--spacing-md);
 }
+
+.cat-search {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-700);
+  margin-bottom: var(--spacing-sm);
+  outline: none;
+}
+
+.cat-search:focus { border-color: var(--color-primary-500); }
 
 .form-select {
   width: 100%;
   padding: var(--spacing-md);
   border: 2px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
   background: var(--color-neutral-0);
   transition: border-color var(--transition-fast);
@@ -208,7 +254,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: 1px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
   transition: border-color var(--transition-fast);
 }
@@ -217,7 +263,7 @@ function handleSubmit() {
 
 .field-error {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-error-500);
   margin-top: var(--spacing-xs);
 }
@@ -227,7 +273,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: white;
   cursor: pointer;
@@ -256,7 +302,7 @@ function handleSubmit() {
 
 @media (max-width: 640px) {
   .category-grid { grid-template-columns: repeat(3, 1fr); }
-  .amount-field { font-size: 24px; }
-  .currency { font-size: 20px; }
+  .amount-field { font-size: var(--font-size-xl); }
+  .currency { font-size: var(--font-size-lg); }
 }
 </style>

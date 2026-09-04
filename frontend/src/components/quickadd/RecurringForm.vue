@@ -1,7 +1,7 @@
 <template>
   <form class="recurring-form" @submit.prevent="handleSubmit">
     <div class="form-field">
-      <label class="form-question">¿Cuánto pagas cada mes?</label>
+      <label class="form-question">¿Cuánto es al mes?</label>
       <div class="amount-input" :class="{ error: submitted && !amount }">
         <span class="currency">$</span>
         <input
@@ -10,21 +10,22 @@
           @input="onAmountInput"
           @focus="onAmountFocus"
           class="amount-field"
-          placeholder="0"
+          placeholder="Ej: 55.000"
+          aria-label="Monto mensual"
         >
       </div>
-      <span v-if="submitted && !amount" class="field-error">Debes indicar un monto</span>
+      <span v-if="submitted && !amount" class="field-error">¿Cuánto es?</span>
     </div>
 
     <div class="form-field">
-      <label class="form-question">¿Qué es?</label>
+      <label class="form-question">¿Qué pago es?</label>
       <input
         v-model="name"
         type="text"
         class="text-input"
-        placeholder="Ej: Netflix, Arriendo, Internet..."
+        placeholder="Netflix, arriendo, celular..."
       >
-      <span v-if="submitted && !name" class="field-error">Debes indicar un nombre</span>
+      <span v-if="submitted && !name" class="field-error">¿Cómo se llama ese pago?</span>
     </div>
 
     <div class="form-field">
@@ -46,12 +47,12 @@
     </div>
 
     <div class="form-field">
-      <label class="form-question">Día del pago</label>
-      <select v-model.number="dayOfMonth" class="form-select">
+      <label class="form-question">¿El día qué?</label>
+      <select v-model.number="dayOfMonth" class="form-select" aria-label="Día del pago">
         <option :value="0" disabled>Seleccionar día</option>
         <option v-for="d in 28" :key="d" :value="d">Día {{ d }}</option>
       </select>
-      <span v-if="submitted && !dayOfMonth" class="field-error">Selecciona el día</span>
+      <span v-if="submitted && !dayOfMonth" class="field-error">¿El día qué?</span>
     </div>
 
     <div class="form-field">
@@ -59,13 +60,13 @@
         v-model="description"
         type="text"
         class="text-input"
-        placeholder="¿Algo más? (opcional)"
+        placeholder="Nota rápida (si quieres)"
       >
     </div>
 
-    <button type="submit" class="submit-btn" :disabled="loading">
+    <button type="submit" class="submit-btn" :disabled="loading" aria-label="Activar pago fijo">
       <span v-if="loading" class="spinner"></span>
-      {{ loading ? 'Guardando...' : 'Guardar recurrente' }}
+      {{ loading ? 'Activando...' : 'Activar pago fijo' }}
     </button>
   </form>
 </template>
@@ -85,9 +86,9 @@ const submitted = ref(false)
 const name = ref('')
 const description = ref('')
 const frequency = ref('monthly')
-const dayOfMonth = ref(1)
+const dayOfMonth = ref(new Date().getDate() > 28 ? 28 : new Date().getDate())
 
-let fmt = useFormattedNumber(0, { prefix: '$' })
+let fmt = useFormattedNumber(0, { prefix: '' })
 const amount = computed(() => fmt.rawValue.value)
 const displayAmount = computed(() => fmt.displayValue.value)
 
@@ -115,7 +116,7 @@ function handleSubmit() {
 
 .form-question {
   display: block;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-neutral-700);
   margin-bottom: var(--spacing-sm);
@@ -134,12 +135,12 @@ function handleSubmit() {
 .amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
-.currency { font-size: 24px; color: var(--color-neutral-400); }
+.currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
 
 .amount-field {
   flex: 1;
   border: none;
-  font-size: 32px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-neutral-900);
   outline: none;
@@ -161,7 +162,7 @@ function handleSubmit() {
   border-radius: var(--radius-md);
   background: var(--color-neutral-0);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-neutral-700);
   transition: all var(--transition-fast);
@@ -175,7 +176,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: 2px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
   background: var(--color-neutral-0);
 }
@@ -187,7 +188,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: 1px solid var(--color-neutral-200);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
 }
 
@@ -195,7 +196,7 @@ function handleSubmit() {
 
 .field-error {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-error-500);
   margin-top: var(--spacing-xs);
 }
@@ -205,7 +206,7 @@ function handleSubmit() {
   padding: var(--spacing-md);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: white;
   background: var(--color-warning-500);

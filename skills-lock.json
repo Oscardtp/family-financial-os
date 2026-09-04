@@ -85,6 +85,11 @@
       "source": "local",
       "sourceType": "file",
       "skillPath": ".agents/skills/friendly-fintech-voice/SKILL.md"
+    },
+    "software-design-architect": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/software-design-architect/SKILL.md"
     }
   }
 }

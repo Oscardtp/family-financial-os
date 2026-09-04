@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,8 @@ from app.infrastructure.repositories.financial_event_repository import SQLAlchem
 from app.infrastructure.repositories.budget_repository import SQLAlchemyBudgetRepository
 from app.application.interfaces.transaction_repository import TransactionRepository
 from app.infrastructure.repositories.transaction_repository import SQLAlchemyTransactionRepository
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/events", tags=["Financial Events"])
 
@@ -138,8 +141,11 @@ async def unpay(
 ):
     service = FinancialEventService(db)
     try:
-        result = await service.unpay(event_id, current_user["household_id"])
+        result = await service.unpay(event_id, current_user)
         await db.commit()
         return result
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este evento")
+    except Exception:
+        logger.exception("Error inesperado en unpay para evento %s", event_id)
+        raise HTTPException(status_code=500, detail="No pudimos anular el pago. Intenta de nuevo.")

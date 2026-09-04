@@ -1,14 +1,15 @@
 <template>
   <div class="fab-container">
-    <button class="fab-button" @click="openModal" title="Agregar movimiento" aria-label="Agregar transaccion">
+    <button class="fab-button" @click="openModal" title="Registro rápido" aria-label="Abrir registro rápido">
       <Plus :size="24" />
     </button>
 
     <Teleport to="body">
       <div v-if="isOpen" class="fab-overlay" @click="closeModal">
-        <div class="fab-modal" @click.stop>
+        <div class="fab-modal" @click.stop role="dialog" aria-modal="true">
+          <div class="drag-handle"></div>
           <div class="fab-modal-header">
-            <h3>{{ headerTitle }}</h3>
+            <h3 id="fab-title" aria-live="polite">{{ headerTitle }}</h3>
             <button class="fab-close" @click="closeModal" aria-label="Cerrar">
               <X :size="20" />
             </button>
@@ -17,7 +18,7 @@
           <TypeSelector v-if="step === 'type'" @select="handleTypeSelect" />
 
           <template v-else-if="step === 'form'">
-            <button class="back-btn" @click="step = 'type'">← Cambiar tipo</button>
+            <button class="back-btn" @click="step = 'type'">← Cambiar</button>
 
             <TransactionForm
               v-if="selectedType === 'expense' || selectedType === 'income'"
@@ -56,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
 import api from '@/services/api'
 import { useGoalsStore } from '@/stores/goals'
@@ -68,6 +69,17 @@ import SourcePicker from './SourcePicker.vue'
 import DoneConfirmation from './DoneConfirmation.vue'
 
 const goalsStore = useGoalsStore()
+
+function haptic(ms = 10) {
+  navigator.vibrate?.(ms)
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Escape' && isOpen.value) closeModal()
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 
 const props = defineProps({
   accounts: { type: Array, default: () => [] },
@@ -86,13 +98,13 @@ const lastCategoryId = ref(0)
 
 const headerTitle = computed(() => {
   const titles = {
-    type: '¿Qué quieres agregar?',
-    source: '¿De dónde salió?',
-    done: '¡Guardado!',
-    expense: 'Registrar pago',
-    income: 'Registrar ingreso',
-    recurring: 'Pago recurrente',
-    goal: 'Crear meta',
+    type: '¿Qué vas a registrar?',
+    source: '¿De cuál cuenta?',
+    done: '¡Listo!',
+    expense: '¿Cuánto pagaste?',
+    income: '¿Cuánto recibiste?',
+    recurring: 'Configura tu pago fijo',
+    goal: '¿Para qué estás ahorrando?',
   }
   return titles[step.value === 'form' ? selectedType.value : step.value] || 'Agregar'
 })
@@ -101,6 +113,7 @@ function openModal() {
   isOpen.value = true
   step.value = 'type'
   selectedType.value = null
+  haptic()
 }
 
 function closeModal() {
@@ -112,6 +125,7 @@ function closeModal() {
 function handleTypeSelect(type) {
   selectedType.value = type
   step.value = 'form'
+  haptic()
 }
 
 async function handleTransactionSubmit(data) {
@@ -131,7 +145,7 @@ async function handleTransactionSubmit(data) {
     step.value = 'source'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intenta de nuevo.')
+    window.$toast?.error(e.response?.data?.detail || 'No pude guardar. ¿Los datos están bien?')
   } finally {
     submitting.value = false
   }
@@ -152,7 +166,7 @@ async function handleRecurringSubmit(data) {
     step.value = 'done'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Intenta de nuevo.')
+    window.$toast?.error(e.response?.data?.detail || 'No pude activar el pago. ¿Los datos están bien?')
   } finally {
     submitting.value = false
   }
@@ -200,12 +214,19 @@ async function handleSourceConfirm({ account_id, remember }) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
   transition: all var(--transition-fast);
 }
 
-.fab-button:hover { background: var(--color-primary-600); transform: scale(1.05); }
+.fab-button:hover { filter: brightness(1.1); transform: scale(1.05); }
 .fab-button:active { transform: scale(0.95); }
+
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: var(--shadow-xl); }
+  50% { box-shadow: var(--shadow-xl), 0 0 0 8px rgba(47, 113, 229, 0.12); }
+}
+.fab-button { animation: fab-pulse 4s ease-in-out infinite; }
+.fab-button:hover { animation: none; }
 
 .fab-overlay {
   position: fixed;
@@ -224,11 +245,20 @@ async function handleSourceConfirm({ account_id, remember }) {
   width: 100%;
   max-width: 400px;
   background: var(--color-neutral-0);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--spacing-lg);
+  padding-top: var(--spacing-sm);
   max-height: 90vh;
   overflow-y: auto;
   animation: slideUp 200ms ease;
+}
+
+.drag-handle {
+  width: 32px;
+  height: 4px;
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  margin: 0 auto var(--spacing-md);
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

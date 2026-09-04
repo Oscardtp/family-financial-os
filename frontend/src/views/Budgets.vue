@@ -55,7 +55,7 @@
           :item="item"
           :status-label="statusLabel"
           @edit="openEdit"
-          @delete="handleDelete"
+          @delete="confirmDelete"
         />
         <div v-if="!budgetItems.length" class="empty-state">
           <p>Aún no tenemos presupuestos para este mes</p>
@@ -94,6 +94,16 @@
         </div>
       </div>
     </template>
+
+    <ConfirmDialog
+      v-model="showConfirm"
+      title="Eliminar presupuesto"
+      message="¿Seguro quieres eliminar este presupuesto? Esta acción no se puede deshacer."
+      confirm-text="Eliminar"
+      type="danger"
+      :loading="deleting"
+      @confirm="handleDelete"
+    />
   </div>
 </template>
 
@@ -101,6 +111,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ChartCard from '@/components/ChartCard.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useCurrency } from '@/composables/useCurrency'
 import { useBudgets } from '@/composables/useBudgets'
 import BudgetCard from '@/components/budgets/BudgetCard.vue'
@@ -121,6 +132,10 @@ const editForm = reactive({ amount: 0 })
 const editError = ref('')
 const editing = ref(false)
 const categories = ref([])
+
+const showConfirm = ref(false)
+const budgetToDelete = ref(null)
+const deleting = ref(false)
 
 function openEdit(item) {
   const raw = rawBudgets.value.find(b => b.category === item.category)
@@ -144,10 +159,24 @@ async function handleEditBudget() {
   }
 }
 
-async function handleDelete(item) {
-  if (!confirm('¿Eliminar este presupuesto?')) return
+function confirmDelete(item) {
   const raw = rawBudgets.value.find(b => b.category === item.category)
-  if (raw) await deleteBudget(raw.id)
+  if (raw) {
+    budgetToDelete.value = raw
+    showConfirm.value = true
+  }
+}
+
+async function handleDelete() {
+  if (!budgetToDelete.value) return
+  deleting.value = true
+  try {
+    await deleteBudget(budgetToDelete.value.id)
+    showConfirm.value = false
+    budgetToDelete.value = null
+  } finally {
+    deleting.value = false
+  }
 }
 
 function createBudgetForCategory(category) {

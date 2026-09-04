@@ -5,7 +5,7 @@
     </div>
     <p class="done-text">{{ message }}</p>
     <p class="done-sub">{{ submessage }}</p>
-    <button class="close-btn" @click="$emit('close')">Cerrar</button>
+    <button class="close-btn" @click="$emit('close')">Seguir</button>
   </div>
 </template>
 
@@ -20,9 +20,11 @@ const props = defineProps({
 defineEmits(['close'])
 
 const messages = {
-  transaction: { text: '¡Listo!', sub: 'Movimiento registrado' },
-  recurring: { text: '¡Guardado!', sub: 'Pago recurrente creado' },
-  goal: { text: '¡Meta creada!', sub: 'Tu meta está lista. ¡A ahorrar!' },
+  expense: { text: '¡Listo! Ya anoté tu gasto.', sub: 'Guardado' },
+  income: { text: '¡Va! Tu plata ya está contada.', sub: 'Guardado' },
+  transaction: { text: '¡Listo! Ya quedó.', sub: 'Guardado' },
+  recurring: { text: 'Listo, ese pago se repite solo.', sub: 'Activo' },
+  goal: { text: '¡Perfecto! Ya empezaste a ahorrar para eso.', sub: 'Meta creada' },
 }
 
 const message = computed(() => messages[props.type]?.text || '¡Listo!')

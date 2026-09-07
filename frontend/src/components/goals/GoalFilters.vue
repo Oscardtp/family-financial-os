@@ -17,7 +17,7 @@
         @click="$emit('update:modelFilterType', 'investment')"
       >Inversión</button>
     </div>
-    <select :value="modelSortBy" @change="$emit('update:modelSortBy', $event.target.value)" class="sort-select">
+    <select id="goal-sort" name="sortBy" :value="modelSortBy" @change="$emit('update:modelSortBy', $event.target.value)" class="sort-select">
       <option value="name">Nombre</option>
       <option value="priority">Prioridad</option>
       <option value="progress">Progreso</option>

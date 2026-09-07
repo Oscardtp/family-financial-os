@@ -6,27 +6,27 @@
         <div class="form-row">
           <div class="form-group">
             <label>Cambio en ingresos (%)</label>
-            <input v-model.number="form.income_change" type="number" step="0.1">
+            <input v-model.number="localForm.income_change" type="number" step="0.1">
           </div>
           <div class="form-group">
             <label>Cambio en gastos (%)</label>
-            <input v-model.number="form.expense_change" type="number" step="0.1">
+            <input v-model.number="localForm.expense_change" type="number" step="0.1">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Pago extra de deuda</label>
-            <input v-model.number="form.extra_debt" type="number" step="1000" min="0">
+            <input v-model.number="localForm.extra_debt" type="number" step="1000" min="0">
           </div>
           <div class="form-group">
             <label>Ahorro mensual nuevo</label>
-            <input v-model.number="form.new_savings" type="number" step="1000" min="0">
+            <input v-model.number="localForm.new_savings" type="number" step="1000" min="0">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Meses a proyectar</label>
-            <input v-model.number="form.months" type="number" min="1" max="60">
+            <input v-model.number="localForm.months" type="number" min="1" max="60">
           </div>
           <div class="form-group">
             <button type="submit" class="btn-primary" :disabled="loading">
@@ -60,11 +60,12 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue'
 import { useCurrency } from '@/composables/useCurrency'
 
 const { fmt } = useCurrency()
 
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
   result: { type: Object, default: null },
   loading: { type: Boolean, default: false },
@@ -72,7 +73,17 @@ defineProps({
   barWidth: { type: Function, required: true },
 })
 
-defineEmits(['run'])
+const emit = defineEmits(['run', 'update:form'])
+
+const localForm = ref({ ...props.form })
+
+watch(
+  localForm,
+  (val) => {
+    emit('update:form', { ...val })
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>

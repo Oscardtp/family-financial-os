@@ -20,7 +20,7 @@
           <div class="due-day" :class="dueClass">Día {{ debt.due_day }}</div>
           <div class="due-month">{{ currentMonthShort }}</div>
         </div>
-        <div class="debt-interest">{{ debt.interest_rate }}%</div>
+        <div class="debt-interest">{{ debt.interest_rate }}% {{ debt.interest_rate_type }}</div>
         <div class="kebab-wrapper" @click.stop>
           <button
             class="kebab-btn"
@@ -142,6 +142,8 @@ function handleMenuAction(action) {
   showKebab.value = false
   if (action === 'history') {
     emit('open-history', props.debt, kebabBtn)
+  } else if (action === 'amortization') {
+    emit('amortization', props.debt.id)
   } else {
     emit(action, props.debt)
   }

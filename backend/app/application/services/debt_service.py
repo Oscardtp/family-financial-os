@@ -10,6 +10,8 @@ from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDe
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
 from app.financial_engine.amortization import AmortizationEngine
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
+from app.financial_engine.rate_engine import RateEngine
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +33,26 @@ class DebtService:
         return debt
 
     async def create(self, data, household_id: str) -> dict:
+        payload = data.model_dump()
+        total_amount = Decimal(str(payload.get("total_amount", 0)))
+        current_balance = Decimal(str(payload.get("current_balance", 0)))
+        minimum_payment = Decimal(str(payload.get("minimum_payment", 0)))
+        interest_rate = Decimal(str(payload.get("interest_rate", 0)))
+
+        if total_amount <= 0:
+            raise ValueError("El monto total de la deuda debe ser mayor a cero")
+        if current_balance < 0:
+            raise ValueError("El saldo actual no puede ser negativo")
+        if current_balance > total_amount:
+            raise ValueError("El saldo actual no puede ser mayor al monto total")
+        if minimum_payment < 0:
+            raise ValueError("El pago mínimo no puede ser negativo")
+        if interest_rate < 0:
+            raise ValueError("La tasa de interés no puede ser negativa")
+
         return await self.debt_repo.create({
             "household_id": household_id,
-            **data.model_dump(),
+            **payload,
         })
 
     async def update(self, debt_id: str, data, household_id: str) -> dict:
@@ -52,9 +71,17 @@ class DebtService:
             debt_id, data.amount, data.payment_date, user["household_id"]
         )
 
-        monthly_rate = Decimal(str(debt["interest_rate"])) / Decimal("1200")
+        rate_type = debt.get("interest_rate_type") or "EA"
+        try:
+            rt = RateType(rate_type)
+        except ValueError:
+            rt = RateType.EA
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(Decimal(str(debt["interest_rate"])), rt))
         interest_charge = (Decimal(str(debt["current_balance"])) * monthly_rate).quantize(Decimal("0.01"))
         payment_amount = Decimal(str(data.amount))
+
+        if payment_amount <= 0:
+            raise ValueError("El monto del pago debe ser mayor a cero")
 
         principal_portion = payment_amount - interest_charge if payment_amount > interest_charge else Decimal("0")
 
@@ -202,12 +229,14 @@ class DebtService:
     async def get_amortization(self, debt_id: str, household_id: str):
         debt = await self.get(debt_id, household_id)
 
+        rate_type = debt.get("interest_rate_type") or "EA"
         engine = AmortizationEngine()
         schedule = engine.generate_schedule(
             balance=debt["current_balance"],
             annual_rate=debt["interest_rate"],
             monthly_payment=debt.get("minimum_payment", 0),
             debt_name=debt["name"],
+            rate_type=rate_type,
         )
         return {
             "debt_name": schedule.debt_name,

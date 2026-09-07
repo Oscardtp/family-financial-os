@@ -159,7 +159,7 @@ async function handleSubmit() {
     emit('saved')
     emit('close')
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Error al actualizar la meta'
+    error.value = e.response?.data?.detail || 'No pudimos actualizar la meta. Revisa los datos e inténtalo de nuevo.'
   } finally {
     saving.value = false
   }

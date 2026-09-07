@@ -72,7 +72,7 @@ async function handleSubmit() {
     emit('saved')
     emit('close')
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Error al registrar la contribución'
+    error.value = e.response?.data?.detail || 'No pudimos registrar la contribución. Revisa los datos e inténtalo de nuevo.'
   } finally {
     submitting.value = false
   }

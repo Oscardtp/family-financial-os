@@ -1,5 +1,6 @@
 from typing import Optional
 import uuid
+from decimal import Decimal
 from datetime import datetime
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,7 +95,7 @@ class SQLAlchemyFinancialObligationRepository:
             "source_id": model.source_id,
             "name": model.name,
             "type": model.type,
-            "amount": float(model.amount),
+            "amount": Decimal(str(model.amount)),
             "currency": model.currency,
             "frequency": model.frequency,
             "anchor_day": model.anchor_day,

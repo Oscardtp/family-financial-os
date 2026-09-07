@@ -141,7 +141,7 @@ async function handleSubmit() {
     form.date = new Date().toISOString().split('T')[0]
     fmtAmount = useFormattedNumber(0, { prefix: '$' })
   } catch (e) {
-    formError.value = e?.response?.data?.detail || 'Error al crear la transacción'
+    formError.value = e?.response?.data?.detail || 'No pudimos guardar el movimiento. Revisa los datos e inténtalo de nuevo.'
   } finally {
     submitting.value = false
   }

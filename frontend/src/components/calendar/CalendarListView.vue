@@ -22,7 +22,8 @@
         >
           <span class="list-dot" :class="eventColor(ev)"></span>
           <span class="list-title">{{ ev.title }}</span>
-          <span class="list-amount">{{ fmt(ev.amount) }}</span>
+          <span class="list-amount">${{ fmt(ev.amount) }}</span>
+          <span v-if="ev.notes" class="list-note">{{ ev.notes }}</span>
           <ChevronRight :size="16" class="list-chevron" />
         </button>
       </div>
@@ -73,6 +74,7 @@ defineEmits(['openEvent', 'createOnDate'])
 .list-dot.ev-default { background: var(--color-calendar-default); }
 .list-title { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--color-neutral-800); }
 .list-amount { font-weight: 700; font-size: 0.9rem; color: var(--color-neutral-700); }
+.list-note { font-size: 0.75rem; color: var(--color-neutral-500); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-chevron { color: var(--color-neutral-400); flex-shrink: 0; }
 .list-loading { display: flex; flex-direction: column; gap: var(--spacing-sm); }
 .skeleton-day-group { height: 80px; background: var(--color-neutral-100); border-radius: var(--radius-lg); animation: pulse 1.2s infinite; }

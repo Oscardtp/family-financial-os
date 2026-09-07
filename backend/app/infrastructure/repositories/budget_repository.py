@@ -1,5 +1,6 @@
 from typing import Optional
 import uuid
+from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import BudgetModel
@@ -79,7 +80,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
             "id": model.id,
             "category_id": model.category_id,
             "household_id": model.household_id,
-            "amount": float(model.amount),
+            "amount": Decimal(str(model.amount)),
             "month": model.month,
             "year": model.year,
         }

@@ -29,7 +29,7 @@
             <span v-if="ev.recommended_date && ev.due_date !== ev.recommended_date" class="ev-sub">{{ fmtDateShort(ev.recommended_date) }}</span>
             <span v-if="isCutoffUrgent(ev)" class="ev-cutoff-badge">🔴</span>
             <span v-if="ev.confidence < 100" class="ev-conf-badge">?</span>
-            <span class="ev-amount">{{ fmt(ev.amount) }}</span>
+            <span class="ev-amount">${{ fmt(ev.amount) }}</span>
           </button>
         </div>
       </div>

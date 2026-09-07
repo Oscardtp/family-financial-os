@@ -15,7 +15,7 @@ Administrar economía real de manera simple, privada y rápida.
 - **Deploy**: Docker, docker-compose
 - **Moneda**: COP (pesos colombianos)
 
-## Skills Instaladas (15)
+## Skills Instaladas (16)
 
 | Skill | Capa |
 |-------|------|
@@ -143,6 +143,28 @@ Administrar economía real de manera simple, privada y rápida.
 
 ---
 
+## Decisiones y Hechos del Proyecto (Referencia Rápida)
+
+Estos puntos son conocimiento projecto; tenlos en cuenta antes de implementar:
+
+- **Calendario único**: El proyecto tiene una pantalla/Calendario dedicada. Los calendarios embebidos en otras vistas se eliminan para evitar duplicidad.
+- **Diseño 100% responsive**: Toda UI debe funcionar en mobile y desktop.
+- **Idioma**: Responder y redactar copy siempre en español (lenguaje colombiano natural cuando aplique).
+- **Money = Decimal**: Nunca usar `float` para dinero. El VO `Money` usa `Decimal` con cuantización a 2 decimales.
+- **InterestRate engine**: Existe `RateEngine.to_monthly_rate(InterestRate)` en `backend/app/financial_engine/rate_engine.py`. Todos los cálculos de tasa deben usarlo, nunca `/1200` ni fórmulas inline.
+- **RateType enum**: `EA`, `EM`, `NOMINAL`, `DAILY`. Default = `EA`.
+- **Frontend rate_type selector**: NewDebtModal, EditDebtModal, PatrimonyItemForm ya incluyen selector. Si agregas forms de deuda/patrimonio, usa el mismo enum y envía `interest_rate_type` en el payload.
+- **useFormattedNumber**: Los composables `onInput` y `onFocus` requieren el evento nativo. Si llamas a estos handlers sin evento, `event.target` lanza `TypeError`.
+- **NaN pitfall en Debts.vue**: Al sumar `current_balance + minimum_payment` desde la API, usar `Number(...)` para coerción. Si la API devuelve string/null, la suma produce `NaN`.
+- **Quality gates**: Todo cambio debe pasar por `product-manager-ux-cx-acceptance` y `friendly-fintech-voice` antes de considerarse finalizado.
+- **Tests**: TDD estricto. Cobertura mínima 80% en paths críticos. Nunca fixear bugs sin test que los reproduzca.
+- **Alembic/SQLite**: Las migraciones usan `PRAGMA table_info` para idempotencia. Tests usan `Base.metadata.create_all`, no alembic.
+- **Multi-tenant**: Todo acceso por `household_id`. Roles: Owner/Member/Viewer.
+- **Clean Architecture**: domain → application → infrastructure → presentation.
+- **PatrimonyEditModal bug (conocido)**: Al editar un pasivo, `interest_rate` y `monthly_payment` se silencian. Documentado como pre-existente; no introducir parches complejos sin ticket explícito.
+
+---
+
 ## Reglas Generales
 
 ### Seguridad
@@ -164,6 +186,7 @@ Administrar economía real de manera simple, privada y rápida.
 - Separar DDL de DML
 - `CREATE INDEX CONCURRENTLY` para índices en tablas existentes
 - Columnas nuevas siempre nullable o con default
+- SQLite: usar `server_default` para NOT NULL en migraciones add-column
 
 ### Git
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
@@ -173,6 +196,7 @@ Administrar economía real de manera simple, privada y rápida.
 ### Arquitectura
 - Clean Architecture: domain → application → infrastructure → presentation
 - Money value object usa `Decimal` (nunca `float`)
+- InterestRate value object + RateEngine para todas las conversiones de tasa
 - Multi-tenant via `household_id`
 - Role-based access: Owner/Member/Viewer
 
@@ -181,3 +205,9 @@ Administrar economía real de manera simple, privada y rápida.
 - Procesos persistentes → ejecución asíncrona → health check → return control
 - Nunca esperar indefinidamente
 - Idempotency: si el servicio ya existe, no crear otro
+
+### Frontend
+- Composable `useFormattedNumber`: `onInput` y `onFocus` requieren el evento nativo
+- En listas de deudas (`Debts.vue`), coerción numérica con `Number(...)` antes de sumar para evitar `NaN`
+- Mantener selector `rate_type` sincronizado con backend enum (`EA`, `EM`, `nominal`, `daily`)
+- Labels de tasa: mostrar "Tasa Interés" (no "Tasa Mensual") cuando se refiere a la tasa anual

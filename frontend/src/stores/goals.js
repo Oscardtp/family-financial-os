@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import api from '@/services/api'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -13,6 +13,14 @@ export const useGoalsStore = defineStore('goals', () => {
   const highlightedGoalId = ref(null)
   const filterType = ref('all')
   const sortBy = ref('name')
+
+  const contributionGoalId = ref(null)
+  const editingGoalId = ref(null)
+  const deletingGoalId = ref(null)
+  const isContributing = ref(false)
+  const isEditing = ref(false)
+  const isDeleting = ref(false)
+  const prevGoalIds = ref([])
 
   const activeGoals = computed(() => {
     let filtered = goals.value.filter(g => g.current_amount < g.target_amount)
@@ -69,7 +77,7 @@ export const useGoalsStore = defineStore('goals', () => {
       const res = await api.get('/savings/goals')
       goals.value = res.data
     } catch {
-      error.value = 'No pudimos cargar tus metas. Revisa tu conexiÃ³n e intenta de nuevo.'
+      error.value = 'No pudimos cargar tus metas. Revisa tu conexión e intenta de nuevo.'
     } finally {
       loading.value = false
     }
@@ -150,6 +158,102 @@ export const useGoalsStore = defineStore('goals', () => {
     }
   }
 
+  function openContribution(goal) {
+    contributionGoalId.value = goal.id
+    isContributing.value = true
+  }
+
+  function closeContribution() {
+    contributionGoalId.value = null
+    isContributing.value = false
+  }
+
+  async function submitContribution(amount, date) {
+    if (!contributionGoalId.value) return { error: 'Meta no válida.' }
+    isContributing.value = true
+    const result = await contributeGoal(contributionGoalId.value, amount, date)
+    if (!result.error) {
+      closeContribution()
+    }
+    isContributing.value = false
+    return result
+  }
+
+  function openEdit(goal) {
+    editingGoalId.value = goal.id
+    isEditing.value = true
+  }
+
+  function closeEdit() {
+    editingGoalId.value = null
+    isEditing.value = false
+  }
+
+  async function submitEdit(data) {
+    if (!editingGoalId.value) return { error: 'Meta no válida.' }
+    isEditing.value = true
+    const result = await editGoal(editingGoalId.value, data)
+    if (!result.error) {
+      closeEdit()
+    }
+    isEditing.value = false
+    return result
+  }
+
+  function confirmDelete(goal) {
+    deletingGoalId.value = goal.id
+    isDeleting.value = true
+  }
+
+  function closeDelete() {
+    deletingGoalId.value = null
+    isDeleting.value = false
+  }
+
+  async function submitDelete() {
+    if (!deletingGoalId.value) return { error: 'Meta no válida.' }
+    isDeleting.value = true
+    const result = await deleteGoal(deletingGoalId.value)
+    if (!result.error) {
+      closeDelete()
+    }
+    isDeleting.value = false
+    return result
+  }
+
+  function toggleDetails(goal) {
+    if (expandedGoal.value === goal.id) {
+      expandedGoal.value = null
+    } else {
+      expandedGoal.value = goal.id
+      loadGoalHistory(goal)
+    }
+  }
+
+  function highlightNewGoal(goal) {
+    if (!goal) return
+    highlightedGoalId.value = goal.id
+    setTimeout(() => {
+      if (highlightedGoalId.value === goal.id) {
+        highlightedGoalId.value = null
+      }
+    }, 2000)
+  }
+
+  watch(
+    goals,
+    (newGoals) => {
+      const oldIds = prevGoalIds.value
+      const newIds = newGoals.map(g => g.id)
+      const newItems = newGoals.filter(g => !oldIds.includes(g.id))
+      if (newItems.length > 0) {
+        highlightNewGoal(newItems[0])
+      }
+      prevGoalIds.value = newIds
+    },
+    { deep: true }
+  )
+
   return {
     goals,
     loading,
@@ -158,6 +262,12 @@ export const useGoalsStore = defineStore('goals', () => {
     highlightedGoalId,
     filterType,
     sortBy,
+    contributionGoalId,
+    editingGoalId,
+    deletingGoalId,
+    isContributing,
+    isEditing,
+    isDeleting,
     activeGoals,
     completedGoals,
     totalCurrent,
@@ -171,6 +281,17 @@ export const useGoalsStore = defineStore('goals', () => {
     deleteGoal,
     contributeGoal,
     loadGoalHistory,
+    openContribution,
+    closeContribution,
+    submitContribution,
+    openEdit,
+    closeEdit,
+    submitEdit,
+    confirmDelete,
+    closeDelete,
+    submitDelete,
+    toggleDetails,
+    highlightNewGoal,
     fmt,
     fmtFull,
     fmtDate,

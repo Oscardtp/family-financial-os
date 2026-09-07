@@ -77,8 +77,8 @@ export function useAccessibility() {
   function getAriaProps(options = {}) {
     const props = {}
     if (options.label) props['aria-label'] = options.label
-    if (options-describedby) props['aria-describedby'] = options-describedby
-    if (options-labelledby) props['aria-labelledby'] = options-labelledby
+    if (options.describedby) props['aria-describedby'] = options.describedby
+    if (options.labelledby) props['aria-labelledby'] = options.labelledby
     if (options.expanded !== undefined) props['aria-expanded'] = options.expanded
     if (options.hidden !== undefined) props['aria-hidden'] = options.hidden
     if (options.live) props['aria-live'] = options.live

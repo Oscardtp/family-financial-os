@@ -39,6 +39,17 @@
           <input v-model.number="form.interest_rate" class="form-input" type="number" step="0.01" min="0">
         </div>
         <div class="form-group">
+          <label class="form-label">Tipo de Tasa</label>
+          <select v-model="form.interest_rate_type" class="form-select">
+            <option value="EA">EA (Efectiva Anual)</option>
+            <option value="EM">EM (Efectiva Mensual)</option>
+            <option value="nominal">Nominal Anual</option>
+            <option value="daily">Diaria</option>
+          </select>
+        </div>
+      </div>
+      <div v-if="fields.includes('monthly_payment')" class="form-row">
+        <div class="form-group">
           <label class="form-label">Pago Mensual</label>
           <input v-model.number="form.monthly_payment" class="form-input" type="number" step="0.01" min="0">
         </div>
@@ -75,6 +86,7 @@ function buildInitial() {
   const obj = {}
   for (const f of props.fields) {
     if (f === 'name' || f === 'type' || f === 'purchase_date') obj[f] = ''
+    else if (f === 'interest_rate_type') obj[f] = 'EA'
     else obj[f] = 0
   }
   return obj

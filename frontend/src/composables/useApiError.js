@@ -17,7 +17,7 @@ export function useApiError() {
 
       switch (status) {
         case 400:
-          message = data?.detail || 'Datos inválidos'
+          message = data?.detail || 'Revisa los datos e inténtalo de nuevo'
           break
         case 401:
           message = 'Sesión expirada. Inicia sesión de nuevo'
@@ -29,13 +29,13 @@ export function useApiError() {
           message = 'No encontramos esto'
           break
         case 422:
-          message = data?.detail || 'Error de validación'
+          message = data?.detail || 'Revisa los campos marcados'
           break
         case 500:
           message = 'Algo falló por aquí. Intenta más tarde'
           break
         default:
-          message = data?.detail || Algo salió mal
+          message = data?.detail || 'Algo salió mal'
       }
     } else if (err.request) {
       message = 'Sin conexión a internet'

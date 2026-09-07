@@ -95,6 +95,7 @@ const selectedType = ref(null)
 const submitting = ref(false)
 const lastAmount = ref(0)
 const lastCategoryId = ref(0)
+const pendingRecurringData = ref(null)
 
 const headerTitle = computed(() => {
   const titles = {
@@ -120,6 +121,7 @@ function closeModal() {
   isOpen.value = false
   step.value = 'type'
   selectedType.value = null
+  pendingRecurringData.value = null
 }
 
 function handleTypeSelect(type) {
@@ -145,7 +147,7 @@ async function handleTransactionSubmit(data) {
     step.value = 'source'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pude guardar. ¿Los datos están bien?')
+    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Revisa los datos e inténtalo de nuevo.')
   } finally {
     submitting.value = false
   }
@@ -154,19 +156,9 @@ async function handleTransactionSubmit(data) {
 async function handleRecurringSubmit(data) {
   submitting.value = true
   try {
-    await api.post('/recurring-payments', {
-      name: data.name,
-      amount: data.amount,
-      type: 'expense',
-      frequency: data.frequency,
-      day_of_month: data.day_of_month,
-      account_id: props.accounts[0]?.id,
-      is_active: true,
-    })
-    step.value = 'done'
-    emit('transaction-created')
-  } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pude activar el pago. ¿Los datos están bien?')
+    pendingRecurringData.value = data
+    lastAmount.value = data.amount
+    step.value = 'source'
   } finally {
     submitting.value = false
   }
@@ -185,6 +177,29 @@ async function handleGoalSubmit(data) {
 }
 
 async function handleSourceConfirm({ account_id, remember }) {
+  if (pendingRecurringData.value) {
+    submitting.value = true
+    try {
+      await api.post('/recurring-payments', {
+        name: pendingRecurringData.value.name,
+        amount: pendingRecurringData.value.amount,
+        type: 'expense',
+        frequency: pendingRecurringData.value.frequency,
+        day_of_month: pendingRecurringData.value.day_of_month,
+        account_id,
+        is_active: true,
+      })
+      step.value = 'done'
+      emit('transaction-created')
+    } catch (e) {
+      window.$toast?.error(e.response?.data?.detail || 'No pudimos activar el pago. Revisa los datos e inténtalo de nuevo.')
+    } finally {
+      submitting.value = false
+      pendingRecurringData.value = null
+    }
+    return
+  }
+
   if (remember && lastCategoryId.value) {
     api.post('/preferences', {
       category_id: lastCategoryId.value,

@@ -32,7 +32,6 @@
             <div class="form-group">
               <label class="form-label">Saldo Actual</label>
               <div class="input-prefix">
-                <span class="prefix">$</span>
                 <input
                   :value="fmtBalance.displayValue.value"
                   @input="fmtBalance.onInput"
@@ -57,9 +56,20 @@
               </div>
 
               <div class="form-group">
+                <label class="form-label">Tipo de Tasa</label>
+                <select v-model="editForm.interest_rate_type" class="form-input">
+                  <option value="EA">EA (Efectiva Anual)</option>
+                  <option value="EM">EM (Efectiva Mensual)</option>
+                  <option value="nominal">Nominal Anual</option>
+                  <option value="daily">Diaria</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
                 <label class="form-label">Pago Minimo</label>
                 <div class="input-prefix">
-                  <span class="prefix">$</span>
                   <input
                     :value="fmtMinPay.displayValue.value"
                     @input="fmtMinPay.onInput"
@@ -111,6 +121,7 @@ const editForm = reactive({
   name: '',
   creditor: '',
   interest_rate: 0,
+  interest_rate_type: 'EA',
   due_day: 15
 })
 
@@ -125,6 +136,7 @@ watch(() => props.show, (val) => {
     editForm.name = props.debt.name || ''
     editForm.creditor = props.debt.creditor || ''
     editForm.interest_rate = props.debt.interest_rate || 0
+    editForm.interest_rate_type = props.debt.interest_rate_type || 'EA'
     editForm.due_day = props.debt.due_day || 15
     fmtBalance.setInitial(props.debt.current_balance || 0)
     fmtMinPay.setInitial(props.debt.minimum_payment || 0)
@@ -144,6 +156,7 @@ async function submitEdit() {
       creditor: editForm.creditor,
       current_balance: fmtBalance.rawValue.value,
       interest_rate: editForm.interest_rate,
+      interest_rate_type: editForm.interest_rate_type,
       minimum_payment: fmtMinPay.rawValue.value,
       due_day: editForm.due_day
     })

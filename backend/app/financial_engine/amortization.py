@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, timedelta
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
+from app.financial_engine.rate_engine import RateEngine
 
 
 @dataclass
@@ -36,7 +38,10 @@ class AmortizationEngine:
         monthly_payment: Decimal,
         debt_name: str = "",
         start_date: date | None = None,
+        rate_type: str = "EA",
     ) -> AmortizationSchedule:
+        rate = InterestRate(annual_rate, RateType(rate_type) if rate_type in {rt.value for rt in RateType} else RateType.EA)
+        monthly_rate = RateEngine.to_monthly_rate(rate)
         if monthly_payment <= 0 or balance <= 0:
             return AmortizationSchedule(
                 debt_name=debt_name,
@@ -45,7 +50,6 @@ class AmortizationEngine:
                 monthly_payment=Decimal("0"),
             )
 
-        monthly_rate = (1 + annual_rate / Decimal("100")) ** (Decimal("1") / Decimal("12")) - 1
         remaining = balance
         payment = monthly_payment
         schedule = AmortizationSchedule(
@@ -142,7 +146,7 @@ class AmortizationEngine:
                     "debt_name": debt["name"],
                     "type": "due_today",
                     "severity": "warning",
-                    "message": f"'{debt['name']}' vence hoy. Pago mínimo: ${debt.get('minimum_payment', 0):,.0f}",
+                    "message": f"'{debt['name']}' vence hoy. Pago mínimo: ${debt.get('minimum_payment', 0):,.0f} COP",
                     "due_date": due_date.isoformat(),
                     "days_overdue": 0,
                     "min_payment": debt.get("minimum_payment", 0),
@@ -154,7 +158,7 @@ class AmortizationEngine:
                     "debt_name": debt["name"],
                     "type": "upcoming",
                     "severity": "info",
-                    "message": f"'{debt['name']}' vence en {days_until} día(s). Pago mínimo: ${debt.get('minimum_payment', 0):,.0f}",
+                    "message": f"'{debt['name']}' vence en {days_until} día(s). Pago mínimo: ${debt.get('minimum_payment', 0):,.0f} COP",
                     "due_date": due_date.isoformat(),
                     "days_overdue": 0,
                     "min_payment": debt.get("minimum_payment", 0),

@@ -112,7 +112,7 @@ async def update_liability(
         raise HTTPException(status_code=404, detail="No encontramos este pasivo")
 
     update_data = data.model_dump(exclude_unset=True)
-    for key in ["current_balance", "interest_rate", "monthly_payment"]:
+    for key in ["current_balance", "interest_rate", "interest_rate_type", "monthly_payment"]:
         if key in update_data:
             update_data[key] = float(update_data[key])
 

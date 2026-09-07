@@ -29,11 +29,14 @@ async def create_recurring_payment(
     db: AsyncSession = Depends(get_db),
 ):
     service = RecurringPaymentService(db)
-    result = await service.create(data, current_user["household_id"], current_user["id"])
-    sync = ObligationSyncService(db)
-    await sync.sync_recurring(result, current_user["household_id"])
-    await db.commit()
-    return result
+    try:
+        result = await service.create(data, current_user["household_id"], current_user["id"])
+        sync = ObligationSyncService(db)
+        await sync.sync_recurring(result, current_user["household_id"])
+        await db.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{payment_id}", response_model=RecurringPaymentResponse)

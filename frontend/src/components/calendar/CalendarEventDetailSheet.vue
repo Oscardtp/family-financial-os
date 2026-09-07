@@ -40,6 +40,9 @@
         <div v-if="store.selectedEvent.consequence_note" class="sheet-note">
           {{ store.selectedEvent.consequence_note }}
         </div>
+        <div v-if="store.selectedEvent.notes" class="sheet-note">
+          {{ store.selectedEvent.notes }}
+        </div>
         <div v-if="store.selectedEvent.confidence < 100" class="sheet-row">
           <Info :size="16" /><span>Origen</span>
           <strong>{{ confidenceLabel(store.selectedEvent) }}</strong>
@@ -72,7 +75,7 @@
         <button
           v-if="store.selectedEvent.obligation_id"
           class="link-btn"
-          @click="$emit('showObligationInfo')"
+          @click="$emit('showObligationInfo', store.selectedEvent.obligation_id)"
         >
           Ver obligación <ArrowRight :size="15" />
         </button>

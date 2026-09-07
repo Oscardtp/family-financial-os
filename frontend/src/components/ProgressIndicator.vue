@@ -20,6 +20,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useCurrency } from '@/composables/useCurrency'
+import { useFinancialHelpers } from '@/composables/useFinancialHelpers'
 
 const props = defineProps({
   label: {
@@ -41,23 +43,19 @@ const props = defineProps({
   }
 })
 
+const { fmt } = useCurrency()
+const { calcPercentage } = useFinancialHelpers()
+
 const percentage = computed(() => {
   if (props.target <= 0) return 0
-  return Math.round((props.current / props.target) * 100)
+  return calcPercentage(props.current, props.target)
 })
 
 const clampedPercentage = computed(() => {
   return Math.min(percentage.value, 100)
 })
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
+const formatCurrency = (amount) => fmt(amount)
 </script>
 
 <style scoped>

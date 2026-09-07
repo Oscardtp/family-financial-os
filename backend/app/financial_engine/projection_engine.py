@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
+from app.financial_engine.rate_engine import RateEngine
 
 
 @dataclass
@@ -90,8 +92,7 @@ class ProjectionEngine:
         annual_rate_pct: Decimal,
         months: int,
     ) -> dict:
-        annual_rate = Decimal(str(annual_rate_pct)) / Decimal("100")
-        monthly_rate = (1 + annual_rate) ** (Decimal("1") / Decimal("12")) - 1
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(annual_rate_pct, RateType.EA))
 
         balance = current.amount
         monthly = monthly_contribution.amount

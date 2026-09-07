@@ -17,7 +17,6 @@
             <div class="form-group">
               <label class="form-label">Monto del Pago</label>
               <div class="input-prefix">
-                <span class="prefix">$</span>
                 <input
                   :value="fmtPay.displayValue.value"
                   @input="fmtPay.onInput"

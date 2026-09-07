@@ -79,5 +79,6 @@ class SQLAlchemyLiabilityRepository(LiabilityRepository):
             "total_amount": Decimal(str(model.total_amount)),
             "current_balance": Decimal(str(model.current_balance)),
             "interest_rate": Decimal(str(model.interest_rate)),
+            "interest_rate_type": model.interest_rate_type if hasattr(model, 'interest_rate_type') else "EA",
             "monthly_payment": Decimal(str(model.monthly_payment)),
         }

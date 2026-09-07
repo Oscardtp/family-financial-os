@@ -54,6 +54,7 @@ export function usePerformance() {
         const observer = new PerformanceObserver((list) => {
           const entries = list.getEntries()
           const lastEntry = entries[entries.length - 1]
+          if (!lastEntry) return
           callback(lastEntry.startTime)
         })
         observer.observe({ type: 'largest-contentful-paint', buffered: true })
@@ -71,6 +72,7 @@ export function usePerformance() {
         const observer = new PerformanceObserver((list) => {
           const entries = list.getEntries()
           entries.forEach(entry => {
+            if (!entry || entry.startTime == null) return
             callback(entry.processingStart - entry.startTime)
           })
         })

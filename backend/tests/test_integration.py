@@ -1,5 +1,6 @@
-import pytest
+﻿import pytest
 import uuid
+from datetime import date
 
 
 def unique_email(prefix="user"):
@@ -149,14 +150,17 @@ async def test_dashboard_with_transactions(client, auth):
         headers=auth["headers"],
     )
     account_id = acc.json()["id"]
+    today = date.today()
+    first_of_month = date(today.year, today.month, 1)
+    mid_of_month = date(today.year, today.month, 5)
     await client.post(
         "/api/v1/transactions",
-        json={"account_id": account_id, "type": "income", "amount": 5000, "description": "Salary", "date": "2026-08-01"},
+        json={"account_id": account_id, "type": "income", "amount": 5000, "description": "Salary", "date": first_of_month.isoformat()},
         headers=auth["headers"],
     )
     await client.post(
         "/api/v1/transactions",
-        json={"account_id": account_id, "type": "expense", "amount": 1200, "description": "Rent", "date": "2026-08-05"},
+        json={"account_id": account_id, "type": "expense", "amount": 1200, "description": "Rent", "date": mid_of_month.isoformat()},
         headers=auth["headers"],
     )
     response = await client.get("/api/v1/dashboard", headers=auth["headers"])

@@ -1,55 +1,25 @@
 {
   "version": 1,
   "skills": {
-    "xlsx": {
-      "source": "HKUDS/DeepTutor",
-      "sourceType": "github",
-      "skillPath": "deeptutor/skills/builtin/xlsx/SKILL.md"
-    },
-    "fastapi-patterns": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/fastapi-patterns/SKILL.md"
-    },
-    "python-patterns": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/python-patterns/SKILL.md"
-    },
-    "vue-patterns": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/vue-patterns/SKILL.md"
-    },
-    "security-review": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": ".agents/skills/security-review/SKILL.md"
-    },
-    "postgres-patterns": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/postgres-patterns/SKILL.md"
+    "ai-process-lifecycle-manager": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/ai-process-lifecycle-manager/SKILL.md"
     },
     "database-migrations": {
       "source": "affaan-m/ECC",
       "sourceType": "github",
       "skillPath": "skills/database-migrations/SKILL.md"
     },
-    "docker-patterns": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/docker-patterns/SKILL.md"
-    },
-    "python-testing": {
-      "source": "affaan-m/ECC",
-      "sourceType": "github",
-      "skillPath": "skills/python-testing/SKILL.md"
-    },
     "deployment-patterns": {
       "source": "affaan-m/ECC",
       "sourceType": "github",
       "skillPath": "skills/deployment-patterns/SKILL.md"
+    },
+    "docker-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/docker-patterns/SKILL.md"
     },
     "excel-author": {
       "source": "NousResearch/hermes-agent",
@@ -61,10 +31,51 @@
       "sourceType": "github",
       "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md"
     },
-    "ai-process-lifecycle-manager": {
+    "fastapi-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/fastapi-patterns/SKILL.md"
+    },
+    "friendly-fintech-voice": {
       "source": "local",
       "sourceType": "file",
-      "skillPath": ".agents/skills/ai-process-lifecycle-manager/SKILL.md"
+      "skillPath": ".agents/skills/friendly-fintech-voice/SKILL.md"
+    },
+    "popular-web-designs": {
+      "source": "NousResearch/hermes-agent",
+      "sourceType": "github",
+      "skillPath": "skills/creative/popular-web-designs/SKILL.md",
+      "computedHash": "7199c96d47f7067b15d7b29b57ecf4a799436684f6a9d076a76b2f86efc91fec"
+    },
+    "postgres-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/postgres-patterns/SKILL.md"
+    },
+    "product-manager-ux-cx-acceptance": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/product-manager-ux-cx-acceptance/SKILL.md"
+    },
+    "python-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/python-patterns/SKILL.md"
+    },
+    "python-testing": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/python-testing/SKILL.md"
+    },
+    "security-review": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/security-review/SKILL.md"
+    },
+    "software-design-architect": {
+      "source": "local",
+      "sourceType": "file",
+      "skillPath": ".agents/skills/software-design-architect/SKILL.md"
     },
     "systematic-debugging": {
       "source": "obra/superpowers",
@@ -76,20 +87,15 @@
       "sourceType": "github",
       "skillPath": "skills/test-driven-development/SKILL.md"
     },
-    "product-manager-ux-cx-acceptance": {
-      "source": "local",
-      "sourceType": "file",
-      "skillPath": ".agents/skills/product-manager-ux-cx-acceptance/SKILL.md"
+    "vue-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/vue-patterns/SKILL.md"
     },
-    "friendly-fintech-voice": {
-      "source": "local",
-      "sourceType": "file",
-      "skillPath": ".agents/skills/friendly-fintech-voice/SKILL.md"
-    },
-    "software-design-architect": {
-      "source": "local",
-      "sourceType": "file",
-      "skillPath": ".agents/skills/software-design-architect/SKILL.md"
+    "xlsx": {
+      "source": "HKUDS/DeepTutor",
+      "sourceType": "github",
+      "skillPath": "deeptutor/skills/builtin/xlsx/SKILL.md"
     }
   }
 }

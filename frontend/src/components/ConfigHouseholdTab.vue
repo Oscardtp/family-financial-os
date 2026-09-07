@@ -1,5 +1,5 @@
 <template>
-  <div class="household">
+  <div class="config-household-tab">
     <div v-if="loading" class="loading">Cargando...</div>
 
     <template v-else>
@@ -229,9 +229,6 @@ onMounted(loadHousehold)
 @media (max-width: 640px) {
   .form-row {
     flex-direction: column;
-  }
-  .household {
-    padding: 0;
   }
   .member-item {
     flex-direction: column;

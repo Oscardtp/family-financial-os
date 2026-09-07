@@ -2,7 +2,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
 from app.financial_engine.money_operations import MoneyOperations
+from app.financial_engine.rate_engine import RateEngine
+from app.financial_engine.helpers import months_between
 
 
 @dataclass
@@ -50,7 +53,7 @@ class SavingsEngine:
                 target_date = goal["target_date"]
                 if isinstance(target_date, str):
                     target_date = date.fromisoformat(target_date)
-                months_left = (target_date.year - today.year) * 12 + (target_date.month - today.month)
+                months_left = months_between(today, target_date)
                 if months_left > 0:
                     monthly_needed = Money(remaining.amount / Decimal(str(months_left)), remaining.currency)
                     months_to_goal = months_left
@@ -101,8 +104,7 @@ class SavingsEngine:
         target = Decimal(str(target_amount))
 
         if expected_return_rate is not None:
-            annual_rate = Decimal(str(expected_return_rate)) / Decimal("100")
-            monthly_rate = (1 + annual_rate) ** (Decimal("1") / Decimal("12")) - 1
+            monthly_rate = RateEngine.to_monthly_rate(InterestRate(Decimal(str(expected_return_rate)), RateType.EA))
         else:
             monthly_rate = Decimal("0")
 

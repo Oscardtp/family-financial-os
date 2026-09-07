@@ -2,8 +2,8 @@
   <div v-if="error" class="error-boundary" role="alert">
     <div class="error-content">
       <AlertTriangle :size="48" class="error-icon" />
-      <h2 class="error-title">Algo salió mal</h2>
-      <p class="error-message">{{ error.message || 'Algo inesperado pasó' }}</p>
+      <h2 class="error-title">Ups, algo falló</h2>
+      <p class="error-message">{{ error.message || 'No esperábamos esto. ¿Recargas la página?' }}</p>
       <div class="error-actions">
         <button class="btn-retry" @click="retry">
           <RefreshCw :size="16" />

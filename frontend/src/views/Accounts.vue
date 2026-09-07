@@ -54,7 +54,7 @@
           </div>
           <div class="account-balance">
             <span class="account-currency">{{ account.currency || 'COP' }}</span>
-            <span class="account-amount">{{ fmt(account.balance) }}</span>
+            <span class="account-amount">${{ fmt(account.balance) }}</span>
           </div>
           <div class="account-actions">
             <button

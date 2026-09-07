@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import SavingsContributionModel
@@ -36,6 +37,6 @@ class SQLAlchemySavingsContributionRepository(SavingsContributionRepository):
         return {
             "id": model.id,
             "goal_id": model.goal_id,
-            "amount": float(model.amount),
+            "amount": Decimal(str(model.amount)),
             "contribution_date": model.contribution_date,
         }

@@ -10,8 +10,10 @@
       <div class="amount-display" :class="{ 'amount-display--income': original.type === 'income' }">
         <span class="amount-prefix">$</span>
         <input
-          v-model.number="form.amount"
-          type="number"
+          :value="fmtAmount.displayValue.value"
+          @input="fmtAmount.onInput"
+          @focus="fmtAmount.onFocus"
+          type="text"
           min="1"
           required
           placeholder="0"
@@ -78,9 +80,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import api from '@/services/api'
+import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import './sheet-styles.css'
 
 const props = defineProps({
@@ -91,13 +94,16 @@ const emit = defineEmits(['close', 'updated'])
 
 const original = computed(() => props.event)
 
-const form = ref({
-  title: props.event.title || '',
-  amount: props.event.amount || 0,
-  due_date: props.event.due_date || '',
-  category_id: props.event.category_id || null,
-  notes: props.event.notes || '',
-})
+const fmtAmount = useFormattedNumber(props.event.amount || 0, { prefix: '$' })
+
+  const form = ref({
+    title: props.event.title || '',
+    due_date: props.event.due_date || '',
+    category_id: props.event.category_id || null,
+    notes: props.event.notes || '',
+  })
+
+  const amountValue = computed(() => fmtAmount.rawValue.value)
 
 const error = ref(null)
 const submitting = ref(false)
@@ -118,7 +124,7 @@ onMounted(async () => {
 
 async function handleSubmit() {
   error.value = null
-  if (!form.value.title || !form.value.amount || !form.value.due_date) {
+  if (!form.value.title || !amountValue.value || !form.value.due_date) {
     error.value = 'Completa todos los campos obligatorios.'
     return
   }
@@ -126,7 +132,7 @@ async function handleSubmit() {
   try {
     await api.put(`/events/${original.value.id}`, {
       title: form.value.title,
-      amount: parseFloat(form.value.amount),
+      amount: parseFloat(fmtAmount.rawValue.value),
       due_date: form.value.due_date,
       category_id: form.value.category_id,
       notes: form.value.notes || null,

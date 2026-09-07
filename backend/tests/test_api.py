@@ -103,3 +103,57 @@ async def test_create_transaction(client):
     data = response.json()
     assert data["amount"] == "1000.00"
     assert data["type"] == "income"
+
+
+@pytest.mark.anyio
+async def test_http_error_handlers_return_friendly_messages(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "errors@example.com", "name": "Error User", "password": "password123",
+    })
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    unauthorized = await client.get("/api/v1/auth/me", headers={"Authorization": "Bearer invalid"})
+    assert unauthorized.status_code == 401
+    body = unauthorized.json()
+    assert body["error"] == "HTTPError"
+    assert "iniciar sesión" in body["detail"]
+
+    not_found = await client.get("/api/v1/accounts/nonexistent", headers=headers)
+    assert not_found.status_code == 404
+    body = not_found.json()
+    assert body["error"] == "HTTPError"
+    assert "No encontramos" in body["detail"]
+
+    bad_request = await client.post("/api/v1/accounts", json={"name": ""}, headers=headers)
+    assert bad_request.status_code == 422
+    body = bad_request.json()
+    assert body["error"] == "ValidationError"
+    assert "fields" in body
+
+
+@pytest.mark.anyio
+async def test_create_recurring_payment_without_account_returns_400(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "recurring@example.com",
+        "name": "Recurring User",
+        "password": "password123",
+    })
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await client.post(
+        "/api/v1/recurring-payments",
+        json={
+            "name": "Netflix",
+            "amount": 55000,
+            "type": "expense",
+            "frequency": "monthly",
+            "day_of_month": 15,
+        },
+        headers=headers,
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"] == "HTTPError"
+    assert "datos enviados" in body["detail"] or "cuenta" in body["detail"].lower()

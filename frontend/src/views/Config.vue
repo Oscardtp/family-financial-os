@@ -25,8 +25,8 @@
       <div class="config-section card">
         <h3 class="section-title">Hogar</h3>
         <div class="config-row">
-          <span class="config-label">Tu familia</span>
-          <router-link to="/household" class="config-link">Ver miembros</router-link>
+          <span class="config-label">Miembros</span>
+          <span class="config-value">Usa la pestaña Hogar para gestionar tu familia</span>
         </div>
       </div>
 
@@ -44,6 +44,10 @@
         <h3 class="section-title">Sesión</h3>
         <button class="btn btn-sm btn-danger" @click="handleLogout">Cerrar sesión</button>
       </div>
+    </template>
+
+    <template v-else-if="activeTab === 'household'">
+      <ConfigHouseholdTab />
     </template>
 
     <template v-else-if="activeTab === 'categories'">
@@ -177,23 +181,23 @@
     </template>
 
     <ConfirmDialog
-      :open="showCatConfirm"
+      v-model="showCatConfirm"
       title="Eliminar categoría"
       message="¿Seguro que quieres eliminar esta categoría? Se perderán todos los datos asociados."
       confirm-text="Eliminar"
       cancel-text="Cancelar"
-      variant="danger"
+      type="danger"
       @confirm="handleDeleteCategoryConfirm"
       @cancel="showCatConfirm = false"
     />
 
     <ConfirmDialog
-      :open="showAccConfirm"
+      v-model="showAccConfirm"
       title="Eliminar cuenta"
       message="¿Seguro que quieres eliminar esta cuenta? Se perderán todos los datos asociados."
       confirm-text="Eliminar"
       cancel-text="Cancelar"
-      variant="danger"
+      type="danger"
       @confirm="handleDeleteAccountConfirm"
       @cancel="showAccConfirm = false"
     />
@@ -203,9 +207,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Tag, Wallet, Banknote, CreditCard, PiggyBank, X } from 'lucide-vue-next'
+import { User, Tag, Wallet, Banknote, CreditCard, PiggyBank, X, Users } from 'lucide-vue-next'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ConfigHouseholdTab from '@/components/ConfigHouseholdTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrency } from '@/composables/useCurrency'
 import { useToast } from '@/composables/useToast'
@@ -220,6 +225,7 @@ const user = computed(() => auth.user)
 
 const tabs = [
   { key: 'profile', label: 'Perfil', icon: User },
+  { key: 'household', label: 'Hogar', icon: Users },
   { key: 'categories', label: 'Categorías', icon: Tag },
   { key: 'accounts', label: 'Cuentas', icon: Wallet },
 ]

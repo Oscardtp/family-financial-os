@@ -243,6 +243,10 @@ class DebtCreate(BaseModel):
         description="Annual interest rate percentage (must be >= 0)",
         ge=0
     )
+    interest_rate_type: str = Field(
+        default="EA",
+        description="Interest rate type: EA (effective annual), EM (effective monthly), nominal (nominal annual), daily"
+    )
     minimum_payment: Decimal = Field(
         default=Decimal("0"),
         description="Minimum monthly payment amount (must be >= 0)",
@@ -263,6 +267,7 @@ class DebtUpdate(BaseModel):
     creditor: Optional[str] = Field(None, description="Updated creditor name")
     current_balance: Optional[Decimal] = Field(None, description="Updated current balance", gt=0)
     interest_rate: Optional[Decimal] = Field(None, description="Updated interest rate", ge=0)
+    interest_rate_type: Optional[str] = Field(None, description="Updated interest rate type")
     minimum_payment: Optional[Decimal] = Field(None, description="Updated minimum payment", ge=0)
     due_day: Optional[int] = Field(None, description="Updated payment due day", ge=1, le=31)
     status: Optional[str] = Field(None, description="Updated debt status")
@@ -276,6 +281,7 @@ class DebtResponse(BaseModel):
     total_amount: Decimal = Field(..., description="Total debt amount")
     current_balance: Decimal = Field(..., description="Current outstanding balance")
     interest_rate: Decimal = Field(..., description="Annual interest rate")
+    interest_rate_type: str = Field(default="EA", description="Interest rate type")
     minimum_payment: Decimal = Field(..., description="Minimum monthly payment")
     due_day: int = Field(..., description="Payment due day")
     start_date: Optional[DateType] = Field(None, description="Debt start date")
@@ -455,6 +461,10 @@ class LiabilityCreate(BaseModel):
         description="Annual interest rate percentage (must be >= 0)",
         ge=0
     )
+    interest_rate_type: str = Field(
+        default="EA",
+        description="Interest rate type: EA (effective annual), EM (effective monthly), nominal (nominal annual), daily"
+    )
     monthly_payment: Decimal = Field(
         default=Decimal("0"),
         description="Monthly payment amount (must be >= 0)",
@@ -467,6 +477,7 @@ class LiabilityUpdate(BaseModel):
     type: Optional[str] = Field(None, description="Updated liability type", min_length=1, max_length=50)
     current_balance: Optional[Decimal] = Field(None, description="Updated current balance", gt=0)
     interest_rate: Optional[Decimal] = Field(None, description="Updated interest rate", ge=0)
+    interest_rate_type: Optional[str] = Field(None, description="Updated interest rate type")
     monthly_payment: Optional[Decimal] = Field(None, description="Updated monthly payment", ge=0)
 
 
@@ -478,6 +489,7 @@ class LiabilityResponse(BaseModel):
     total_amount: Decimal = Field(..., description="Total liability amount")
     current_balance: Decimal = Field(..., description="Current outstanding balance")
     interest_rate: Decimal = Field(..., description="Annual interest rate")
+    interest_rate_type: str = Field(default="EA", description="Interest rate type")
     monthly_payment: Decimal = Field(..., description="Monthly payment amount")
 
 
@@ -517,14 +529,14 @@ class SavingsSummary(BaseModel):
 
 
 class RecurringPaymentCreate(BaseModel):
-    account_id: UUID = Field(..., description="Account to deduct from")
+    account_id: Optional[UUID] = Field(None, description="Account to deduct from")
     category_id: Optional[UUID] = Field(None, description="Category for the payment")
     name: str = Field(..., description="Payment name (e.g., 'Netflix', 'Rent')", min_length=1, max_length=255)
     amount: Decimal = Field(..., description="Payment amount", gt=0)
     type: str = Field(default="expense", description="Payment type", pattern="^(expense|income)$")
     frequency: str = Field(default="monthly", description="Payment frequency", pattern="^(weekly|biweekly|monthly|yearly)$")
     day_of_month: int = Field(default=1, description="Day of month for monthly payments", ge=1, le=31)
-    next_due_date: DateType = Field(..., description="Next due date")
+    next_due_date: Optional[DateType] = Field(None, description="Next due date")
     description: Optional[str] = Field(None, description="Optional description")
 
 

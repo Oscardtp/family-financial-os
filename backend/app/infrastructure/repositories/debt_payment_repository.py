@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import DebtPaymentModel
@@ -80,9 +81,9 @@ class SQLAlchemyDebtPaymentRepository(DebtPaymentRepository):
         return {
             "id": model.id,
             "debt_id": model.debt_id,
-            "amount": float(model.amount),
-            "principal": float(model.principal) if model.principal else None,
-            "interest": float(model.interest) if model.interest else None,
+            "amount": Decimal(str(model.amount)),
+            "principal": Decimal(str(model.principal)) if model.principal else None,
+            "interest": Decimal(str(model.interest)) if model.interest else None,
             "payment_date": model.payment_date,
             "is_reversed": model.is_reversed,
         }

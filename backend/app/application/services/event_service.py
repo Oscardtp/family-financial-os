@@ -67,6 +67,8 @@ class FinancialEventService:
         update_data = data.model_dump(exclude_unset=True)
         if "amount" in update_data:
             update_data["amount"] = Decimal(str(update_data["amount"]))
+        if update_data.get("notes") == "":
+            update_data["notes"] = None
         for key in ("account_id", "responsible_member_id"):
             if key in update_data and update_data[key] is not None:
                 update_data[key] = str(update_data[key])

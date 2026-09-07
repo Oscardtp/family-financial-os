@@ -15,7 +15,7 @@
       </div>
       <div class="detail-item">
         <span class="detail-label">Tasa Interés</span>
-        <span class="detail-value">{{ debt.interest_rate }}%</span>
+        <span class="detail-value">{{ debt.interest_rate }}% {{ debt.interest_rate_type }}</span>
       </div>
       <div class="detail-item">
         <span class="detail-label">Día Vencimiento</span>
@@ -48,9 +48,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useCurrency } from '@/composables/useCurrency'
+import { useFinancialHelpers } from '@/composables/useFinancialHelpers'
 import DebtActions from './DebtActions.vue'
 
 const { fmt, fmtDate } = useCurrency()
+const { calcPercentage, safeNumber } = useFinancialHelpers()
 
 const props = defineProps({
   debt: { type: Object, required: true },
@@ -59,10 +61,10 @@ const props = defineProps({
 defineEmits(['edit', 'pay'])
 
 const progressPercent = computed(() => {
-  const original = Number(props.debt.total_amount || 0)
-  const current = Number(props.debt.current_balance || 0)
+  const original = safeNumber(props.debt.total_amount)
+  const current = safeNumber(props.debt.current_balance)
   if (original <= 0) return 0
-  return Math.round(((original - current) / original) * 100)
+  return calcPercentage(original - current, original)
 })
 </script>
 

@@ -155,7 +155,7 @@ async function handleSubmit() {
     fmtTarget.setInitial(0)
     fmtMonthly.setInitial(0)
   } catch (e) {
-    formError.value = e.response?.data?.detail || 'Error al crear la meta'
+    formError.value = e.response?.data?.detail || 'No pudimos crear la meta. Revisa los datos e inténtalo de nuevo.'
   } finally {
     submitting.value = false
   }

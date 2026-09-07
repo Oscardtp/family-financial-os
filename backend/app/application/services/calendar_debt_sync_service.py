@@ -7,6 +7,8 @@ from app.infrastructure.repositories.financial_event_repository import SQLAlchem
 from app.infrastructure.repositories.debt_repository import SQLAlchemyDebtRepository
 from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDebtPaymentRepository
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
+from app.domain.value_objects.interest_rate import InterestRate, RateType
+from app.financial_engine.rate_engine import RateEngine
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,12 @@ class CalendarDebtSyncService:
         if payment_amount <= 0:
             return None
 
-        monthly_rate = Decimal(str(debt["interest_rate"])) / Decimal("1200")
+        rate_type = debt.get("interest_rate_type") or "EA"
+        try:
+            rt = RateType(rate_type)
+        except ValueError:
+            rt = RateType.EA
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(Decimal(str(debt["interest_rate"])), rt))
         interest_charge = (Decimal(str(debt["current_balance"])) * monthly_rate).quantize(Decimal("0.01"))
         principal_portion = payment_amount - interest_charge if payment_amount > interest_charge else Decimal("0")
 

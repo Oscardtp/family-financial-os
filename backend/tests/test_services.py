@@ -405,3 +405,114 @@ async def test_dashboard_service_financial_alert(client):
     data = resp.json()
     assert data["financial_alert"] is not None
     assert data["financial_alert"]["type"] in ("critical", "warning")
+
+
+# ─── Validaciones dominio FASE 3 ─────────────────────────────────────
+
+@pytest.mark.anyio
+async def test_transaction_service_rejects_zero_amount(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "svc_tx_zero@example.com", "name": "Zero TX", "password": "password123",
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+    acc = await client.post("/api/v1/accounts",
+        json={"name": "Checking", "type": "bank", "balance": 1000}, headers=headers)
+    acc_id = acc.json()["id"]
+
+    resp = await client.post("/api/v1/transactions", json={
+        "account_id": acc_id, "type": "income", "amount": 0,
+        "description": "Bad", "date": "2026-01-15",
+    }, headers=headers)
+    assert resp.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_debt_service_create_validates_domain_rules(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "svc_debt_val@example.com", "name": "Debt Val", "password": "password123",
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+    resp = await client.post("/api/v1/debts", json={
+        "name": "Bad", "creditor": "Bank",
+        "total_amount": 0, "current_balance": 0,
+        "interest_rate": -1, "minimum_payment": -100,
+        "due_day": 1, "start_date": "2026-01-01",
+    }, headers=headers)
+    assert resp.status_code == 422
+
+    resp2 = await client.post("/api/v1/debts", json={
+        "name": "Bad", "creditor": "Bank",
+        "total_amount": 1000, "current_balance": 2000,
+        "interest_rate": 10, "minimum_payment": 100,
+        "due_day": 1, "start_date": "2026-01-01",
+    }, headers=headers)
+    assert resp2.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_debt_service_payment_rejects_zero_amount(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "svc_debt_pay_zero@example.com", "name": "Pay Zero", "password": "password123",
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+    debt = await client.post("/api/v1/debts", json={
+        "name": "Loan", "creditor": "Bank",
+        "total_amount": 1000000, "current_balance": 1000000,
+        "interest_rate": 12.0, "minimum_payment": 100000,
+        "due_day": 1, "start_date": "2026-01-01",
+    }, headers=headers)
+    debt_id = debt.json()["id"]
+
+    resp = await client.post(f"/api/v1/debts/{debt_id}/payments", json={
+        "amount": 0, "payment_date": "2026-02-01",
+    }, headers=headers)
+    assert resp.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_debt_service_create_validates_domain_rules_unit(session):
+    from app.application.services.debt_service import DebtService
+    from app.presentation.schemas.schemas import DebtCreate
+
+    service = DebtService(session)
+    bad = DebtCreate(
+        name="Bad", creditor="Bank",
+        total_amount=1000, current_balance=1000,
+        interest_rate=10, minimum_payment=100,
+        due_day=1, start_date="2026-01-01",
+    )
+    bad.current_balance = 2000
+    with pytest.raises(ValueError):
+        await service.create(bad, str(__import__('uuid').uuid4()))
+
+
+@pytest.mark.anyio
+async def test_debt_service_payment_validates_amount_unit(session):
+    from app.application.services.debt_service import DebtService
+    from app.presentation.schemas.schemas import DebtPaymentCreate
+    from app.infrastructure.models.models import DebtModel
+    from uuid import uuid4
+    from datetime import date
+
+    service = DebtService(session)
+    household_id = str(uuid4())
+    debt = DebtModel(
+        household_id=household_id,
+        name="Loan",
+        creditor="Bank",
+        total_amount=1000000,
+        current_balance=1000000,
+        interest_rate=12,
+        minimum_payment=100000,
+        due_day=1,
+        start_date=date(2026, 1, 1),
+    )
+    session.add(debt)
+    await session.flush()
+
+    payment_data = DebtPaymentCreate(amount=1000, payment_date=date(2026, 2, 1))
+    payment_data.amount = 0
+    with pytest.raises(ValueError):
+        await service.create_payment(str(debt.id), payment_data, {"household_id": household_id, "id": str(uuid4())})

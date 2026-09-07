@@ -15,10 +15,10 @@
     <template v-else>
       <div class="available-card">
         <span class="available-label">Disponible</span>
-        <span class="available-value">{{ fmt(availability?.projected_available ?? 0) }}</span>
+        <span class="available-value">${{ fmt(availability?.projected_available ?? 0) }}</span>
         <div class="available-meta">
-          <span>Cuentas: {{ fmt(availability?.available ?? 0) }}</span>
-          <span>Pagos: {{ fmt(availability?.upcoming_payments ?? 0) }}</span>
+          <span>Cuentas: ${{ fmt(availability?.available ?? 0) }}</span>
+          <span>Pagos: ${{ fmt(availability?.upcoming_payments ?? 0) }}</span>
         </div>
       </div>
 
@@ -55,20 +55,20 @@
             <div class="month-grid">
               <div class="month-row">
                 <span>Ingresos</span>
-                <strong class="income">{{ fmt(monthSummary?.expected_income ?? 0) }}</strong>
+                <strong class="income">${{ fmt(monthSummary?.expected_income ?? 0) }}</strong>
               </div>
               <div class="month-row">
                 <span>Gastos</span>
-                <strong class="expense">{{ fmt(monthSummary?.expected_expenses ?? 0) }}</strong>
+                <strong class="expense">${{ fmt(monthSummary?.expected_expenses ?? 0) }}</strong>
               </div>
               <div class="month-divider"></div>
               <div class="month-row">
                 <span>Disponible proyectado</span>
-                <strong :class="(monthSummary?.projected_available ?? 0) < 0 ? 'expense' : 'income'">{{ fmt(monthSummary?.projected_available ?? 0) }}</strong>
+                <strong :class="(monthSummary?.projected_available ?? 0) < 0 ? 'expense' : 'income'">${{ fmt(monthSummary?.projected_available ?? 0) }}</strong>
               </div>
               <div class="month-row">
                 <span>Efectivo necesario</span>
-                <strong class="warn">{{ fmt(monthSummary?.cash_needed ?? 0) }}</strong>
+                <strong class="warn">${{ fmt(monthSummary?.cash_needed ?? 0) }}</strong>
               </div>
             </div>
           </section>

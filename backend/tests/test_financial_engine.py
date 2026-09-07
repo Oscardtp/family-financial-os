@@ -30,11 +30,15 @@ class TestMoneyOperations:
         assert MoneyOperations.percentage(Money("25"), Money("0")) == Decimal("0.00")
 
     def test_apply_interest(self):
-        result = MoneyOperations.apply_interest(Money("1000"), Decimal("12"), 1)
+        result = MoneyOperations.apply_interest(Money("1000"), Decimal("12"), 1, "EA")
+        assert result.amount == Decimal("1009.49")
+
+    def test_apply_interest_em(self):
+        result = MoneyOperations.apply_interest(Money("1000"), Decimal("12"), 1, "EM")
         assert result.amount == Decimal("1120.00")
 
     def test_amortize_payment(self):
-        result = MoneyOperations.amortize_payment(Money("1000"), Decimal("12"), 12, 1)
+        result = MoneyOperations.amortize_payment(Money("1000"), Decimal("12"), 12, 1, "EA")
         assert result["payment"].is_positive()
         assert result["principal"].is_positive()
         assert result["interest"].is_positive()
@@ -120,6 +124,23 @@ class TestDebtEngine:
         )
         assert result["months"] > 0
         assert result["total_paid"].is_positive()
+
+    def test_project_payoff_em_rate(self):
+        engine = DebtEngine()
+        result_ea = engine.project_payoff(
+            balance=Money("1000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Money("100"),
+        )
+        result_em = engine.project_payoff(
+            balance=Money("1000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Money("200"),
+            rate_type="EM",
+        )
+        assert result_em["months"] > 0
+        assert result_em["total_paid"].is_positive()
+        assert result_em["months"] != result_ea["months"]
 
 
 class TestSavingsEngine:

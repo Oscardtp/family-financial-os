@@ -1,7 +1,9 @@
 import { ref, computed, reactive } from 'vue'
 import api from '@/services/api'
+import { useCurrency } from '@/composables/useCurrency'
 
 export function useBudgets() {
+  const { fmt } = useCurrency()
   const now = new Date()
   const loading = ref(true)
   const error = ref('')
@@ -37,7 +39,7 @@ export function useBudgets() {
 
   const chartOptions = {
     plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8 } } },
-    scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + Number(v).toLocaleString('es-CO', { maximumFractionDigits: 0 }) } }, x: { grid: { display: false } } },
+    scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + fmt(v) } }, x: { grid: { display: false } } },
   }
 
   function prevMonth() {

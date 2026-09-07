@@ -84,6 +84,7 @@ class DebtModel(Base):
     total_amount = Column(Numeric(15, 2), nullable=False)
     current_balance = Column(Numeric(15, 2), nullable=False)
     interest_rate = Column(Numeric(5, 2), default=0)
+    interest_rate_type = Column(String(20), default="EA")
     minimum_payment = Column(Numeric(15, 2), default=0)
     due_day = Column(Integer, default=1)
     start_date = Column(Date, nullable=True)
@@ -161,6 +162,7 @@ class LiabilityModel(Base):
     total_amount = Column(Numeric(15, 2), nullable=False)
     current_balance = Column(Numeric(15, 2), nullable=False)
     interest_rate = Column(Numeric(5, 2), default=0)
+    interest_rate_type = Column(String(20), default="EA")
     monthly_payment = Column(Numeric(15, 2), default=0)
 
 

@@ -42,7 +42,7 @@
       @unpay="onUnpay"
       @edit="openEdit"
       @delete="openDelete"
-      @showObligationInfo="showObligationInfo"
+      @showObligationInfo="onShowObligationInfo"
     />
 
     <EventTypePicker
@@ -78,6 +78,13 @@
       @cancel="cancelDelete"
     />
 
+    <ObligationDetailSheet
+      v-if="obligationIdToShow"
+      :show="!!obligationIdToShow"
+      :obligation-id="obligationIdToShow"
+      @close="obligationIdToShow = null"
+    />
+
     <CalendarRecurringSheet />
   </div>
 </template>
@@ -87,7 +94,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useCurrency } from '@/composables/useCurrency'
-import { eventsService } from '@/services/events'
+import { eventsService, obligationsService } from '@/services/events'
 import { useCalendarNavigation } from '@/composables/useCalendarNavigation'
 import { useCalendarFilters } from '@/composables/useCalendarFilters'
 import {
@@ -95,7 +102,7 @@ import {
   fmtDateShort as _fmtDateShort,
   isCutoffUrgent as _isCutoffUrgent,
 } from '@/composables/useCalendarHelpers'
-import { useRecurringPayments } from '@/composables/useRecurringPayments'
+import { useRecurringStore } from '@/stores/recurring'
 import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue'
 import CalendarGridView from '@/components/calendar/CalendarGridView.vue'
 import CalendarListView from '@/components/calendar/CalendarListView.vue'
@@ -106,6 +113,7 @@ import ExpenseFormSheet from '@/components/calendar/ExpenseFormSheet.vue'
 import IncomeFormSheet from '@/components/calendar/IncomeFormSheet.vue'
 import EventEditSheet from '@/components/calendar/EventEditSheet.vue'
 import ConfirmDeleteModal from '@/components/calendar/ConfirmDeleteModal.vue'
+import ObligationDetailSheet from '@/components/calendar/ObligationDetailSheet.vue'
 
 const toast = useToast()
 const { fmt } = useCurrency()
@@ -119,7 +127,7 @@ const {
   WEEKDAYS, FILTERS, activeFilter, filteredCalendarDays, filteredListGrouped,
 } = useCalendarFilters()
 
-const { openRecurrentes } = useRecurringPayments()
+const { openRecurrentes } = useRecurringStore()
 
 const viewMode = ref('calendar')
 const todayStr = computed(() => new Date().toISOString().slice(0, 10))
@@ -133,6 +141,7 @@ const selectedDate = ref('')
 const editingEvent = ref(null)
 const deleteTarget = ref(null)
 const deleteLoading = ref(false)
+const obligationIdToShow = ref(null)
 
 function openEvent(ev) { store.openEvent(ev) }
 
@@ -207,8 +216,8 @@ async function onUnpay(ev) {
   else toast.success('Listo, el pago se anuló.')
 }
 
-function showObligationInfo() {
-  toast.info('Este pago hace parte de una obligación recurrente: se crea automáticamente cada mes.')
+function onShowObligationInfo(obligationId) {
+  obligationIdToShow.value = obligationId || null
 }
 
 onMounted(async () => {

@@ -34,10 +34,10 @@
         <div class="available-top">
           <span class="available-label">Disponible</span>
         </div>
-        <span class="available-value">{{ fmt(availability?.projected_available ?? d.total_balance ?? 0) }}</span>
+        <span class="available-value">${{ fmt(availability?.projected_available ?? d.total_balance ?? 0) }}</span>
         <div class="available-meta">
-          <span>Cuentas: {{ fmt(availability?.available ?? d.total_balance ?? 0) }}</span>
-          <span>Pagos: {{ fmt(availability?.upcoming_payments ?? totalMonthlyPayment) }}</span>
+          <span>Cuentas: ${{ fmt(availability?.available ?? d.total_balance ?? 0) }}</span>
+          <span>Pagos: ${{ fmt(availability?.upcoming_payments ?? totalMonthlyPayment) }}</span>
         </div>
       </div>
 
@@ -78,16 +78,16 @@
             <div class="month-grid">
               <div class="month-row">
                 <span>Ingresos</span>
-                <strong class="income">{{ fmt(monthSummary?.expected_income ?? d.monthly_income ?? 0) }}</strong>
+                <strong class="income">${{ fmt(monthSummary?.expected_income ?? d.monthly_income ?? 0) }}</strong>
               </div>
               <div class="month-row">
                 <span>Gastos</span>
-                <strong class="expense">{{ fmt(monthSummary?.expected_expenses ?? d.monthly_expenses ?? 0) }}</strong>
+                <strong class="expense">${{ fmt(monthSummary?.expected_expenses ?? d.monthly_expenses ?? 0) }}</strong>
               </div>
               <div class="month-divider"></div>
               <div class="month-row">
                 <span>Nos queda</span>
-                <strong :class="netMonthly >= 0 ? 'income' : 'expense'">{{ fmt(netMonthly) }}</strong>
+                <strong :class="netMonthly >= 0 ? 'income' : 'expense'">${{ fmt(netMonthly) }}</strong>
               </div>
             </div>
           </div>
@@ -105,7 +105,7 @@
                 <div class="cat-track">
                   <div class="cat-fill" :style="{ width: cat.pct + '%', background: cat.color }" />
                 </div>
-                <span class="cat-amount">{{ fmt(cat.amount) }}</span>
+                <span class="cat-amount">${{ fmt(cat.amount) }}</span>
               </div>
               <button v-if="topCategories.length > 4" class="btn-expand" @click="showFullCat = !showFullCat">
                 {{ showFullCat ? 'Ver menos' : `Ver todas (${topCategories.length})` }}
@@ -124,7 +124,7 @@
                   <span class="tx-date">{{ tx.date }}</span>
                 </div>
                 <span class="tx-amount" :class="tx.type">
-                  {{ tx.type === 'income' ? '+' : '-' }}{{ fmt(tx.amount) }}
+                  {{ tx.type === 'income' ? '+' : '-' }}${{ fmt(tx.amount) }}
                 </span>
               </div>
             </div>
@@ -138,11 +138,11 @@
             <div class="side-rows">
               <div class="side-row">
                 <span class="side-label">Total</span>
-                <span class="side-value expense">{{ fmt(d.total_debt) }}</span>
+                <span class="side-value expense">${{ fmt(d.total_debt) }}</span>
               </div>
               <div class="side-row">
                 <span class="side-label">Pagamos al mes</span>
-                <span class="side-value">{{ fmt(totalMonthlyPayment) }}</span>
+                <span class="side-value">${{ fmt(totalMonthlyPayment) }}</span>
               </div>
               <div class="side-row">
                 <span class="side-label">Ya pagamos</span>
@@ -182,7 +182,7 @@
                   <div class="budget-fill" :class="'fill-' + b.status"
                     :style="{ width: Math.min((b.spent / b.budgeted) * 100, 100) + '%' }" />
                 </div>
-                <span class="budget-detail">{{ fmt(b.spent) }} / {{ fmt(b.budgeted) }}</span>
+                <span class="budget-detail">${{ fmt(b.spent) }} / ${{ fmt(b.budgeted) }}</span>
               </div>
             </div>
           </div>

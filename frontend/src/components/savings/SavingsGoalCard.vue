@@ -30,8 +30,10 @@
 import { computed } from 'vue'
 import { useCurrency } from '@/composables/useCurrency'
 import { useSmartCalculator } from '@/composables/useSmartCalculator'
+import { useFinancialHelpers } from '@/composables/useFinancialHelpers'
 
 const { fmt, formatDate } = useCurrency()
+const { calcPercentage } = useFinancialHelpers()
 const { calculateMonthly } = useSmartCalculator()
 
 const props = defineProps({
@@ -42,7 +44,7 @@ defineEmits(['contribute', 'edit', 'delete'])
 
 const progressPercent = computed(() => {
   if (!props.goal.target_amount) return 0
-  return Math.min(Math.round((props.goal.current_amount / props.goal.target_amount) * 100), 100)
+  return Math.min(calcPercentage(props.goal.current_amount, props.goal.target_amount), 100)
 })
 
 const monthlySuggestion = computed(() => {

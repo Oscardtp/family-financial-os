@@ -69,6 +69,7 @@ async def debt_projection(
             balance=Money(Decimal(str(debt["current_balance"]))),
             annual_rate=Decimal(str(debt.get("interest_rate", 0))),
             monthly_payment=Money(Decimal(str(debt.get("minimum_payment", 0)))),
+            rate_type=debt.get("interest_rate_type") or "EA",
         )
         projections.append({
             "debt_id": debt["id"],

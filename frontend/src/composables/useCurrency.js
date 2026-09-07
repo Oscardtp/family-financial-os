@@ -20,9 +20,10 @@ export function useCurrency() {
    * Formatea un número como COP sin símbolo de moneda.
    * fmt(1500000) → "1.500.000"
    */
-  function fmt(value) {
+  function fmt(value, decimals = 0) {
     const n = Number(value || 0)
-    return formatter.format(n)
+    if (decimals === 0) return formatter.format(n)
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: decimals }).format(n)
   }
 
   /**

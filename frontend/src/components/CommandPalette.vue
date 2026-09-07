@@ -114,7 +114,7 @@ const commands = [
   { id: 'nav-calendar', name: 'Calendario', icon: Calendar, action: () => router.push('/calendar'), type: 'navigation' },
   { id: 'nav-progress', name: 'Como Voy', icon: TrendingUp, action: () => router.push('/progress'), type: 'navigation' },
   { id: 'nav-goals', name: 'Metas', icon: Target, action: () => router.push('/goals'), type: 'navigation' },
-  { id: 'nav-household', name: 'Mi Familia', icon: Users, action: () => router.push('/household'), type: 'navigation' },
+  { id: 'nav-household', name: 'Mi Familia', icon: Users, action: () => router.push('/config?tab=household'), type: 'navigation' },
   { id: 'nav-config', name: 'Mi Perfil', icon: User, action: () => router.push('/config'), type: 'navigation' },
 
   { id: 'action-new-debt', name: 'Nueva Deuda', icon: Plus, shortcut: 'N', action: () => router.push('/debts/new'), type: 'action' },

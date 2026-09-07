@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
 from app.financial_engine.money_operations import MoneyOperations
+from app.financial_engine.rate_engine import RateEngine
 
 
 @dataclass
@@ -82,14 +84,14 @@ class DebtEngine:
         )
 
     def generate_amortization(
-        self, balance: Money, annual_rate: Decimal, months: int
+        self, balance: Money, annual_rate: Decimal, months: int, rate_type: str = "EA"
     ) -> list[DebtAmortizationRow]:
         rows = []
         current_balance = balance
 
         for period in range(1, months + 1):
             remaining_periods = months - period + 1
-            amort = MoneyOperations.amortize_payment(current_balance, annual_rate, remaining_periods, 1)
+            amort = MoneyOperations.amortize_payment(current_balance, annual_rate, remaining_periods, 1, rate_type)
             current_balance = amort["remaining"]
 
             rows.append(DebtAmortizationRow(
@@ -103,18 +105,23 @@ class DebtEngine:
         return rows
 
     def project_payoff(
-        self, balance: Money, annual_rate: Decimal, monthly_payment: Money
+        self, balance: Money, annual_rate: Decimal, monthly_payment: Money, rate_type: str = "EA"
     ) -> dict:
         if monthly_payment.is_zero() or balance.is_zero():
             return {"months": 0, "total_paid": Money.zero(), "total_interest": Money.zero()}
 
-        monthly_rate = (1 + annual_rate / Decimal("100")) ** (Decimal("1") / Decimal("12")) - 1
+        try:
+            rt = RateType(rate_type)
+        except ValueError:
+            rt = RateType.EA
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(annual_rate, rt))
         current_balance = balance
         months = 0
         total_paid = Money.zero()
 
         while current_balance.is_positive() and months < 600:
             interest = Money(current_balance.amount * monthly_rate, balance.currency)
+            interest = Money(interest.amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), balance.currency)
             principal = monthly_payment - interest
 
             if principal.amount > current_balance.amount:
@@ -123,12 +130,10 @@ class DebtEngine:
             else:
                 payment = monthly_payment
 
-            current_balance = current_balance - principal
+            new_balance_amount = (current_balance.amount - principal.amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            current_balance = Money.zero(balance.currency) if new_balance_amount < 0 else Money(new_balance_amount, balance.currency)
             total_paid = total_paid + payment
             months += 1
-
-            if current_balance.is_negative():
-                current_balance = Money.zero()
 
         return {
             "months": months,

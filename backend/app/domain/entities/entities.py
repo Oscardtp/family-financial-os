@@ -71,6 +71,7 @@ class Debt:
     total_amount: Money = field(default_factory=lambda: Money.zero())
     current_balance: Money = field(default_factory=lambda: Money.zero())
     interest_rate: Decimal = Decimal("0.00")
+    interest_rate_type: str = "EA"
     minimum_payment: Money = field(default_factory=lambda: Money.zero())
     due_day: int = 1
     start_date: date | None = None
@@ -202,4 +203,5 @@ class Liability:
     total_amount: Money = field(default_factory=lambda: Money.zero())
     current_balance: Money = field(default_factory=lambda: Money.zero())
     interest_rate: Decimal = Decimal("0.00")
+    interest_rate_type: str = "EA"
     monthly_payment: Money = field(default_factory=lambda: Money.zero())

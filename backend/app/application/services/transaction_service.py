@@ -37,6 +37,10 @@ class TransactionService:
     async def create(self, data, user: dict) -> dict:
         household_id = user["household_id"]
 
+        amount = Decimal(str(data.amount))
+        if amount <= 0:
+            raise ValueError("El monto debe ser mayor a cero")
+
         account = await self._get_owned_account(data.account_id, household_id)
 
         self._validate_transfer(data)
@@ -45,7 +49,7 @@ class TransactionService:
         if data.type == "transfer" and data.to_account_id:
             await self._get_owned_account(data.to_account_id, household_id)
 
-        self._check_balance(account, data.type, data.amount)
+        self._check_balance(account, data.type, amount)
 
         await self._adjust_balances(data)
 
@@ -54,7 +58,7 @@ class TransactionService:
             "category_id": data.category_id,
             "user_id": user["id"],
             "type": data.type,
-            "amount": Decimal(str(data.amount)),
+            "amount": amount,
             "description": data.description,
             "date": data.date,
             "to_account_id": data.to_account_id,

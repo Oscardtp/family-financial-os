@@ -80,7 +80,7 @@ class CalendarSyncResponse(BaseModel):
 
 
 class MarkPaidRequest(BaseModel):
-    amount: Optional[float] = Field(None, description="Payment amount (defaults to event amount)")
+    amount: Optional[Decimal] = Field(None, description="Payment amount (defaults to event amount)")
 
 
 class PatternSuggestionResponse(BaseModel):

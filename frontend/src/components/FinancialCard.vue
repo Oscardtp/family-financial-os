@@ -43,6 +43,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useCurrency } from '@/composables/useCurrency'
 
 const props = defineProps({
   label: {
@@ -81,11 +82,10 @@ const props = defineProps({
   }
 })
 
+const { fmt } = useCurrency()
+
 const formattedAmount = computed(() => {
-  return new Intl.NumberFormat('es-CO', {
-    minimumFractionDigits: props.decimals,
-    maximumFractionDigits: props.decimals
-  }).format(props.amount)
+  return fmt(props.amount, props.decimals)
 })
 </script>
 

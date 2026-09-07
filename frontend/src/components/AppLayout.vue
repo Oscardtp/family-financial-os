@@ -153,7 +153,6 @@ const navSections = [
     label: 'CUENTA',
     items: [
       { to: '/config', label: 'Mi Perfil', icon: User },
-      { to: '/household', label: 'Mi Familia', icon: Users },
     ]
   },
 ]
@@ -302,20 +301,7 @@ watch(() => route.path, () => {
     margin-left: 0;
   }
   .hamburger-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: var(--space-md);
-    left: var(--space-md);
-    z-index: calc(var(--z-sidebar) - 2);
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-    background: var(--color-neutral-800);
-    color: white;
-    border: none;
-    cursor: pointer;
+    display: none;
   }
   .content {
     padding: var(--space-md);

@@ -40,11 +40,16 @@ async def create_debt(
     db: AsyncSession = Depends(get_db),
 ):
     service = DebtService(db)
-    result = await service.create(data, current_user["household_id"])
-    sync = ObligationSyncService(db)
-    await sync.sync_debt(result, current_user["household_id"])
-    await db.commit()
-    return result
+    try:
+        result = await service.create(data, current_user["household_id"])
+        sync = ObligationSyncService(db)
+        await sync.sync_debt(result, current_user["household_id"])
+        await db.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="No pudimos crear la deuda. Intenta de nuevo.")
 
 
 @router.get("/{debt_id}", response_model=DebtResponse, summary="Get debt details", description="Returns full details of a specific debt")

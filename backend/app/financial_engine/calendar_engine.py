@@ -149,7 +149,7 @@ class CalendarEngine:
 
         avg_amount = sum(amounts) / len(amounts)
         avg_day = sum(days) / len(days)
-        amounts_close = all(abs(a - avg_amount) / avg_amount < 0.15 for a in amounts) if avg_amount > 0 else False
+        amounts_close = all(abs(a - avg_amount) / avg_amount < Decimal("0.15") for a in amounts) if avg_amount > 0 else False
         days_close = all(abs(d - avg_day) <= 3 for d in days)
 
         if amounts_close and days_close:

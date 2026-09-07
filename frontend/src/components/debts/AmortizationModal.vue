@@ -23,7 +23,7 @@
                 <span class="summary-value">${{ fmt(amortData.original_balance ?? 0) }}</span>
               </div>
               <div class="summary-row">
-                <span class="summary-label">Tasa Mensual</span>
+                <span class="summary-label">Tasa Interés</span>
                 <span class="summary-value">{{ amortData.interest_rate }}%</span>
               </div>
               <div class="summary-row">

@@ -1,5 +1,6 @@
 from typing import Optional
 import uuid
+from decimal import Decimal
 from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,7 +88,7 @@ class SQLAlchemyRecurringPaymentRepository:
             "account_id": model.account_id,
             "category_id": model.category_id,
             "name": model.name,
-            "amount": float(model.amount),
+            "amount": Decimal(str(model.amount)),
             "type": model.type,
             "frequency": model.frequency,
             "day_of_month": model.day_of_month,

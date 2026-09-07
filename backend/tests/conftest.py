@@ -63,6 +63,13 @@ app.router.lifespan_context = _noop_lifespan
 
 @pytest.fixture
 async def client():
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+
+
+@pytest.fixture
+async def session():
+    async with test_session_factory() as s:
+        yield s
+        await s.close()

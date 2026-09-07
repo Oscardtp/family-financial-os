@@ -1,17 +1,17 @@
 <template>
-  <div v-if="recurrentesOpen" class="sheet-backdrop" @click.self="closeRecurrentes">
-    <div class="sheet">
-      <button class="sheet-close" @click="closeRecurrentes" aria-label="Cerrar"><X :size="20" /></button>
+  <div v-if="recurrentesOpen" class="sheet-backdrop" @click.self="closeRecurrentes" @keydown.esc="closeRecurrentes">
+    <div class="sheet" @click.stop>
+      <button class="sheet-close" @click="closeRecurrentes" aria-label="Cerrar" type="button"><X :size="20" /></button>
       <h3 class="form-title">Recurrentes</h3>
 
-      <div v-if="store.obligations.length === 0" class="empty-state-inline">
+      <div v-if="calendarStore.obligations.length === 0" class="empty-state-inline">
         <p>No tienes pagos recurrentes todavía.</p>
         <p class="empty-desc">Crea uno desde el botón de agregar rápido.</p>
       </div>
 
       <div v-else class="recurring-list">
         <div
-          v-for="ob in store.obligations"
+          v-for="ob in calendarStore.obligations"
           :key="ob.id"
           class="recurring-card"
         >
@@ -50,7 +50,7 @@
         <select v-model="newRecurring.account_id" class="form-input">
           <option value="" disabled>Seleccionar cuenta</option>
           <option
-            v-for="a in store.accounts"
+            v-for="a in calendarStore.accounts"
             :key="a.id"
             :value="a.id"
           >{{ a.name }}</option>
@@ -93,14 +93,25 @@
 <script setup>
 import { X, Plus } from 'lucide-vue-next'
 import { useCurrency } from '@/composables/useCurrency'
-import { useRecurringPayments } from '@/composables/useRecurringPayments'
+import { useRecurringStore } from '@/stores/recurring'
+import { useCalendarStore } from '@/stores/useCalendar'
+import { storeToRefs } from 'pinia'
 
 const { fmtFull } = useCurrency()
+const calendarStore = useCalendarStore()
+const recurringStore = useRecurringStore()
 
 const {
-  store, recurrentesOpen, showRecurringForm, recurringSaving, newRecurring,
-  closeRecurrentes, onCreateRecurring, onToggleObligation,
-} = useRecurringPayments()
+  recurrentesOpen, showRecurringForm, recurringSaving, newRecurring,
+} = storeToRefs(recurringStore)
+
+const closeRecurrentes = () => recurringStore.closeRecurrentes()
+
+function handleKeydown(e) {
+  if (e.key === 'Escape' && recurrentesOpen.value) {
+    closeRecurrentes()
+  }
+}
 </script>
 
 <style scoped>

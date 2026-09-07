@@ -1,0 +1,42 @@
+﻿import { useGoalsStore } from '@/stores/goals'
+
+export function useGoals() {
+  const store = useGoalsStore()
+  return {
+    goals: store.goals,
+    loading: store.loading,
+    error: store.error,
+    expandedGoal: store.expandedGoal,
+    highlightedGoalId: store.highlightedGoalId,
+    filterType: store.filterType,
+    sortBy: store.sortBy,
+    activeGoals: store.activeGoals,
+    completedGoals: store.completedGoals,
+    totalCurrent: store.totalCurrent,
+    totalTarget: store.totalTarget,
+    overallProgress: store.overallProgress,
+    goalProgress: store.goalProgress,
+    monthsRemaining: store.monthsRemaining,
+    fetchGoals: store.fetchGoals,
+    createGoal: store.createGoal,
+    editGoal: store.editGoal,
+    deleteGoal: store.deleteGoal,
+    contributeGoal: store.contributeGoal,
+    loadGoalHistory: store.loadGoalHistory,
+    openContribution: store.openContribution,
+    closeContribution: store.closeContribution,
+    submitContribution: store.submitContribution,
+    openEdit: store.openEdit,
+    closeEdit: store.closeEdit,
+    submitEdit: store.submitEdit,
+    confirmDelete: store.confirmDelete,
+    closeDelete: store.closeDelete,
+    submitDelete: store.submitDelete,
+    toggleDetails: store.toggleDetails,
+    highlightNewGoal: store.highlightNewGoal,
+    fmt: store.fmt,
+    fmtFull: store.fmtFull,
+    fmtDate: store.fmtDate,
+    fmtMonth: store.fmtMonth,
+  }
+}

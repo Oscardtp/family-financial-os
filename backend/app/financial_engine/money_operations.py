@@ -1,5 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 from app.domain.value_objects.money import Money
+from app.domain.value_objects.interest_rate import InterestRate, RateType
+from app.financial_engine.rate_engine import RateEngine
 
 
 class MoneyOperations:
@@ -31,15 +33,24 @@ class MoneyOperations:
         )
 
     @staticmethod
-    def apply_interest(principal: Money, rate: Decimal, periods: int = 1) -> Money:
-        factor = (1 + rate / Decimal("100")) ** periods
+    def apply_interest(principal: Money, rate: Decimal, periods: int = 1, rate_type: str = "EA") -> Money:
+        try:
+            rt = RateType(rate_type)
+        except ValueError:
+            rt = RateType.EA
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(rate, rt))
+        factor = (Decimal("1") + monthly_rate) ** periods
         return Money(principal.amount * factor, principal.currency)
 
     @staticmethod
     def amortize_payment(
-        balance: Money, rate: Decimal, total_periods: int, current_period: int = 1
+        balance: Money, rate: Decimal, total_periods: int, current_period: int = 1, rate_type: str = "EA"
     ) -> dict:
-        monthly_rate = (1 + rate / Decimal("100")) ** (Decimal("1") / Decimal("12")) - 1
+        try:
+            rt = RateType(rate_type)
+        except ValueError:
+            rt = RateType.EA
+        monthly_rate = RateEngine.to_monthly_rate(InterestRate(rate, rt))
         if monthly_rate == 0:
             payment = balance.amount / Decimal(str(total_periods))
             return {

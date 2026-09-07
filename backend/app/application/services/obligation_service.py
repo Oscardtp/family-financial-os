@@ -1,3 +1,4 @@
+from app.financial_engine.helpers import months_between
 from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal
@@ -26,8 +27,7 @@ def _start_month(base: date, anchor_day: int | None) -> date:
 
 def _occurrence_dates(start: date, month_offset: int, anchor_day: int,
                       offset_recommended: int, offset_cutoff: int | None):
-    year, month = start.year, start.month
-    total = (year * 12 + (month - 1)) + month_offset
+    total = (start.year * 12 + (start.month - 1)) + month_offset
     year, month = total // 12, total % 12 + 1
     due = date(year, month, _clamp_day(year, month, anchor_day))
     recommended = due - timedelta(days=offset_recommended)

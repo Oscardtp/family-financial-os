@@ -23,7 +23,7 @@
             <div class="form-group">
               <label class="form-label">Acreedor</label>
               <input
-                v-model="createForm.créditor"
+                v-model="createForm.creditor"
                 type="text"
                 class="form-input"
                 placeholder="Ej: Daviplata"
@@ -33,31 +33,29 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Monto Original</label>
-                <div class="input-prefix">
-                  <span class="prefix">$</span>
-                  <input
-                    :value="fmtAmount.displayValue.value"
-                    @input="fmtAmount.onInput"
-                    @focus="fmtAmount.onFocus"
-                    class="form-input with-prefix"
-                    required
-                  />
-                </div>
+              <label class="form-label">Monto Original</label>
+              <div class="input-prefix">
+                <input
+                  :value="fmtAmount.displayValue.value"
+                  @input="fmtAmount.onInput"
+                  @focus="fmtAmount.onFocus"
+                  class="form-input with-prefix"
+                  required
+                />
+              </div>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Saldo Actual</label>
-                <div class="input-prefix">
-                  <span class="prefix">$</span>
-                  <input
-                    :value="fmtBalance.displayValue.value"
-                    @input="fmtBalance.onInput"
-                    @focus="fmtBalance.onFocus"
-                    class="form-input with-prefix"
-                    required
-                  />
-                </div>
+              <label class="form-label">Saldo Actual</label>
+              <div class="input-prefix">
+                <input
+                  :value="fmtBalance.displayValue.value"
+                  @input="fmtBalance.onInput"
+                  @focus="fmtBalance.onFocus"
+                  class="form-input with-prefix"
+                  required
+                />
+              </div>
               </div>
             </div>
 
@@ -74,17 +72,28 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Pago Minimo</label>
-                <div class="input-prefix">
-                  <span class="prefix">$</span>
-                  <input
-                    :value="fmtMinPay.displayValue.value"
-                    @input="fmtMinPay.onInput"
-                    @focus="fmtMinPay.onFocus"
-                    class="form-input with-prefix"
-                    required
-                  />
-                </div>
+                <label class="form-label">Tipo de Tasa</label>
+                <select v-model="createForm.interest_rate_type" class="form-input">
+                  <option value="EA">EA (Efectiva Anual)</option>
+                  <option value="EM">EM (Efectiva Mensual)</option>
+                  <option value="nominal">Nominal Anual</option>
+                  <option value="daily">Diaria</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+              <label class="form-label">Pago Minimo</label>
+              <div class="input-prefix">
+                <input
+                  :value="fmtMinPay.displayValue.value"
+                  @input="fmtMinPay.onInput"
+                  @focus="fmtMinPay.onFocus"
+                  class="form-input with-prefix"
+                  required
+                />
+              </div>
               </div>
             </div>
 
@@ -156,8 +165,9 @@ const emit = defineEmits(['close', 'created'])
 
 const createForm = reactive({
   name: '',
-  créditor: '',
+  creditor: '',
   interest_rate: 0,
+  interest_rate_type: 'EA',
   debt_type: 'loan',
   due_day: 1,
   start_date: new Date().toISOString().split('T')[0],
@@ -174,8 +184,9 @@ const fmtMinPay = useFormattedNumber(0, { prefix: '$' })
 watch(() => props.show, (val) => {
   if (val) {
     createForm.name = ''
-    createForm.créditor = ''
+    createForm.creditor = ''
     createForm.interest_rate = 0
+    createForm.interest_rate_type = 'EA'
     createForm.debt_type = 'loan'
     createForm.due_day = 1
     createForm.start_date = new Date().toISOString().split('T')[0]
@@ -194,10 +205,11 @@ async function submitCreate() {
   try {
     await api.post('/debts', {
       name: createForm.name,
-      créditor: createForm.créditor,
-      original_amount: fmtAmount.rawValue.value,
+      creditor: createForm.creditor,
+      total_amount: fmtAmount.rawValue.value,
       current_balance: fmtBalance.rawValue.value || fmtAmount.rawValue.value,
       interest_rate: createForm.interest_rate,
+      interest_rate_type: createForm.interest_rate_type,
       minimum_payment: fmtMinPay.rawValue.value,
       debt_type: createForm.debt_type,
       due_day: createForm.due_day,

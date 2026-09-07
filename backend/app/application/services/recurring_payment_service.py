@@ -24,10 +24,22 @@ class RecurringPaymentService:
         return payment
 
     async def create(self, data, household_id: str, user_id: str) -> dict:
-        return await self.repo.create({
+        payload = {
             "household_id": household_id,
             **data.model_dump(),
-        })
+        }
+        if not payload.get("account_id"):
+            accounts = await self.acc_repo.get_all(household_id, limit=1)
+            if not accounts:
+                raise ValueError("Necesitas tener una cuenta creada para registrar un pago recurrente.")
+            payload["account_id"] = accounts[0]["id"]
+        if not payload.get("next_due_date"):
+            payload["next_due_date"] = self._calculate_next_due(
+                payload.get("frequency", "monthly"),
+                payload.get("day_of_month", 1),
+                date.today(),
+            )
+        return await self.repo.create(payload)
 
     async def update(self, payment_id: str, data, household_id: str) -> dict:
         payment = await self.get(payment_id, household_id)

@@ -294,6 +294,10 @@ onMounted(() => {
     gap: 12px;
   }
 
+  .page-header .btn-primary {
+    width: 100%;
+  }
+
   .summary-stats {
     flex-direction: row;
     flex-wrap: wrap;

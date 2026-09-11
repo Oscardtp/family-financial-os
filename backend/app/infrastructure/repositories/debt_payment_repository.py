@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from sqlalchemy import select, update
+from sqlalchemy import select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import DebtPaymentModel
 from app.application.interfaces.debt_payment_repository import DebtPaymentRepository
@@ -21,6 +21,16 @@ class SQLAlchemyDebtPaymentRepository(DebtPaymentRepository):
             .order_by(DebtPaymentModel.payment_date.desc())
             .offset(skip)
             .limit(limit)
+        )
+        return [self._to_dict(m) for m in result.scalars().all()]
+
+    async def get_by_debt_ids(self, household_id: str, debt_ids: list[str]) -> list[dict]:
+        if not debt_ids:
+            return []
+        result = await self.session.execute(
+            select(DebtPaymentModel)
+            .where(DebtPaymentModel.debt_id.in_(debt_ids))
+            .order_by(DebtPaymentModel.debt_id, DebtPaymentModel.payment_date.desc())
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 

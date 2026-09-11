@@ -18,6 +18,8 @@
           required
           placeholder="0"
           class="amount-input-clean"
+          id="edit-event-amount"
+          name="amount"
         />
       </div>
 
@@ -31,6 +33,8 @@
               required
               placeholder="¿Qué es este pago?"
               class="tyba-input"
+              id="edit-event-title"
+              name="title"
             />
           </label>
         </div>
@@ -38,14 +42,14 @@
         <div class="field-group">
           <label class="field-label">
             Fecha
-            <input v-model="form.due_date" type="date" required class="tyba-input" />
+            <input v-model="form.due_date" type="date" required class="tyba-input" id="edit-event-date" name="due_date" />
           </label>
         </div>
 
         <div v-if="original.type === 'expense' && form.category_id" class="field-group">
           <label class="field-label">
             Categoría
-            <select v-model="form.category_id" class="tyba-select">
+            <select v-model="form.category_id" class="tyba-select" id="edit-event-category" name="category_id">
               <option :value="null" disabled>Seleccionar</option>
               <option v-for="cat in expenseCategories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
@@ -62,6 +66,8 @@
               rows="2"
               placeholder="Opcional..."
               class="tyba-textarea"
+              id="edit-event-notes"
+              name="notes"
             ></textarea>
           </label>
         </div>

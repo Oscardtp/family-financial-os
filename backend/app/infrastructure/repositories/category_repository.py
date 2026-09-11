@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import CategoryModel
 from app.application.interfaces.category_repository import CategoryRepository
@@ -34,6 +34,16 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         await self.session.flush()
         await self.session.refresh(model)
         return self._to_dict(model)
+
+    async def bulk_create(self, categories: List[dict]) -> List[dict]:
+        clean_categories = [
+            {k: str(v) if isinstance(v, uuid.UUID) else v for k, v in cat.items()}
+            for cat in categories
+        ]
+        models = [CategoryModel(**cat) for cat in clean_categories]
+        self.session.add_all(models)
+        await self.session.flush()
+        return [self._to_dict(m) for m in models]
 
     async def delete(self, id_val) -> bool:
         result = await self.session.execute(

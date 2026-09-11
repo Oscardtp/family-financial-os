@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 import uuid
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import AccountModel
 from app.application.interfaces.account_repository import AccountRepository
@@ -30,6 +30,14 @@ class SQLAlchemyAccountRepository(AccountRepository):
             .limit(limit)
         )
         return [self._to_dict(m) for m in result.scalars().all()]
+
+    async def get_total_balance_by_type(self, household_id: str, exclude_types: list[str]) -> Decimal:
+        result = await self.session.execute(
+            select(func.coalesce(func.sum(AccountModel.balance), Decimal("0")))
+            .where(AccountModel.household_id == _to_str_id(household_id))
+            .where(AccountModel.type.notin_(exclude_types))
+        )
+        return result.scalar_one() or Decimal("0")
 
     async def create(self, account: dict) -> dict:
         clean = {k: str(v) if isinstance(v, uuid.UUID) else v for k, v in account.items()}
@@ -63,20 +71,15 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return True
         return False
 
-    async def update_balance(self, id_val, amount) -> dict:
+    async def update_balance(self, id_val, amount) -> None:
         await self.session.execute(
             update(AccountModel)
             .where(AccountModel.id == _to_str_id(id_val))
             .values(balance=AccountModel.balance + Decimal(str(amount)))
         )
         await self.session.flush()
-        result = await self.session.execute(
-            select(AccountModel).where(AccountModel.id == _to_str_id(id_val))
-        )
-        model = result.scalar_one()
-        return self._to_dict(model)
 
-    async def deduct_balance(self, id_val, amount) -> Optional[dict]:
+    async def deduct_balance(self, id_val, amount) -> bool | None:
         result = await self.session.execute(
             update(AccountModel)
             .where(AccountModel.id == _to_str_id(id_val))
@@ -86,7 +89,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         await self.session.flush()
         if result.rowcount == 0:
             return None
-        return await self.get_by_id(id_val)
+        return True
 
     @staticmethod
     def _to_dict(model: AccountModel) -> dict:

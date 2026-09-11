@@ -8,6 +8,8 @@
         type="text"
         class="text-input"
         placeholder="Viaje, carro, emergencia..."
+        id="quick-goal-name"
+        name="name"
       >
       <span v-if="submitted && !name" class="field-error">¿Para qué es?</span>
     </div>
@@ -24,6 +26,8 @@
           class="amount-field"
           placeholder="Ej: 2.000.000"
           aria-label="Monto objetivo"
+          id="quick-goal-amount"
+          name="amount"
         >
       </div>
       <span v-if="submitted && !amount" class="field-error">¿Cuánto necesitas?</span>
@@ -31,22 +35,79 @@
 
     <div class="form-field">
       <label class="form-question">¿Cuánto puedes guardar cada mes?</label>
-      <div class="amount-input-small">
-        <span class="currency-small">$</span>
+      <div class="amount-input">
+        <span class="currency">$</span>
         <input
           :value="displayContribution"
           @input="onContributionInput"
           @focus="onContributionFocus"
-          class="amount-field-small"
+          class="amount-field"
           placeholder="0"
           aria-label="Ahorro mensual"
+          id="quick-goal-contribution"
+          name="monthly_contribution"
         >
+      </div>
+    </div>
+
+    <div v-if="fechaObjetivoInfo" class="form-field">
+      <label class="form-question">Fecha objetivo estimada</label>
+      <div class="fecha-objetivo-display">
+        <input
+          type="text"
+          class="fecha-objetivo-input"
+          :value="fechaObjetivoInfo.fechaObjetivo"
+          readonly
+          aria-label="Fecha objetivo estimada"
+        >
+      </div>
+    </div>
+    <div v-if="fechaObjetivoInfo?.warning" class="form-field">
+      <div class="goal-date-warning">
+        <AlertTriangle :size="16" aria-hidden="true" />
+        <span>{{ fechaObjetivoInfo.warning }}</span>
       </div>
     </div>
 
     <div class="form-field">
       <label class="form-question">¿Para cuándo?</label>
-      <input v-model="targetDate" type="date" class="date-input" aria-label="Fecha objetivo">
+      <input v-model="targetDate" type="date" class="date-input" aria-label="Fecha objetivo" id="quick-goal-date" name="target_date">
+    </div>
+
+    <div class="form-field">
+      <label class="form-question">¿Qué tipo de meta es?</label>
+      <select v-model="goalType" class="form-select" aria-label="Tipo de meta" id="quick-goal-type" name="goal_type">
+        <option value="savings">Ahorro</option>
+        <option value="investment">Inversión</option>
+      </select>
+    </div>
+
+    <div v-if="goalType === 'investment'" class="form-row">
+      <div class="form-field">
+        <label class="form-question">Rendimiento esperado (% EA)</label>
+        <input
+          v-model="expectedReturnRate"
+          type="number"
+          class="text-input"
+          placeholder="Ej: 9"
+          min="0"
+          step="0.1"
+          id="quick-goal-return"
+          name="expected_return_rate"
+        >
+      </div>
+      <div class="form-field">
+        <label class="form-question">Horizonte (meses)</label>
+        <input
+          v-model="horizonMonths"
+          type="number"
+          class="text-input"
+          placeholder="Ej: 24"
+          min="1"
+          id="quick-goal-horizon"
+          name="horizon_months"
+        >
+      </div>
     </div>
 
     <div v-if="smartSummary" class="smart-summary">
@@ -60,6 +121,8 @@
         type="text"
         class="text-input"
         placeholder="Nota rápida (si quieres)"
+        id="quick-goal-description"
+        name="description"
       >
     </div>
 
@@ -72,9 +135,10 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { Calculator } from 'lucide-vue-next'
+import { Calculator, Calendar, AlertTriangle } from 'lucide-vue-next'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import { useSmartCalculator } from '@/composables/useSmartCalculator'
+import { calcularFechaObjetivo } from '@/composables/useGoalDate'
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
@@ -89,6 +153,9 @@ const name = ref('')
 const description = ref('')
 const monthlyContribution = ref(0)
 const targetDate = ref('')
+const goalType = ref('savings')
+const expectedReturnRate = ref('')
+const horizonMonths = ref('')
 
 let fmt = useFormattedNumber(0, { prefix: '' })
 const amount = computed(() => fmt.rawValue.value)
@@ -111,6 +178,8 @@ const { calcSmartFields } = useSmartCalculator()
 const smartResult = ref({ monthly: false, date: false, summary: '' })
 
 const smartSummary = computed(() => smartResult.value.summary || '')
+
+const fechaObjetivoInfo = computed(() => calcularFechaObjetivo(amount.value, monthlyContribution.value))
 
 watch([amount, targetDate, monthlyContribution], () => {
   if (amount.value > 0) {
@@ -135,17 +204,32 @@ function handleSubmit() {
   submitted.value = true
   if (!name.value || !amount.value) return
 
-  emit('submit', {
+  const payload = {
     name: name.value,
     target_amount: amount.value,
     monthly_contribution: monthlyContribution.value || null,
     target_date: targetDate.value || null,
-  })
+    goal_type: goalType.value,
+    description: description.value || null,
+  }
+
+  if (goalType.value === 'investment') {
+    payload.expected_return_rate = expectedReturnRate.value ? parseFloat(expectedReturnRate.value) : null
+    payload.horizon_months = horizonMonths.value ? parseInt(horizonMonths.value) : null
+  }
+
+  emit('submit', payload)
 }
 </script>
 
 <style scoped>
 .form-field { margin-bottom: var(--spacing-lg); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
 
 .form-question {
   display: block;
@@ -163,9 +247,8 @@ function handleSubmit() {
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
-
-.amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
 .currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
@@ -183,30 +266,6 @@ function handleSubmit() {
 
 .amount-field::placeholder { color: var(--color-neutral-300); }
 
-.amount-input-small {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  border: 2px solid var(--color-neutral-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-}
-
-.amount-input-small:focus-within { border-color: var(--color-primary-500); }
-
-.currency-small { font-size: var(--font-size-base); color: var(--color-neutral-400); }
-
-.amount-field-small {
-  flex: 1;
-  border: none;
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-neutral-900);
-  outline: none;
-  width: 100%;
-  background: transparent;
-}
-
 .date-input {
   width: 100%;
   padding: var(--spacing-md);
@@ -214,9 +273,20 @@ function handleSubmit() {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
+  min-height: 44px;
 }
 
-.date-input:focus { border-color: var(--color-primary-500); outline: none; }
+.form-select {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-700);
+  background: var(--color-neutral-0);
+  transition: border-color var(--transition-fast);
+  min-height: 44px;
+}
 
 .text-input {
   width: 100%;
@@ -225,9 +295,8 @@ function handleSubmit() {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
+  min-height: 44px;
 }
-
-.text-input:focus { border-color: var(--color-primary-500); outline: none; }
 
 .field-error {
   display: block;
@@ -268,6 +337,43 @@ function handleSubmit() {
   line-height: 1.4;
 }
 
+.fecha-objetivo-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-50);
+  min-height: 44px;
+}
+
+.fecha-objetivo-display:focus-within {
+  box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12);
+}
+
+.fecha-objetivo-input {
+  width: 100%;
+  border: none;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-sans);
+  background: transparent;
+  color: var(--color-neutral-600);
+  outline: none;
+}
+
+.goal-date-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--color-warning-50);
+  border: 1px solid var(--color-warning-100);
+  border-radius: var(--radius-md);
+  color: var(--color-error-600);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
 .spinner {
   width: 16px;
   height: 16px;
@@ -278,4 +384,10 @@ function handleSubmit() {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

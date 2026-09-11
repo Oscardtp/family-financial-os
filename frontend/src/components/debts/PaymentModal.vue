@@ -23,6 +23,8 @@
                   @focus="fmtPay.onFocus"
                   class="form-input with-prefix"
                   placeholder="0"
+                  id="payment-amount"
+                  name="amount"
                   required
                 />
               </div>
@@ -30,11 +32,13 @@
 
             <div class="form-group">
               <label class="form-label">Fecha del Pago</label>
-              <input
-                v-model="paymentForm.payment_date"
-                type="date"
-                class="form-input"
-                required
+                <input
+                  v-model="paymentForm.payment_date"
+                  type="date"
+                  class="form-input"
+                  id="payment-date"
+                  name="payment_date"
+                  required
               />
             </div>
 
@@ -187,10 +191,6 @@ async function submitPayment() {
   transition: border-color var(--transition-fast);
 }
 
-.input-prefix:focus-within {
-  border-color: var(--color-primary-500);
-}
-
 .prefix {
   padding: var(--spacing-md);
   background: var(--color-neutral-100);
@@ -198,16 +198,14 @@ async function submitPayment() {
   font-size: 14px;
   font-weight: 500;
   border-right: 1px solid var(--color-neutral-200);
+  min-height: 44px;
 }
 
 .form-input.with-prefix {
   border: none;
   border-radius: 0;
   flex: 1;
-}
-
-.form-input.with-prefix:focus {
-  border: none;
+  min-height: 44px;
 }
 
 .form-error {

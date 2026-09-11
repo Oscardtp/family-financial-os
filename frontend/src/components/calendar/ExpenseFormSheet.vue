@@ -17,6 +17,8 @@
           placeholder="0"
           class="amount-input-clean"
           autofocus
+          id="expense-amount"
+          name="amount"
         />
       </div>
 
@@ -30,6 +32,8 @@
               required
               placeholder="Ej: Mercado, Gasolina..."
               class="tyba-input"
+              id="expense-title"
+              name="title"
             />
           </label>
         </div>
@@ -37,14 +41,14 @@
         <div class="field-group">
           <label class="field-label">
             Fecha
-            <input v-model="form.due_date" type="date" required class="tyba-input" />
+            <input v-model="form.due_date" type="date" required class="tyba-input" id="expense-date" name="due_date" />
           </label>
         </div>
 
         <div class="field-group">
           <label class="field-label">
             Categoría
-            <select v-model="form.category_id" class="tyba-select" required>
+            <select v-model="form.category_id" class="tyba-select" required id="expense-category" name="category_id">
               <option :value="null" disabled>Seleccionar</option>
               <option v-for="cat in expenseCategories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
@@ -61,6 +65,8 @@
               rows="2"
               placeholder="Opcional..."
               class="tyba-textarea"
+              id="expense-notes"
+              name="notes"
             ></textarea>
           </label>
         </div>

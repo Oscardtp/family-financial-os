@@ -9,6 +9,36 @@ vi.mock('@/composables/useCurrency', () => ({
   }),
 }))
 
+vi.mock('@/composables/useFinancialHelpers', () => ({
+  useFinancialHelpers: () => ({
+    fmt: (v) => `$${v}`,
+    calcPercentage: (a, b) => Math.round((a / b) * 100),
+    safeNumber: (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback,
+  }),
+}))
+
+vi.mock('@/stores/goals', () => ({
+  useGoalsStore: () => ({
+    getProjection: () => null,
+  }),
+}))
+
+vi.mock('@/components/goals/GoalStatusBadge.vue', () => ({
+  default: { template: '<span class="goal-status-badge-mock" />' },
+}))
+
+vi.mock('@/components/goals/GoalVariance.vue', () => ({
+  default: { template: '<span class="goal-variance-mock" />' },
+}))
+
+vi.mock('@/components/goals/GoalProjectionDetail.vue', () => ({
+  default: { template: '<div class="goal-projection-detail-mock" />' },
+}))
+
+vi.mock('@/components/goals/GoalScenarioSimulator.vue', () => ({
+  default: { template: '<div class="goal-scenario-simulator-mock" />' },
+}))
+
 vi.mock('lucide-vue-next', () => ({
   Calendar: { template: '<span />' },
   TrendingUp: { template: '<span />' },
@@ -38,6 +68,10 @@ function mountCard(props = {}) {
       stubs: {
         Calendar: { template: '<span />' },
         TrendingUp: { template: '<span />' },
+        GoalStatusBadge: { template: '<span class="goal-status-badge-mock" />' },
+        GoalVariance: { template: '<span class="goal-variance-mock" />' },
+        GoalProjectionDetail: { template: '<div class="goal-projection-detail-mock" />' },
+        GoalScenarioSimulator: { template: '<div class="goal-scenario-simulator-mock" />' },
       },
     },
   })
@@ -217,5 +251,44 @@ describe('GoalCard', () => {
   it('applies completed class when completed', () => {
     const wrapper = mountCard({ completed: true })
     expect(wrapper.find('.goal-card').classes()).toContain('completed')
+  })
+
+  it('renders GoalStatusBadge for active goals', () => {
+    const wrapper = mountCard({ expanded: true })
+    expect(wrapper.find('.goal-status-badge-mock').exists()).toBe(true)
+  })
+
+  it('does not render GoalStatusBadge when completed', () => {
+    const wrapper = mountCard({ completed: true, goal: makeGoal({ current_amount: 5000000 }) })
+    expect(wrapper.find('.goal-status-badge-mock').exists()).toBe(false)
+  })
+
+  it('renders GoalVariance in projection section for investments', () => {
+    const wrapper = mountCard({
+      goal: makeGoal({
+        goal_type: 'investment',
+        expected_return_rate: 9,
+        horizon_months: 24,
+        projected_value: 6000000,
+      }),
+    })
+    expect(wrapper.find('.goal-variance-mock').exists()).toBe(true)
+  })
+
+  it('renders GoalProjectionDetail when expanded for investments', () => {
+    const wrapper = mountCard({
+      expanded: true,
+      goal: makeGoal({
+        goal_type: 'investment',
+        expected_return_rate: 9,
+        horizon_months: 24,
+      }),
+    })
+    expect(wrapper.find('.goal-projection-detail-mock').exists()).toBe(true)
+  })
+
+  it('renders GoalScenarioSimulator when expanded', () => {
+    const wrapper = mountCard({ expanded: true })
+    expect(wrapper.find('.goal-scenario-simulator-mock').exists()).toBe(true)
   })
 })

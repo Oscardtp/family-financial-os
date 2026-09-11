@@ -23,7 +23,7 @@ export function useCurrency() {
   function fmt(value, decimals = 0) {
     const n = Number(value || 0)
     if (decimals === 0) return formatter.format(n)
-    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: decimals }).format(n)
+    return new Intl.NumberFormat('es-CO', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n)
   }
 
   /**

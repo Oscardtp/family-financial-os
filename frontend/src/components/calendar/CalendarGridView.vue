@@ -89,7 +89,7 @@ defineEmits(['createOnDate', 'openEvent'])
   font-size: 0.6rem; background: var(--color-neutral-200); border-radius: 50%;
   width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
 }
-.ev-amount { margin-left: auto; font-weight: 700; }
+.ev-amount { font-family: var(--font-mono); margin-left: auto; font-weight: 700; }
 .ev-income { background: var(--color-calendar-income-bg); }
 .ev-expense { background: var(--color-calendar-expense-bg); }
 .ev-debt { background: var(--color-calendar-debt-bg); }

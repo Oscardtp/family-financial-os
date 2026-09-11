@@ -13,5 +13,9 @@ class DebtPaymentOverrideRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_debt_ids(self, household_id: str, debt_ids: list[str]) -> list[dict]:
+        ...
+
+    @abstractmethod
     async def create(self, override: dict) -> dict:
         ...

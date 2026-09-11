@@ -153,7 +153,7 @@ Estos puntos son conocimiento projecto; tenlos en cuenta antes de implementar:
 - **Money = Decimal**: Nunca usar `float` para dinero. El VO `Money` usa `Decimal` con cuantización a 2 decimales.
 - **InterestRate engine**: Existe `RateEngine.to_monthly_rate(InterestRate)` en `backend/app/financial_engine/rate_engine.py`. Todos los cálculos de tasa deben usarlo, nunca `/1200` ni fórmulas inline.
 - **RateType enum**: `EA`, `EM`, `NOMINAL`, `DAILY`. Default = `EA`.
-- **Frontend rate_type selector**: NewDebtModal, EditDebtModal, PatrimonyItemForm ya incluyen selector. Si agregas forms de deuda/patrimonio, usa el mismo enum y envía `interest_rate_type` en el payload.
+- **Frontend rate_type selector**: NewDebtModal y EditDebtModal ya incluyen selector. Si agregas forms de deuda, usa el mismo enum y env00eda `interest_rate_type` en el payload.
 - **useFormattedNumber**: Los composables `onInput` y `onFocus` requieren el evento nativo. Si llamas a estos handlers sin evento, `event.target` lanza `TypeError`.
 - **NaN pitfall en Debts.vue**: Al sumar `current_balance + minimum_payment` desde la API, usar `Number(...)` para coerción. Si la API devuelve string/null, la suma produce `NaN`.
 - **Quality gates**: Todo cambio debe pasar por `product-manager-ux-cx-acceptance` y `friendly-fintech-voice` antes de considerarse finalizado.
@@ -161,7 +161,6 @@ Estos puntos son conocimiento projecto; tenlos en cuenta antes de implementar:
 - **Alembic/SQLite**: Las migraciones usan `PRAGMA table_info` para idempotencia. Tests usan `Base.metadata.create_all`, no alembic.
 - **Multi-tenant**: Todo acceso por `household_id`. Roles: Owner/Member/Viewer.
 - **Clean Architecture**: domain → application → infrastructure → presentation.
-- **PatrimonyEditModal bug (conocido)**: Al editar un pasivo, `interest_rate` y `monthly_payment` se silencian. Documentado como pre-existente; no introducir parches complejos sin ticket explícito.
 
 ---
 

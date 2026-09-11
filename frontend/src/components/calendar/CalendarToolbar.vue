@@ -17,9 +17,6 @@
           <List :size="16" /> Lista
         </button>
       </div>
-      <button class="link-action" @click="$emit('openRecurrentes')">
-        <Repeat :size="15" /> Admin recurrentes <ArrowRight :size="14" />
-      </button>
     </div>
 
     <div class="filter-row">
@@ -43,7 +40,7 @@
 </template>
 
 <script setup>
-import { ChevronLeft, ChevronRight, ArrowRight, CalendarDays, List, Repeat } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, CalendarDays, List } from 'lucide-vue-next'
 
 defineProps({
   viewMode: { type: String, required: true },
@@ -52,7 +49,7 @@ defineProps({
   filters: { type: Array, required: true },
 })
 
-defineEmits(['update:viewMode', 'update:activeFilter', 'prev', 'next', 'today', 'openRecurrentes'])
+defineEmits(['update:viewMode', 'update:activeFilter', 'prev', 'next', 'today'])
 </script>
 
 <style scoped>

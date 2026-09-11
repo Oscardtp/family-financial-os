@@ -20,10 +20,11 @@ function calculateMonthly(remaining, targetDate) {
 }
 
 function calculateDate(remaining, monthly) {
-  if (!remaining || remaining <= 0 || !monthly || monthly <= 0) return null
+  if (!remaining || remaining <= 0 || !monthly || monthly <= 0 || !isFinite(remaining) || !isFinite(monthly)) return null
   const months = Math.ceil(remaining / monthly)
   const target = new Date()
   target.setMonth(target.getMonth() + months)
+  if (Number.isNaN(target.getTime())) return null
   return target.toISOString().split('T')[0]
 }
 

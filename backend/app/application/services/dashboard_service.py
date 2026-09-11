@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
@@ -28,18 +29,42 @@ class DashboardService:
 
     async def get_summary(self, user: dict):
         household_id = user["household_id"]
+        today = date.today()
+        end_of_month = (
+            date(today.year, today.month + 1, 1) - timedelta(days=1)
+            if today.month < 12
+            else date(today.year, 12, 31)
+        )
 
-        total_balance = await self._get_total_balance(household_id)
-        monthly_income, monthly_expenses = await self._get_monthly_flow(household_id)
-        total_debt = await self.debt_repo.get_total_balance(household_id)
-        total_savings = await self._get_total_savings(household_id)
+        group_a = await asyncio.gather(
+            self._get_total_balance(household_id),
+            self._get_monthly_flow(household_id),
+            self.debt_repo.get_total_balance(household_id),
+            self._get_total_savings(household_id),
+            self.tx_repo.get_all(household_id=household_id, limit=10),
+            self.budget_repo.get_all(household_id, today.month, today.year),
+            self.tx_repo.get_totals_by_category(
+                household_id,
+                date_from=date(today.year, today.month, 1),
+                date_to=end_of_month,
+            ),
+        )
+        total_balance = group_a[0]
+        monthly_income, monthly_expenses = group_a[1]
+        total_debt = group_a[2]
+        total_savings = group_a[3]
+        recent_txs = group_a[4]
+        budgets = group_a[5]
+        spending = group_a[6]
+
         net_worth = await self._get_net_worth(household_id, total_balance)
-        recent_txs = await self.tx_repo.get_all(household_id=household_id, limit=10)
 
-        budget_status = await self._get_budget_status(household_id)
-        upcoming = await self._get_upcoming_payments(household_id)
-        savings_summary = await self._get_savings_summary(household_id, total_savings)
-        financial_alert = await self._build_financial_alert(household_id, monthly_income)
+        budget_status = self._build_budget_status(budgets, spending)
+        upcoming, savings_summary, financial_alert = await asyncio.gather(
+            self._get_upcoming_payments(household_id),
+            self._get_savings_summary(household_id, total_savings),
+            self._build_financial_alert(household_id, monthly_income),
+        )
 
         from app.presentation.schemas.schemas import DashboardResponse
         return DashboardResponse(
@@ -58,8 +83,7 @@ class DashboardService:
         )
 
     async def _get_total_balance(self, household_id: str) -> Decimal:
-        accounts = await self.account_repo.get_all(household_id)
-        return sum(a["balance"] for a in accounts if a["type"] != "credit_card")
+        return await self.account_repo.get_total_balance_by_type(household_id, ["credit_card"])
 
     async def _get_monthly_flow(self, household_id: str) -> tuple[Decimal, Decimal]:
         today = date.today()
@@ -82,23 +106,13 @@ class DashboardService:
         return sum(g["current_amount"] for g in goals)
 
     async def _get_net_worth(self, household_id: str, balance: Decimal) -> Decimal:
-        total_assets = await self.asset_repo.get_total_value(household_id)
-        total_liabilities = await self.liability_repo.get_total_balance(household_id)
+        total_assets, total_liabilities = await asyncio.gather(
+            self.asset_repo.get_total_value(household_id),
+            self.liability_repo.get_total_balance(household_id),
+        )
         return total_assets + balance - total_liabilities
 
-    async def _get_budget_status(self, household_id: str) -> list[dict]:
-        today = date.today()
-        budgets = await self.budget_repo.get_all(household_id, today.month, today.year)
-        end_of_month = (
-            date(today.year, today.month + 1, 1) - timedelta(days=1)
-            if today.month < 12
-            else date(today.year, 12, 31)
-        )
-        spending = await self.tx_repo.get_totals_by_category(
-            household_id,
-            date_from=date(today.year, today.month, 1),
-            date_to=end_of_month,
-        )
+    def _build_budget_status(self, budgets: list, spending: list) -> list[dict]:
         engine = BudgetEngine()
         result = engine.calculate_budget_status(budgets, spending)
         return [build_budget_item(item) for item in result.items]
@@ -117,8 +131,9 @@ class DashboardService:
             for p in upcoming[:5]
         ]
 
-    async def _get_savings_summary(self, household_id: str, total_savings) -> SavingsSummary:
-        goals = await self.savings_repo.get_all(household_id)
+    async def _get_savings_summary(self, household_id: str, total_savings, goals: list = None) -> SavingsSummary:
+        if goals is None:
+            goals = await self.savings_repo.get_all(household_id)
         return SavingsSummary(
             total=total_savings,
             goals=[
@@ -168,16 +183,16 @@ class DashboardService:
 
 
 def build_budget_item(item) -> dict:
-    budgeted = float(item.budgeted.amount)
-    spent = float(item.spent.amount)
+    budgeted = item.budgeted.amount
+    spent = item.spent.amount
     status = item.status
     message = None
     if status == "exceeded":
         diff = spent - budgeted
-        pct = ((diff / budgeted) * 100) if budgeted > 0 else 0
+        pct = ((diff / budgeted) * Decimal("100")) if budgeted > 0 else Decimal("0")
         message = f"{item.category_name} excedio ${diff:,.0f} ({pct:.1f}%). Considere revisar el presupuesto."
     elif status == "warning":
-        pct = ((spent / budgeted) * 100) if budgeted > 0 else 0
+        pct = ((spent / budgeted) * Decimal("100")) if budgeted > 0 else Decimal("0")
         remaining = budgeted - spent
         message = f"{item.category_name} va al {pct:.0f}% del presupuesto. Le quedan ${remaining:,.0f}."
     else:

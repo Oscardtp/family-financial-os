@@ -10,7 +10,6 @@
       @prev="prevMonth"
       @next="nextMonth"
       @today="goToday"
-      @openRecurrentes="openRecurrentes"
     />
 
     <CalendarGridView
@@ -78,14 +77,12 @@
       @cancel="cancelDelete"
     />
 
-    <ObligationDetailSheet
+     <ObligationDetailSheet
       v-if="obligationIdToShow"
       :show="!!obligationIdToShow"
       :obligation-id="obligationIdToShow"
       @close="obligationIdToShow = null"
     />
-
-    <CalendarRecurringSheet />
   </div>
 </template>
 
@@ -102,12 +99,10 @@ import {
   fmtDateShort as _fmtDateShort,
   isCutoffUrgent as _isCutoffUrgent,
 } from '@/composables/useCalendarHelpers'
-import { useRecurringStore } from '@/stores/recurring'
 import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue'
 import CalendarGridView from '@/components/calendar/CalendarGridView.vue'
 import CalendarListView from '@/components/calendar/CalendarListView.vue'
 import CalendarEventDetailSheet from '@/components/calendar/CalendarEventDetailSheet.vue'
-import CalendarRecurringSheet from '@/components/calendar/CalendarRecurringSheet.vue'
 import EventTypePicker from '@/components/calendar/EventTypePicker.vue'
 import ExpenseFormSheet from '@/components/calendar/ExpenseFormSheet.vue'
 import IncomeFormSheet from '@/components/calendar/IncomeFormSheet.vue'
@@ -126,8 +121,6 @@ const {
 const {
   WEEKDAYS, FILTERS, activeFilter, filteredCalendarDays, filteredListGrouped,
 } = useCalendarFilters()
-
-const { openRecurrentes } = useRecurringStore()
 
 const viewMode = ref('calendar')
 const todayStr = computed(() => new Date().toISOString().slice(0, 10))

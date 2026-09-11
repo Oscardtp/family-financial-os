@@ -39,6 +39,20 @@ class SQLAlchemyHouseholdRepository(HouseholdRepository):
         await self.session.flush()
         return {"household_id": _to_str_id(household_id), "user_id": _to_str_id(user_id), "role": role}
 
+    async def update(self, household_id, data: dict) -> dict:
+        result = await self.session.execute(
+            select(HouseholdModel).where(HouseholdModel.id == _to_str_id(household_id))
+        )
+        model = result.scalar_one_or_none()
+        if not model:
+            raise ValueError("Hogar no encontrado")
+        for key, value in data.items():
+            if key != "id" and hasattr(model, key):
+                setattr(model, key, value)
+        await self.session.flush()
+        await self.session.refresh(model)
+        return self._to_dict(model)
+
     @staticmethod
     def _to_dict(model: HouseholdModel) -> dict:
         return {

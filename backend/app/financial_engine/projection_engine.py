@@ -108,14 +108,14 @@ class ProjectionEngine:
 
             breakdown.append({
                 "month": month,
-                "balance": str(balance.quantize(Decimal("1"), ROUND_HALF_UP)),
-                "contributions": str(total_contributions.quantize(Decimal("1"), ROUND_HALF_UP)),
-                "interest": str(total_interest.quantize(Decimal("1"), ROUND_HALF_UP)),
+                "balance": str(balance.quantize(Decimal("0.01"), ROUND_HALF_UP)),
+                "contributions": str(total_contributions.quantize(Decimal("0.01"), ROUND_HALF_UP)),
+                "interest": str(total_interest.quantize(Decimal("0.01"), ROUND_HALF_UP)),
             })
 
         return {
-            "projected_value": str(balance.quantize(Decimal("1"), ROUND_HALF_UP)),
-            "total_contributions": str(total_contributions.quantize(Decimal("1"), ROUND_HALF_UP)),
-            "total_interest": str(total_interest.quantize(Decimal("1"), ROUND_HALF_UP)),
+            "projected_value": str(balance.quantize(Decimal("0.01"), ROUND_HALF_UP)),
+            "total_contributions": str(total_contributions.quantize(Decimal("0.01"), ROUND_HALF_UP)),
+            "total_interest": str(total_interest.quantize(Decimal("0.01"), ROUND_HALF_UP)),
             "monthly_breakdown": breakdown,
         }

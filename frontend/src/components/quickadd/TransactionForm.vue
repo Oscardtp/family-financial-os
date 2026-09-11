@@ -14,6 +14,8 @@
           class="amount-field"
           :placeholder="type === 'expense' ? 'Ej: 45.000' : 'Ej: 800.000'"
           aria-label="Monto"
+          id="tx-amount"
+          name="amount"
         >
       </div>
       <span v-if="submitted && !amount" class="field-error">¿Cuánto fue?</span>
@@ -27,6 +29,8 @@
         type="text"
         class="cat-search"
         placeholder="Buscar categoría..."
+        id="tx-category-search"
+        name="category_search"
       >
       <div v-if="displayCategories.length" class="category-grid">
         <button
@@ -48,7 +52,7 @@
 
     <div v-if="isDebtCategory" class="form-field">
       <label class="form-question">¿Qué deuda?</label>
-      <select v-model="debtId" class="form-select" aria-label="Seleccionar deuda">
+      <select v-model="debtId" class="form-select" aria-label="Seleccionar deuda" id="tx-debt" name="debt_id">
         <option :value="0" disabled>Seleccionar deuda</option>
         <option v-for="d in debts" :key="d.id" :value="d.id">
           {{ d.name }} (${{ fmtCurrency(d.current_balance ?? 0) }})
@@ -63,6 +67,8 @@
         type="text"
         class="text-input"
         placeholder="Nota rápida (si quieres)"
+        id="tx-description"
+        name="description"
       >
     </div>
 
@@ -154,9 +160,8 @@ function handleSubmit() {
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
-
-.amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
 .currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
@@ -192,6 +197,8 @@ function handleSubmit() {
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
+  min-height: 44px;
+  justify-content: center;
 }
 
 .category-btn:hover { border-color: var(--color-primary-300); }
@@ -232,9 +239,8 @@ function handleSubmit() {
   color: var(--color-neutral-700);
   margin-bottom: var(--spacing-sm);
   outline: none;
+  min-height: 44px;
 }
-
-.cat-search:focus { border-color: var(--color-primary-500); }
 
 .form-select {
   width: 100%;
@@ -245,9 +251,8 @@ function handleSubmit() {
   color: var(--color-neutral-700);
   background: var(--color-neutral-0);
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
-
-.form-select:focus { border-color: var(--color-primary-500); outline: none; }
 
 .text-input {
   width: 100%;
@@ -257,9 +262,8 @@ function handleSubmit() {
   font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
-
-.text-input:focus { border-color: var(--color-primary-500); outline: none; }
 
 .field-error {
   display: block;

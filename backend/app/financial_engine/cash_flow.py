@@ -58,15 +58,13 @@ class CashFlowEngine:
 
         for i in range(1, months + 1):
             net = current_income - current_expenses
+            cumulative = (projections[-1]["cumulative"] if projections else Money.zero()) + net
             projections.append({
                 "month": i,
                 "income": current_income,
                 "expenses": current_expenses,
                 "net": net,
-                "cumulative": Money(
-                    sum(p["net"].amount for p in projections) + net.amount,
-                    net.currency,
-                ),
+                "cumulative": cumulative,
             })
             current_income = Money(
                 current_income.amount * (1 + growth_rate / Decimal("100")),

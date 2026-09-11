@@ -17,6 +17,8 @@
           placeholder="0"
           class="amount-input-clean"
           autofocus
+          id="income-amount"
+          name="amount"
         />
       </div>
 
@@ -24,7 +26,7 @@
         <div class="field-group">
           <label class="field-label">
             Fecha
-            <input v-model="form.due_date" type="date" required class="tyba-input" />
+            <input v-model="form.due_date" type="date" required class="tyba-input" id="income-date" name="due_date" />
           </label>
         </div>
 
@@ -36,6 +38,8 @@
               type="text"
               placeholder="Ej: Quincena, Freelance..."
               class="tyba-input"
+              id="income-title"
+              name="title"
             />
           </label>
         </div>
@@ -48,6 +52,8 @@
               rows="2"
               placeholder="Opcional..."
               class="tyba-textarea"
+              id="income-notes"
+              name="notes"
             ></textarea>
           </label>
         </div>

@@ -219,6 +219,7 @@ watch(
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  font-family: var(--font-mono);
 }
 
 .amort-table th {

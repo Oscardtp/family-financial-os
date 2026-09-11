@@ -21,7 +21,7 @@
     </div>
 
     <label class="remember-check">
-      <input type="checkbox" v-model="remember">
+      <input type="checkbox" v-model="remember" id="source-remember" name="remember">
       ¿Siempre de esta cuenta?
     </label>
 
@@ -86,6 +86,7 @@ function handleConfirm() {
 .success-icon { color: var(--color-success-500); margin-bottom: var(--spacing-md); }
 
 .amount-display {
+  font-family: var(--font-mono);
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-neutral-900);

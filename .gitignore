@@ -64,15 +64,14 @@ backend/backend.log
 backend/backend_error.log
 
 # Tool output folders
-.firecrawl/
 .kilo/
-.opencode/node_modules/
-.opencode/package.json
-.opencode/package-lock.json
-.opencode/bun.lock
-.claude/
-agent/
-.agents/skills/popular-web-designs/
+.opencode/
+.agents/skills/
+.agents/state/
+
+# Project-specific
+DEUDAS PROYECCION 2026.xlsx
+frontend/null
 
 # Reference / example files
 Ejemplo Frontend/

@@ -15,3 +15,7 @@ class HouseholdRepository(ABC):
     @abstractmethod
     async def add_member(self, household_id: uuid.UUID, user_id: uuid.UUID, role: str = "member") -> dict:
         ...
+
+    @abstractmethod
+    async def update(self, household_id: uuid.UUID, data: dict) -> dict:
+        ...

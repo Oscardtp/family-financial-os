@@ -46,7 +46,7 @@ class FinancialEventRepository(ABC):
         ...
 
     @abstractmethod
-    async def mark_as_paid(self, id: uuid.UUID, paid_by: str, paid_amount: float, paid_at) -> dict:
+    async def mark_as_paid(self, id: uuid.UUID, paid_by: str, paid_amount, paid_at) -> dict:
         ...
 
     @abstractmethod

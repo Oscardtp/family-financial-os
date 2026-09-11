@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,7 @@ from app.config import get_settings, DB_FILE
 from app.database import engine
 from app.presentation.v1 import (
     auth, accounts, transactions, categories, budgets, debts, savings,
-    patrimony, dashboard, projections, household, reports, audit,
+    dashboard, projections, household, reports, audit,
     recurring_payments, notifications, preferences, events, obligations, coach, month,
 )
 from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler
@@ -64,7 +64,6 @@ app.include_router(categories.router, prefix="/api/v1")
 app.include_router(budgets.router, prefix="/api/v1")
 app.include_router(debts.router, prefix="/api/v1")
 app.include_router(savings.router, prefix="/api/v1")
-app.include_router(patrimony.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(projections.router, prefix="/api/v1")
 app.include_router(household.router, prefix="/api/v1")

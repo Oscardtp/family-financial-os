@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from calendar import monthrange
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
@@ -45,7 +46,7 @@ class RecurringPaymentService:
         payment = await self.get(payment_id, household_id)
         update_data = data.model_dump(exclude_unset=True)
         if "amount" in update_data:
-            update_data["amount"] = float(update_data["amount"])
+            update_data["amount"] = update_data["amount"]
         return await self.repo.update({**payment, **update_data})
 
     async def delete(self, payment_id: str, household_id: str):
@@ -83,13 +84,6 @@ class RecurringPaymentService:
         if not account:
             raise ValueError("Cuenta no encontrada")
 
-        if payment["type"] == "expense" and account["type"] != "credit_card":
-            if account["balance"] < Decimal(str(payment["amount"])):
-                raise ValueError(
-                    f"No tienes suficiente plata. Disponible: ${account['balance']:,.2f}, "
-                    f"necesitas: ${Decimal(str(payment['amount'])):,.2f}"
-                )
-
         today = date.today()
         await self.tx_repo.create({
             "account_id": payment["account_id"],
@@ -123,13 +117,9 @@ class RecurringPaymentService:
             if next_month > 12:
                 next_month = 1
                 next_year += 1
-            try:
-                return date(next_year, next_month, min(day_of_month, 28))
-            except ValueError:
-                return date(next_year, next_month, 28)
+            max_day = monthrange(next_year, next_month)[1]
+            return date(next_year, next_month, min(day_of_month, max_day))
         elif frequency == "yearly":
-            try:
-                return date(from_date.year + 1, from_date.month, min(day_of_month, 28))
-            except ValueError:
-                return date(from_date.year + 1, from_date.month, 28)
+            max_day = monthrange(from_date.year + 1, from_date.month)[1]
+            return date(from_date.year + 1, from_date.month, min(day_of_month, max_day))
         return from_date + timedelta(days=30)

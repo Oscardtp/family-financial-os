@@ -96,6 +96,7 @@ const progressPercent = computed(() => {
 }
 
 .detail-value {
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 13px;
   color: var(--color-neutral-800);

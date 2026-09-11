@@ -2,11 +2,12 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="modal-overlay" @click="$emit('close')">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>Editar Deuda</h3>
-            <button class="modal-close" @click="$emit('close')">&times;</button>
-          </div>
+        <FocusTrap :visible="show">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <h3>Editar Deuda</h3>
+              <button class="modal-close" @click="$emit('close')">&times;</button>
+            </div>
 
           <form class="debt-form" @submit.prevent="submitEdit">
             <div class="form-group">
@@ -15,6 +16,8 @@
                 v-model="editForm.name"
                 type="text"
                 class="form-input"
+                id="edit-debt-name"
+                name="name"
                 required
               />
             </div>
@@ -25,6 +28,8 @@
                 v-model="editForm.creditor"
                 type="text"
                 class="form-input"
+                id="edit-debt-creditor"
+                name="creditor"
                 required
               />
             </div>
@@ -37,6 +42,8 @@
                   @input="fmtBalance.onInput"
                   @focus="fmtBalance.onFocus"
                   class="form-input with-prefix"
+                  id="edit-debt-balance"
+                  name="current_balance"
                   required
                 />
               </div>
@@ -51,13 +58,15 @@
                   step="0.1"
                   min="0"
                   class="form-input"
+                  id="edit-debt-interest-rate"
+                  name="interest_rate"
                   required
                 />
               </div>
 
               <div class="form-group">
                 <label class="form-label">Tipo de Tasa</label>
-                <select v-model="editForm.interest_rate_type" class="form-input">
+                <select v-model="editForm.interest_rate_type" class="form-input" id="edit-debt-rate-type" name="interest_rate_type">
                   <option value="EA">EA (Efectiva Anual)</option>
                   <option value="EM">EM (Efectiva Mensual)</option>
                   <option value="nominal">Nominal Anual</option>
@@ -75,6 +84,8 @@
                     @input="fmtMinPay.onInput"
                     @focus="fmtMinPay.onFocus"
                     class="form-input with-prefix"
+                    id="edit-debt-min-payment"
+                    name="minimum_payment"
                     required
                   />
                 </div>
@@ -89,6 +100,8 @@
                 min="1"
                 max="31"
                 class="form-input"
+                id="edit-debt-due-day"
+                name="due_day"
                 required
               />
             </div>
@@ -100,6 +113,7 @@
             </button>
           </form>
         </div>
+        </FocusTrap>
       </div>
     </Transition>
   </Teleport>
@@ -109,6 +123,7 @@
 import { ref, reactive, watch } from 'vue'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import api from '@/services/api'
+import FocusTrap from '@/components/FocusTrap.vue'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -232,10 +247,6 @@ async function submitEdit() {
   transition: border-color var(--transition-fast);
 }
 
-.input-prefix:focus-within {
-  border-color: var(--color-primary-500);
-}
-
 .prefix {
   padding: var(--spacing-md);
   background: var(--color-neutral-100);
@@ -243,16 +254,14 @@ async function submitEdit() {
   font-size: 14px;
   font-weight: 500;
   border-right: 1px solid var(--color-neutral-200);
+  min-height: 44px;
 }
 
 .form-input.with-prefix {
   border: none;
   border-radius: 0;
   flex: 1;
-}
-
-.form-input.with-prefix:focus {
-  border: none;
+  min-height: 44px;
 }
 
 .form-row {

@@ -80,6 +80,22 @@ class SQLAlchemyRecurringPaymentRepository:
             return True
         return False
 
+    async def unlink_account(self, account_id) -> int:
+        """Set account_id to None for all recurring payments tied to this account.
+        Returns the number of payments updated."""
+        result = await self.session.execute(
+            select(RecurringPaymentModel).where(
+                RecurringPaymentModel.account_id == _to_str_id(account_id)
+            )
+        )
+        models = result.scalars().all()
+        count = 0
+        for model in models:
+            model.account_id = None
+            count += 1
+        await self.session.flush()
+        return count
+
     @staticmethod
     def _to_dict(model: RecurringPaymentModel) -> dict:
         return {

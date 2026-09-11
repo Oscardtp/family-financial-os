@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import DebtPaymentOverrideModel
 from app.application.interfaces.debt_payment_override_repository import DebtPaymentOverrideRepository
@@ -30,6 +30,16 @@ class SQLAlchemyDebtPaymentOverrideRepository(DebtPaymentOverrideRepository):
             select(DebtPaymentOverrideModel)
             .where(DebtPaymentOverrideModel.debt_id == debt_id)
             .order_by(DebtPaymentOverrideModel.year.desc(), DebtPaymentOverrideModel.month.desc())
+        )
+        return [self._to_dict(m) for m in result.scalars().all()]
+
+    async def get_by_debt_ids(self, household_id: str, debt_ids: list[str]) -> list[dict]:
+        if not debt_ids:
+            return []
+        result = await self.session.execute(
+            select(DebtPaymentOverrideModel)
+            .where(DebtPaymentOverrideModel.debt_id.in_(debt_ids))
+            .order_by(DebtPaymentOverrideModel.debt_id, DebtPaymentOverrideModel.year.desc(), DebtPaymentOverrideModel.month.desc())
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 

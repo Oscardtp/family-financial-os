@@ -19,6 +19,8 @@
             v-model="form.name"
             type="text"
             placeholder="Tu nombre"
+            id="login-name"
+            name="name"
             required
           >
         </div>
@@ -28,6 +30,8 @@
             v-model="form.email"
             type="email"
             placeholder="correo@ejemplo.com"
+            id="login-email"
+            name="email"
             required
           >
         </div>
@@ -37,6 +41,8 @@
             v-model="form.password"
             type="password"
             placeholder="Mínimo 6 caracteres"
+            id="login-password"
+            name="password"
             required
             minlength="6"
           >
@@ -155,8 +161,9 @@ async function handleSubmit() {
   color: white;
   border: none;
   border-radius: var(--radius-md);
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background var(--transition-fast);
 }

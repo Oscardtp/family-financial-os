@@ -89,6 +89,10 @@ class AccountUpdate(BaseModel):
         description="Updated account type",
         pattern="^(cash|bank|wallet|digital_wallet|credit_card)$"
     )
+    balance: Optional[Decimal] = Field(
+        None,
+        description="Updated account balance"
+    )
     is_active: Optional[bool] = Field(
         None,
         description="Whether the account is active"
@@ -328,6 +332,7 @@ class SavingsGoalCreate(BaseModel):
         min_length=1,
         max_length=100
     )
+    description: Optional[str] = Field(None, description="Nota rápida de la meta")
     target_amount: Decimal = Field(
         ...,
         description="Target savings amount (must be > 0)",
@@ -358,18 +363,25 @@ class SavingsGoalCreate(BaseModel):
     )
 
 
+class HouseholdUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Nombre del hogar")
+
+
 class SavingsGoalUpdate(BaseModel):
     name: Optional[str] = Field(None, description="Updated goal name", min_length=1, max_length=100)
+    description: Optional[str] = Field(None, description="Nota rápida de la meta")
     target_amount: Optional[Decimal] = Field(None, description="Updated target amount", gt=0)
     target_date: Optional[DateType] = Field(None, description="Updated target date")
     monthly_contribution: Optional[Decimal] = Field(None, description="Updated monthly contribution")
     priority: Optional[str] = Field(None, description="Updated priority level")
+    goal_type: Optional[str] = Field(None, description="Updated goal type: 'savings' or 'investment'")
 
 
 class SavingsGoalResponse(BaseModel):
     id: UUID = Field(..., description="Savings goal's unique identifier")
     household_id: UUID = Field(..., description="Household UUID")
     name: str = Field(..., description="Goal name")
+    description: Optional[str] = Field(None, description="Nota rápida de la meta")
     target_amount: Decimal = Field(..., description="Target amount")
     current_amount: Decimal = Field(..., description="Current saved amount")
     target_date: Optional[DateType] = Field(None, description="Target date")
@@ -394,103 +406,6 @@ class SavingsContributionResponse(BaseModel):
     goal_id: UUID = Field(..., description="Associated savings goal UUID")
     amount: Decimal = Field(..., description="Contribution amount")
     contribution_date: DateType = Field(..., description="Contribution date")
-
-
-class AssetCreate(BaseModel):
-    name: str = Field(
-        ...,
-        description="Asset name (e.g., 'Car', 'Real Estate')",
-        min_length=1,
-        max_length=100
-    )
-    type: str = Field(
-        ...,
-        description="Asset type (e.g., 'vehicle', 'property', 'investment')",
-        min_length=1,
-        max_length=50
-    )
-    value: Decimal = Field(
-        ...,
-        description="Asset value (must be > 0)",
-        gt=0
-    )
-    purchase_date: Optional[DateType] = Field(None, description="Date the asset was purchased")
-
-
-class AssetUpdate(BaseModel):
-    name: Optional[str] = Field(None, description="Updated asset name", min_length=1, max_length=100)
-    type: Optional[str] = Field(None, description="Updated asset type", min_length=1, max_length=50)
-    value: Optional[Decimal] = Field(None, description="Updated asset value", gt=0)
-    purchase_date: Optional[DateType] = Field(None, description="Updated purchase date")
-
-
-class AssetResponse(BaseModel):
-    id: UUID = Field(..., description="Asset's unique identifier")
-    household_id: UUID = Field(..., description="Household UUID")
-    name: str = Field(..., description="Asset name")
-    type: str = Field(..., description="Asset type")
-    value: Decimal = Field(..., description="Asset value")
-    purchase_date: Optional[DateType] = Field(None, description="Purchase date")
-
-
-class LiabilityCreate(BaseModel):
-    name: str = Field(
-        ...,
-        description="Liability name (e.g., 'Mortgage', 'Car Loan')",
-        min_length=1,
-        max_length=100
-    )
-    type: str = Field(
-        ...,
-        description="Liability type (e.g., 'mortgage', 'loan', 'credit')",
-        min_length=1,
-        max_length=50
-    )
-    total_amount: Decimal = Field(
-        ...,
-        description="Total liability amount (must be > 0)",
-        gt=0
-    )
-    current_balance: Decimal = Field(
-        ...,
-        description="Current outstanding balance (must be > 0)",
-        gt=0
-    )
-    interest_rate: Decimal = Field(
-        default=Decimal("0"),
-        description="Annual interest rate percentage (must be >= 0)",
-        ge=0
-    )
-    interest_rate_type: str = Field(
-        default="EA",
-        description="Interest rate type: EA (effective annual), EM (effective monthly), nominal (nominal annual), daily"
-    )
-    monthly_payment: Decimal = Field(
-        default=Decimal("0"),
-        description="Monthly payment amount (must be >= 0)",
-        ge=0
-    )
-
-
-class LiabilityUpdate(BaseModel):
-    name: Optional[str] = Field(None, description="Updated liability name", min_length=1, max_length=100)
-    type: Optional[str] = Field(None, description="Updated liability type", min_length=1, max_length=50)
-    current_balance: Optional[Decimal] = Field(None, description="Updated current balance", gt=0)
-    interest_rate: Optional[Decimal] = Field(None, description="Updated interest rate", ge=0)
-    interest_rate_type: Optional[str] = Field(None, description="Updated interest rate type")
-    monthly_payment: Optional[Decimal] = Field(None, description="Updated monthly payment", ge=0)
-
-
-class LiabilityResponse(BaseModel):
-    id: UUID = Field(..., description="Liability's unique identifier")
-    household_id: UUID = Field(..., description="Household UUID")
-    name: str = Field(..., description="Liability name")
-    type: str = Field(..., description="Liability type")
-    total_amount: Decimal = Field(..., description="Total liability amount")
-    current_balance: Decimal = Field(..., description="Current outstanding balance")
-    interest_rate: Decimal = Field(..., description="Annual interest rate")
-    interest_rate_type: str = Field(default="EA", description="Interest rate type")
-    monthly_payment: Decimal = Field(..., description="Monthly payment amount")
 
 
 class BudgetStatusItem(BaseModel):
@@ -554,7 +469,7 @@ class RecurringPaymentUpdate(BaseModel):
 class RecurringPaymentResponse(BaseModel):
     id: UUID = Field(..., description="Recurring payment ID")
     household_id: UUID = Field(..., description="Household UUID")
-    account_id: UUID = Field(..., description="Account UUID")
+    account_id: Optional[UUID] = Field(None, description="Account UUID (may be null if account was deleted)")
     category_id: Optional[UUID] = Field(None, description="Category UUID")
     name: str = Field(..., description="Payment name")
     amount: Decimal = Field(..., description="Payment amount")
@@ -563,7 +478,7 @@ class RecurringPaymentResponse(BaseModel):
     day_of_month: int = Field(..., description="Day of month")
     next_due_date: DateType = Field(..., description="Next due date")
     is_active: bool = Field(..., description="Whether active")
-    description: Optional[str] = Field(None, description="Description")
+    description: Optional[str] = Field(None, description="Optional description")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 

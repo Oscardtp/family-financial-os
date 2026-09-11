@@ -6,6 +6,7 @@ from app.presentation.schemas.schemas import (
     AccountCreate, AccountUpdate, AccountResponse,
 )
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
+from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
 from app.presentation.audit_helper import log_action
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"])
@@ -76,7 +77,7 @@ async def update_account(
     return result
 
 
-@router.delete("/{account_id}", status_code=204, summary="Delete account", description="Permanently delete an account")
+@router.delete("/{account_id}", status_code=204, summary="Delete account", description="Permanently delete an account. Any recurring payments linked to this account will be unlinked.")
 async def delete_account(
     account_id: str,
     current_user: dict = Depends(require_owner),
@@ -86,6 +87,11 @@ async def delete_account(
     account = await repo.get_by_id(account_id)
     if not account or account["household_id"] != current_user["household_id"]:
         raise HTTPException(status_code=404, detail="No encontramos esta cuenta")
+
+    # Unlink any recurring payments tied to this account before deleting
+    recurring_repo = SQLAlchemyRecurringPaymentRepository(db)
+    await recurring_repo.unlink_account(account_id)
+
     await log_action(
         db, current_user["household_id"], current_user["id"], current_user["email"],
         "delete", "account", account_id, account["name"],

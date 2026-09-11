@@ -82,11 +82,7 @@ defineEmits(['update:modelFilterType', 'update:modelSortBy'])
   color: var(--color-neutral-700);
   background: var(--color-neutral-0);
   cursor: pointer;
-}
-
-.sort-select:focus {
-  outline: none;
-  border-color: var(--color-primary-400);
+  min-height: 44px;
 }
 
 @media (max-width: 480px) {

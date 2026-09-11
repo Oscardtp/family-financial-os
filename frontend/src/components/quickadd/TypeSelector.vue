@@ -92,7 +92,7 @@ onMounted(() => firstBtn.value?.focus())
 
 @media (max-width: 640px) {
   .type-btn { padding: var(--spacing-md) var(--spacing-xs); }
-  .type-icon { width: 36px; height: 36px; }
+  .type-icon { width: 44px; height: 44px; }
   .type-hint { display: none; }
 }
 </style>

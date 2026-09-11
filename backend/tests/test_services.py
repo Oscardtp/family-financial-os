@@ -23,7 +23,7 @@ async def test_transaction_service_create_income(client):
     assert resp.json()["type"] == "income"
 
     acc_resp = await client.get(f"/api/v1/accounts/{acc_id}", headers=headers)
-    assert float(acc_resp.json()["balance"]) == 5000.0
+    assert Decimal(acc_resp.json()["balance"]) == Decimal("5000")
 
 
 @pytest.mark.anyio
@@ -43,7 +43,7 @@ async def test_transaction_service_create_expense(client):
     assert resp.status_code == 201
 
     acc_resp = await client.get(f"/api/v1/accounts/{acc_id}", headers=headers)
-    assert float(acc_resp.json()["balance"]) == 8000.0
+    assert Decimal(acc_resp.json()["balance"]) == Decimal("8000")
 
 
 @pytest.mark.anyio
@@ -83,8 +83,8 @@ async def test_transaction_service_create_transfer(client):
 
     a1 = await client.get(f"/api/v1/accounts/{acc1.json()['id']}", headers=headers)
     a2 = await client.get(f"/api/v1/accounts/{acc2.json()['id']}", headers=headers)
-    assert float(a1.json()["balance"]) == 3000.0
-    assert float(a2.json()["balance"]) == 3000.0
+    assert Decimal(a1.json()["balance"]) == Decimal("3000")
+    assert Decimal(a2.json()["balance"]) == Decimal("3000")
 
 
 @pytest.mark.anyio
@@ -107,7 +107,7 @@ async def test_transaction_service_delete_reverses(client):
     assert resp.status_code == 204
 
     acc_resp = await client.get(f"/api/v1/accounts/{acc_id}", headers=headers)
-    assert float(acc_resp.json()["balance"]) == 0.0
+    assert Decimal(acc_resp.json()["balance"]) == Decimal("0")
 
 
 # ─── DebtService ──────────────────────────────────────────────────────
@@ -153,8 +153,8 @@ async def test_debt_service_payment_interest_split(client):
     }, headers=headers)
     assert resp.status_code == 201
     payment = resp.json()
-    assert float(payment["interest"]) > 0
-    assert float(payment["principal"]) > 0
+    assert Decimal(payment["interest"]) > 0
+    assert Decimal(payment["principal"]) > 0
 
 
 @pytest.mark.anyio
@@ -204,7 +204,7 @@ async def test_recurring_payment_service_create_and_pay(client):
     assert resp.status_code == 200
 
     acc_resp = await client.get(f"/api/v1/accounts/{acc.json()['id']}", headers=headers)
-    assert float(acc_resp.json()["balance"]) == 5000.0
+    assert Decimal(acc_resp.json()["balance"]) == Decimal("5000")
 
 
 @pytest.mark.anyio
@@ -298,7 +298,7 @@ async def test_savings_service_contribution_updates_amount(client):
         "monthly_contribution": 500000, "priority": "high", "goal_type": "savings",
     }, headers=headers)
     goal_id = goal.json()["id"]
-    assert float(goal.json()["current_amount"]) == 0.0
+    assert Decimal(goal.json()["current_amount"]) == Decimal("0")
 
     resp = await client.post(f"/api/v1/savings/goals/{goal_id}/contributions", json={
         "amount": 250000, "contribution_date": "2026-02-01",
@@ -306,7 +306,7 @@ async def test_savings_service_contribution_updates_amount(client):
     assert resp.status_code == 201
 
     updated = await client.get(f"/api/v1/savings/goals/{goal_id}", headers=headers)
-    assert float(updated.json()["current_amount"]) == 250000.0
+    assert Decimal(updated.json()["current_amount"]) == Decimal("250000")
 
     resp2 = await client.post(f"/api/v1/savings/goals/{goal_id}/contributions", json={
         "amount": 750000, "contribution_date": "2026-03-01",
@@ -314,7 +314,7 @@ async def test_savings_service_contribution_updates_amount(client):
     assert resp2.status_code == 201
 
     updated2 = await client.get(f"/api/v1/savings/goals/{goal_id}", headers=headers)
-    assert float(updated2.json()["current_amount"]) == 1000000.0
+    assert Decimal(updated2.json()["current_amount"]) == Decimal("1000000")
 
 
 @pytest.mark.anyio
@@ -347,8 +347,29 @@ async def test_savings_service_summary(client):
     resp = await client.get("/api/v1/savings/summary", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["total_current"] == 0.0
+    assert Decimal(data["total_current"]) == Decimal("0")
     assert data["savings_rate"] is not None
+
+
+@pytest.mark.anyio
+async def test_savings_goal_accepts_description(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "svc_desc@example.com", "name": "Desc", "password": "password123",
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+    goal = await client.post("/api/v1/savings/goals", json={
+        "name": "Vacation",
+        "description": "Viaje a la costa",
+        "target_amount": 3000000,
+        "target_date": "2026-12-31",
+        "priority": "medium",
+        "goal_type": "savings",
+    }, headers=headers)
+    assert goal.status_code == 201
+    body = goal.json()
+    assert body["name"] == "Vacation"
+    assert body["description"] == "Viaje a la costa"
 
 
 # ─── DashboardService ─────────────────────────────────────────────────
@@ -373,8 +394,8 @@ async def test_dashboard_service_summary(client):
     resp = await client.get("/api/v1/dashboard", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert float(data["total_balance"]) == 5100000.0
-    assert float(data["monthly_income"]) == 5000000.0
+    assert Decimal(data["total_balance"]) == Decimal("5100000")
+    assert Decimal(data["monthly_income"]) == Decimal("5000000")
 
 
 @pytest.mark.anyio

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
-from datetime import date, timedelta
+from datetime import date
+from dateutil.relativedelta import relativedelta
 from app.domain.value_objects.money import Money
 from app.domain.value_objects.interest_rate import InterestRate, RateType
 from app.financial_engine.rate_engine import RateEngine
@@ -79,7 +80,7 @@ class AmortizationEngine:
             if remaining < 0:
                 remaining = Decimal("0")
 
-            next_date = current_date + timedelta(days=30)
+            next_date = current_date + relativedelta(months=1)
             schedule.rows.append(AmortizationRow(
                 month=month_num,
                 payment_date=next_date.isoformat(),
@@ -91,11 +92,27 @@ class AmortizationEngine:
             ))
             current_date = next_date
 
+        if remaining > 0 and month_num < 600:
+            month_num += 1
+            final_interest = (remaining * monthly_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            actual_payment = remaining + final_interest
+            next_date = current_date + relativedelta(months=1)
+            schedule.rows.append(AmortizationRow(
+                month=month_num,
+                payment_date=next_date.isoformat(),
+                payment=actual_payment,
+                principal=remaining,
+                interest=final_interest,
+                balance=Decimal("0"),
+                cumulative_interest=cumulative_interest + final_interest,
+            ))
+            cumulative_interest += final_interest
+            remaining = Decimal("0")
+
         schedule.total_interest = cumulative_interest
         schedule.total_payments = balance + cumulative_interest
         schedule.payoff_months = month_num
         if start_date:
-            from dateutil.relativedelta import relativedelta
             schedule.payoff_date = (start_date + relativedelta(months=month_num)).isoformat()
         else:
             schedule.payoff_date = schedule.rows[-1].payment_date if schedule.rows else ""

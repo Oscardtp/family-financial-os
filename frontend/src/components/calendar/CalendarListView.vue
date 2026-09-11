@@ -73,7 +73,7 @@ defineEmits(['openEvent', 'createOnDate'])
 .list-dot.ev-upcoming { background: var(--color-calendar-upcoming); }
 .list-dot.ev-default { background: var(--color-calendar-default); }
 .list-title { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--color-neutral-800); }
-.list-amount { font-weight: 700; font-size: 0.9rem; color: var(--color-neutral-700); }
+.list-amount { font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem; color: var(--color-neutral-700); }
 .list-note { font-size: 0.75rem; color: var(--color-neutral-500); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-chevron { color: var(--color-neutral-400); flex-shrink: 0; }
 .list-loading { display: flex; flex-direction: column; gap: var(--spacing-sm); }

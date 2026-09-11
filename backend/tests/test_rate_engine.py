@@ -22,10 +22,11 @@ class TestRateEngine:
         assert monthly == Decimal("0.02")
 
     def test_daily_rate(self):
-        rate = InterestRate(Decimal("0.1"), RateType.DAILY)
+        rate = InterestRate(Decimal("10"), RateType.DAILY)
         monthly = RateEngine.to_monthly_rate(rate)
-        expected = (Decimal("1") + Decimal("0.001")) ** Decimal("30") - Decimal("1")
+        expected = (Decimal("1") + Decimal("0.10")) ** (Decimal("30") / Decimal("365")) - Decimal("1")
         assert monthly == expected
+        assert monthly < Decimal("0.01")
 
     def test_zero_rate_ea(self):
         rate = InterestRate(Decimal("0"), RateType.EA)
@@ -43,6 +44,13 @@ class TestRateEngine:
         monthly = RateEngine.to_monthly_rate(rate)
         expected = (Decimal("1") + Decimal("0.12")) ** (Decimal("1") / Decimal("12")) - Decimal("1")
         assert monthly == expected
+
+    def test_daily_rate_realistic(self):
+        rate = InterestRate(Decimal("10"), RateType.DAILY)
+        monthly = RateEngine.to_monthly_rate(rate)
+        expected = (Decimal("1") + Decimal("0.10")) ** (Decimal("30") / Decimal("365")) - Decimal("1")
+        assert monthly == expected
+        assert monthly < Decimal("0.01")
 
     def test_fallback_unknown_type(self):
         rate = InterestRate(Decimal("12"), "UNKNOWN")

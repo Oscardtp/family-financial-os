@@ -59,6 +59,8 @@ defineEmits(['edit', 'pay'])
   background: var(--color-primary-500);
   color: white;
   border-color: var(--color-primary-500);
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .action-btn.primary:hover {

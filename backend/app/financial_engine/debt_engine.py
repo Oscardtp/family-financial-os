@@ -8,15 +8,6 @@ from app.financial_engine.rate_engine import RateEngine
 
 
 @dataclass
-class DebtAmortizationRow:
-    period: int
-    payment: Money
-    principal: Money
-    interest: Money
-    balance: Money
-
-
-@dataclass
 class DebtSummaryItem:
     id: str
     name: str
@@ -82,27 +73,6 @@ class DebtEngine:
             total_paid=total_paid,
             overall_progress=overall_progress,
         )
-
-    def generate_amortization(
-        self, balance: Money, annual_rate: Decimal, months: int, rate_type: str = "EA"
-    ) -> list[DebtAmortizationRow]:
-        rows = []
-        current_balance = balance
-
-        for period in range(1, months + 1):
-            remaining_periods = months - period + 1
-            amort = MoneyOperations.amortize_payment(current_balance, annual_rate, remaining_periods, 1, rate_type)
-            current_balance = amort["remaining"]
-
-            rows.append(DebtAmortizationRow(
-                period=period,
-                payment=amort["payment"],
-                principal=amort["principal"],
-                interest=amort["interest"],
-                balance=current_balance,
-            ))
-
-        return rows
 
     def project_payoff(
         self, balance: Money, annual_rate: Decimal, monthly_payment: Money, rate_type: str = "EA"

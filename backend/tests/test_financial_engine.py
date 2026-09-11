@@ -9,6 +9,36 @@ from app.financial_engine.debt_engine import DebtEngine
 from app.financial_engine.savings_engine import SavingsEngine
 from app.financial_engine.net_worth_engine import NetWorthEngine
 from app.financial_engine.projection_engine import ProjectionEngine, ScenarioAssumptions
+from app.financial_engine.amortization import AmortizationEngine
+
+
+class TestAmortizationEngine:
+    def test_generate_schedule_respects_calendar_months(self):
+        engine = AmortizationEngine()
+        schedule = engine.generate_schedule(
+            balance=Decimal("1000000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Decimal("100000"),
+            debt_name="Test",
+            start_date=date(2026, 1, 15),
+        )
+        assert len(schedule.rows) >= 1
+        assert schedule.rows[0].payment_date == "2026-02-15"
+        if len(schedule.rows) >= 2:
+            assert schedule.rows[1].payment_date == "2026-03-15"
+        if len(schedule.rows) >= 3:
+            assert schedule.rows[2].payment_date == "2026-04-15"
+
+    def test_generate_schedule_ends_at_zero_balance(self):
+        engine = AmortizationEngine()
+        schedule = engine.generate_schedule(
+            balance=Decimal("100000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Decimal("8500"),
+            debt_name="Test",
+            start_date=date(2026, 1, 15),
+        )
+        assert schedule.rows[-1].balance == Decimal("0.00")
 
 
 class TestMoneyOperations:
@@ -167,7 +197,33 @@ class TestNetWorthEngine:
         assert result.net_worth == Money("15000")
 
 
-class TestProjectionEngine:
+class TestAmortizationEngine:
+    def test_generate_schedule_respects_calendar_months(self):
+        engine = AmortizationEngine()
+        schedule = engine.generate_schedule(
+            balance=Decimal("1000000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Decimal("100000"),
+            debt_name="Test",
+            start_date=date(2026, 1, 15),
+        )
+        assert len(schedule.rows) >= 1
+        assert schedule.rows[0].payment_date == "2026-02-15"
+        if len(schedule.rows) >= 2:
+            assert schedule.rows[1].payment_date == "2026-03-15"
+        if len(schedule.rows) >= 3:
+            assert schedule.rows[2].payment_date == "2026-04-15"
+
+    def test_generate_schedule_ends_at_zero_balance(self):
+        engine = AmortizationEngine()
+        schedule = engine.generate_schedule(
+            balance=Decimal("100000"),
+            annual_rate=Decimal("12"),
+            monthly_payment=Decimal("8500"),
+            debt_name="Test",
+            start_date=date(2026, 1, 15),
+        )
+        assert schedule.rows[-1].balance == Decimal("0.00")
     def test_project_scenario(self):
         engine = ProjectionEngine()
         result = engine.project_scenario(

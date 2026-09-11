@@ -1,7 +1,7 @@
 from typing import Optional
 import uuid
 from datetime import date, datetime, timezone
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import FinancialEventModel
 
@@ -40,7 +40,7 @@ class SQLAlchemyFinancialEventRepository:
             date_to = date(year, month + 1, 1)
         return await self.get_by_date_range(household_id, date_from, date_to)
 
-    async def get_by_date_range(self, household_id, date_from: date, date_to: date) -> list[dict]:
+    async def get_by_date_range(self, household_id, date_from: date, date_to: date, limit: int = 100) -> list[dict]:
         result = await self.session.execute(
             select(FinancialEventModel)
             .where(FinancialEventModel.household_id == _to_str_id(household_id))
@@ -49,25 +49,28 @@ class SQLAlchemyFinancialEventRepository:
                 FinancialEventModel.due_date < date_to,
             ))
             .order_by(FinancialEventModel.due_date)
+            .limit(limit)
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 
-    async def get_pending(self, household_id) -> list[dict]:
+    async def get_pending(self, household_id, limit: int = 100) -> list[dict]:
         result = await self.session.execute(
             select(FinancialEventModel)
             .where(FinancialEventModel.household_id == _to_str_id(household_id))
             .where(FinancialEventModel.status == "pending")
             .order_by(FinancialEventModel.due_date)
+            .limit(limit)
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 
-    async def get_overdue(self, household_id, as_of: date) -> list[dict]:
+    async def get_overdue(self, household_id, as_of: date, limit: int = 100) -> list[dict]:
         result = await self.session.execute(
             select(FinancialEventModel)
             .where(FinancialEventModel.household_id == _to_str_id(household_id))
             .where(FinancialEventModel.status == "pending")
             .where(FinancialEventModel.due_date < as_of)
             .order_by(FinancialEventModel.due_date)
+            .limit(limit)
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 
@@ -102,7 +105,7 @@ class SQLAlchemyFinancialEventRepository:
             return True
         return False
 
-    async def mark_as_paid(self, id_val, paid_by: str, paid_amount: float, paid_at) -> dict:
+    async def mark_as_paid(self, id_val, paid_by: str, paid_amount, paid_at) -> dict:
         result = await self.session.execute(
             select(FinancialEventModel).where(FinancialEventModel.id == _to_str_id(id_val))
         )
@@ -128,6 +131,42 @@ class SQLAlchemyFinancialEventRepository:
         )
         return result.scalar_one_or_none() is not None
 
+    async def get_existing_event_keys(self, household_id: str, events: list) -> set[tuple]:
+        if not events:
+            return set()
+        conditions = [
+            and_(
+                FinancialEventModel.source == ev.source,
+                FinancialEventModel.source_id == str(ev.source_id),
+                FinancialEventModel.due_date == ev.due_date,
+            )
+            for ev in events
+        ]
+        result = await self.session.execute(
+            select(FinancialEventModel.source, FinancialEventModel.source_id, FinancialEventModel.due_date)
+            .where(FinancialEventModel.household_id == _to_str_id(household_id))
+            .where(or_(*conditions))
+        )
+        return {(row.source, str(row.source_id), row.due_date) for row in result.all()}
+
+    async def bulk_create(self, events_data: list[dict]) -> int:
+        if not events_data:
+            return 0
+        from sqlalchemy import insert
+        stmt = insert(FinancialEventModel).values(events_data)
+        bind = self.session.bind
+        dialect = bind.dialect.name if bind else "sqlite"
+        if dialect == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            stmt = pg_insert(FinancialEventModel).values(events_data).on_conflict_do_nothing(
+                index_elements=["household_id", "source", "source_id", "due_date"]
+            )
+        else:
+            stmt = stmt.prefix_with("OR IGNORE")
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount
+
     async def get_by_recurrence_group(self, household_id, recurrence_group_id: str) -> list[dict]:
         result = await self.session.execute(
             select(FinancialEventModel)
@@ -137,7 +176,7 @@ class SQLAlchemyFinancialEventRepository:
         )
         return [self._to_dict(m) for m in result.scalars().all()]
 
-    async def get_upcoming(self, household_id, as_of: date, days: int = 30, include_overdue: bool = False) -> list[dict]:
+    async def get_upcoming(self, household_id, as_of: date, days: int = 30, include_overdue: bool = False, limit: int = 100) -> list[dict]:
         from datetime import timedelta
         date_to = as_of + timedelta(days=days)
         query = (
@@ -148,24 +187,19 @@ class SQLAlchemyFinancialEventRepository:
         )
         if not include_overdue:
             query = query.where(FinancialEventModel.due_date >= as_of)
-        result = await self.session.execute(query.order_by(FinancialEventModel.due_date))
+        result = await self.session.execute(query.order_by(FinancialEventModel.due_date).limit(limit))
         return [self._to_dict(m) for m in result.scalars().all()]
 
     async def delete_upcoming_by_obligation(self, household_id, obligation_id: str, as_of: date) -> int:
         result = await self.session.execute(
-            select(FinancialEventModel)
+            delete(FinancialEventModel)
             .where(FinancialEventModel.household_id == _to_str_id(household_id))
             .where(FinancialEventModel.obligation_id == obligation_id)
             .where(FinancialEventModel.status == "pending")
             .where(FinancialEventModel.due_date >= as_of)
         )
-        models = result.scalars().all()
-        count = 0
-        for model in models:
-            await self.session.delete(model)
-            count += 1
         await self.session.flush()
-        return count
+        return result.rowcount
 
     @staticmethod
     def _to_dict(model: FinancialEventModel) -> dict:

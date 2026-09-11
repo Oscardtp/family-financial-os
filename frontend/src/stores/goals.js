@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import api from '@/services/api'
 import { useCurrency } from '@/composables/useCurrency'
+import { useGoalProjection } from '@/composables/useGoalProjection'
 
 export const useGoalsStore = defineStore('goals', () => {
   const { fmt, fmtFull, fmtDate, fmtMonth } = useCurrency()
@@ -21,6 +22,10 @@ export const useGoalsStore = defineStore('goals', () => {
   const isEditing = ref(false)
   const isDeleting = ref(false)
   const prevGoalIds = ref([])
+  const projectionCache = ref(new Map())
+  const { calculateProjection } = useGoalProjection()
+  const projectionLoading = ref(new Map())
+  const projectionError = ref(new Map())
 
   const activeGoals = computed(() => {
     let filtered = goals.value.filter(g => g.current_amount < g.target_amount)
@@ -90,6 +95,7 @@ export const useGoalsStore = defineStore('goals', () => {
         target_amount: parseFloat(data.target_amount),
         priority: data.priority,
         goal_type: data.goal_type,
+        description: data.description || null,
       }
       if (data.monthly_contribution) payload.monthly_contribution = parseFloat(data.monthly_contribution)
       if (data.target_date) payload.target_date = data.target_date
@@ -160,7 +166,7 @@ export const useGoalsStore = defineStore('goals', () => {
 
   function openContribution(goal) {
     contributionGoalId.value = goal.id
-    isContributing.value = true
+    isContributing.value = false
   }
 
   function closeContribution() {
@@ -171,17 +177,20 @@ export const useGoalsStore = defineStore('goals', () => {
   async function submitContribution(amount, date) {
     if (!contributionGoalId.value) return { error: 'Meta no válida.' }
     isContributing.value = true
-    const result = await contributeGoal(contributionGoalId.value, amount, date)
-    if (!result.error) {
-      closeContribution()
+    try {
+      const result = await contributeGoal(contributionGoalId.value, amount, date)
+      if (!result.error) {
+        closeContribution()
+      }
+      return result
+    } finally {
+      isContributing.value = false
     }
-    isContributing.value = false
-    return result
   }
 
   function openEdit(goal) {
     editingGoalId.value = goal.id
-    isEditing.value = true
+    isEditing.value = false
   }
 
   function closeEdit() {
@@ -192,17 +201,20 @@ export const useGoalsStore = defineStore('goals', () => {
   async function submitEdit(data) {
     if (!editingGoalId.value) return { error: 'Meta no válida.' }
     isEditing.value = true
-    const result = await editGoal(editingGoalId.value, data)
-    if (!result.error) {
-      closeEdit()
+    try {
+      const result = await editGoal(editingGoalId.value, data)
+      if (!result.error) {
+        closeEdit()
+      }
+      return result
+    } finally {
+      isEditing.value = false
     }
-    isEditing.value = false
-    return result
   }
 
   function confirmDelete(goal) {
     deletingGoalId.value = goal.id
-    isDeleting.value = true
+    isDeleting.value = false
   }
 
   function closeDelete() {
@@ -213,12 +225,15 @@ export const useGoalsStore = defineStore('goals', () => {
   async function submitDelete() {
     if (!deletingGoalId.value) return { error: 'Meta no válida.' }
     isDeleting.value = true
-    const result = await deleteGoal(deletingGoalId.value)
-    if (!result.error) {
-      closeDelete()
+    try {
+      const result = await deleteGoal(deletingGoalId.value)
+      if (!result.error) {
+        closeDelete()
+      }
+      return result
+    } finally {
+      isDeleting.value = false
     }
-    isDeleting.value = false
-    return result
   }
 
   function toggleDetails(goal) {
@@ -227,6 +242,7 @@ export const useGoalsStore = defineStore('goals', () => {
     } else {
       expandedGoal.value = goal.id
       loadGoalHistory(goal)
+      fetchProjection(goal)
     }
   }
 
@@ -238,6 +254,37 @@ export const useGoalsStore = defineStore('goals', () => {
         highlightedGoalId.value = null
       }
     }, 2000)
+  }
+
+  async function fetchProjection(goal) {
+    if (projectionCache.value.has(goal.id)) {
+      return projectionCache.value.get(goal.id)
+    }
+    if (projectionLoading.value.get(goal.id)) return null
+    const payload = {
+      current_amount: Number(goal.current_amount) || 0,
+      monthly_contribution: Number(goal.monthly_contribution) || 0,
+      target_amount: Number(goal.target_amount) || 0,
+      expected_return_rate: goal.expected_return_rate ?? null,
+      horizon_months: goal.horizon_months ?? null,
+    }
+    if (payload.monthly_contribution <= 0 && payload.target_amount > 0) return null
+    projectionLoading.value.set(goal.id, true)
+    projectionError.value.set(goal.id, null)
+    try {
+      const data = await calculateProjection(payload)
+      projectionCache.value.set(goal.id, data)
+      return data
+    } catch (e) {
+      projectionError.value.set(goal.id, 'No pudimos calcular la proyección. Intenta de nuevo.')
+      return null
+    } finally {
+      projectionLoading.value.set(goal.id, false)
+    }
+  }
+
+  function getProjection(goal) {
+    return projectionCache.value.get(goal.id) || null
   }
 
   watch(
@@ -291,6 +338,10 @@ export const useGoalsStore = defineStore('goals', () => {
     closeDelete,
     submitDelete,
     toggleDetails,
+    fetchProjection,
+    getProjection,
+    projectionLoading,
+    projectionError,
     highlightNewGoal,
     fmt,
     fmtFull,

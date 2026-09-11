@@ -35,7 +35,7 @@ defineEmits(['close', 'confirm'])
 .modal-title {
   font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--color-neutral-900);
 }
@@ -76,6 +76,7 @@ defineEmits(['close', 'confirm'])
   padding: 8px 20px;
   border-radius: var(--radius-pill);
   border: none;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;

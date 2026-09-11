@@ -56,6 +56,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  if (token.value) {
+    fetchUser()
+  }
+
   function logout() {
     user.value = null
     token.value = null

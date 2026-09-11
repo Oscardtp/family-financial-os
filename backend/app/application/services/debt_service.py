@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from decimal import Decimal
-from calendar import month_name
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -260,23 +259,36 @@ class DebtService:
 
     async def get_due_alerts(self, household_id: str):
         from datetime import date as date_type
+        from itertools import groupby
 
         debts = await self.debt_repo.get_all(household_id)
         today = date_type.today()
 
+        debt_ids = [str(d["id"]) for d in debts]
+        all_payments = await self.payment_repo.get_by_debt_ids(household_id, debt_ids)
+        all_overrides = await self.override_repo.get_by_debt_ids(household_id, debt_ids)
+
+        payments_by_debt: dict[str, list[dict]] = {}
+        for debt_id, group in groupby(sorted(all_payments, key=lambda p: p["debt_id"]), key=lambda p: p["debt_id"]):
+            payments_by_debt[debt_id] = list(group)
+
+        overrides_by_debt: dict[str, list[dict]] = {}
+        for debt_id, group in groupby(sorted(all_overrides, key=lambda o: o["debt_id"]), key=lambda o: o["debt_id"]):
+            overrides_by_debt[debt_id] = list(group)
+
         paid_months = {}
         for debt in debts:
-            payments = await self.payment_repo.get_by_debt_id(debt["id"], limit=1000)
+            debt_id = str(debt["id"])
             months = set()
-            for p in [p for p in payments if not p.get("is_reversed")]:
-                pd = p["payment_date"]
-                if hasattr(pd, 'year'):
-                    months.add((pd.year, pd.month))
-            overrides = await self.override_repo.get_by_debt_id(debt["id"])
-            for o in overrides:
+            for p in payments_by_debt.get(debt_id, []):
+                if not p.get("is_reversed"):
+                    pd = p["payment_date"]
+                    if hasattr(pd, 'year'):
+                        months.add((pd.year, pd.month))
+            for o in overrides_by_debt.get(debt_id, []):
                 if o["is_paid"]:
                     months.add((o["year"], o["month"]))
-            paid_months[debt["id"]] = months
+            paid_months[debt_id] = months
 
         engine = AmortizationEngine()
         return engine.calculate_due_alerts(debts, paid_months=paid_months)

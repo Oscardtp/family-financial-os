@@ -67,6 +67,7 @@ class SQLAlchemySavingsGoalRepository(SavingsGoalRepository):
             "id": model.id,
             "household_id": model.household_id,
             "name": model.name,
+            "description": model.description,
             "target_amount": Decimal(str(model.target_amount)),
             "current_amount": Decimal(str(model.current_amount)),
             "target_date": model.target_date,

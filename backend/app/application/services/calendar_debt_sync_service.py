@@ -136,7 +136,7 @@ class CalendarDebtSyncService:
         updated = await self.event_repo.mark_as_paid(
             event["id"],
             None,
-            float(amount),
+            amount,
             payment_date,
         )
         logger.info(
@@ -168,7 +168,7 @@ class CalendarDebtSyncService:
         updated = await self.event_repo.mark_as_paid(
             event["id"],
             None,
-            float(D(str(event.get("amount", 0)))),
+            Decimal(str(event.get("amount", 0))),
             due_date,
         )
         return updated

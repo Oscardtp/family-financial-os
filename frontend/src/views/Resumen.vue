@@ -339,7 +339,7 @@ onMounted(loadAll)
 .resumen-page { max-width: 1100px; margin: 0 auto; padding: 0 var(--spacing-md); }
 
 .resumen-header { margin-bottom: var(--spacing-md); }
-.resumen-greeting { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--color-neutral-900); }
+.resumen-greeting { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; margin: 0; color: var(--color-neutral-900); }
 .resumen-date { color: var(--color-neutral-500); font-size: 0.85rem; margin: 4px 0 0; }
 
 .resumen-alert {
@@ -370,7 +370,7 @@ onMounted(loadAll)
 .available-link { font-size: 0.75rem; color: #fff; opacity: 0.8; text-decoration: none; }
 .available-link:hover { opacity: 1; text-decoration: underline; }
 .available-value { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); display: block; margin: 4px 0; }
-.available-meta { display: flex; gap: 12px; font-size: 0.75rem; opacity: 0.8; }
+.available-meta { display: flex; gap: 12px; font-size: 0.75rem; opacity: 0.8; font-family: var(--font-mono); }
 
 .resumen-grid { display: grid; grid-template-columns: 1fr 300px; gap: var(--spacing-md); align-items: start; }
 .resumen-main { display: flex; flex-direction: column; gap: var(--spacing-md); }
@@ -414,6 +414,7 @@ onMounted(loadAll)
 
 .month-grid { display: flex; flex-direction: column; gap: 10px; }
 .month-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+.month-row strong { font-family: var(--font-mono); font-weight: 600; }
 .month-divider { height: 1px; background: var(--color-neutral-100); margin: 4px 0; }
 .income { color: var(--color-success-700); }
 .expense { color: var(--color-error-700); }
@@ -462,7 +463,7 @@ onMounted(loadAll)
 .fill-ok { background: var(--color-success-500); }
 .fill-warning { background: var(--color-warning-500); }
 .fill-over { background: var(--color-error-500); }
-.budget-detail { font-size: 0.7rem; color: var(--color-neutral-500); }
+.budget-detail { font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-neutral-500); }
 
 .coach-list { display: flex; flex-direction: column; gap: 10px; }
 .coach-item { background: var(--color-neutral-50); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }

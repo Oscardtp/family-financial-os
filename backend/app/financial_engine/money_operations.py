@@ -22,7 +22,7 @@ class MoneyOperations:
             return Money.zero()
         total = MoneyOperations.sum_amounts(amounts)
         count = Decimal(str(len(amounts)))
-        return Money(total.amount / count, total.currency)
+        return Money((total.amount / count).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), total.currency)
 
     @staticmethod
     def percentage(part: Money, whole: Money) -> Decimal:

@@ -1,6 +1,6 @@
 import json
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import NotificationModel, UserModel
 
@@ -61,18 +61,16 @@ class SQLAlchemyNotificationRepository:
             return dict(notification)
         return None
 
-    async def mark_all_as_read(self, household_id: str, user_id: str):
-        query = select(NotificationModel).where(
-            NotificationModel.household_id == household_id,
-            NotificationModel.user_id == user_id,
-            NotificationModel.is_read == False,
+    async def mark_all_as_read(self, household_id: str, user_id: str) -> int:
+        result = await self.session.execute(
+            update(NotificationModel)
+            .where(NotificationModel.household_id == household_id)
+            .where(NotificationModel.user_id == user_id)
+            .where(NotificationModel.is_read == False)
+            .values(is_read=True)
         )
-        result = await self.session.execute(query)
-        notifications = result.scalars().all()
-        for n in notifications:
-            n.is_read = True
         await self.session.flush()
-        return len(notifications)
+        return result.rowcount
 
     async def notify_household_members(
         self,
@@ -84,23 +82,26 @@ class SQLAlchemyNotificationRepository:
     ) -> int:
         """Create a notification for every household member except the excluded one."""
         result = await self.session.execute(
-            select(UserModel).where(
+            select(UserModel.id).where(
                 UserModel.household_id == household_id,
                 UserModel.id != exclude_user_id,
             )
         )
-        members = result.scalars().all()
-        count = 0
-        for member in members:
-            notification = NotificationModel(
-                household_id=household_id,
-                user_id=member.id,
-                type="family_event",
-                title=title,
-                message=message,
-                data=json.dumps(data) if data else None,
-            )
-            self.session.add(notification)
-            count += 1
+        member_ids = result.scalars().all()
+        if not member_ids:
+            return 0
+        values = [
+            {
+                "household_id": household_id,
+                "user_id": member_id,
+                "type": "family_event",
+                "title": title,
+                "message": message,
+                "data": json.dumps(data) if data else None,
+            }
+            for member_id in member_ids
+        ]
+        stmt = insert(NotificationModel).values(values)
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return result.rowcount

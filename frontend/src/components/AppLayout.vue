@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app-layout">
     <button
       class="hamburger-btn"
@@ -82,11 +82,9 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import ThemeToggle from '@/components/ThemeToggle.vue'
-import NotificationBell from '@/components/NotificationBell.vue'
 import {
   LayoutDashboard, Receipt, Calendar, Target,
-  Users, User, PanelLeftClose, PanelLeftOpen,
+  User, PanelLeftClose, PanelLeftOpen,
   LogOut, Menu
 } from 'lucide-vue-next'
 
@@ -301,7 +299,7 @@ watch(() => route.path, () => {
     margin-left: 0;
   }
   .hamburger-btn {
-    display: none;
+    display: flex;
   }
   .content {
     padding: var(--space-md);

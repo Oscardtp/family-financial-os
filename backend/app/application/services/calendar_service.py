@@ -68,13 +68,13 @@ class CalendarService:
 
         return {
             "days": days,
-            "available": float(available),
-            "upcoming_payments": float(upcoming_payments),
-            "projected_available": float(available - upcoming_payments),
-            "cash_needed": float(cash_needed),
-            "expected_income": float(expected_income),
-            "expected_expenses": float(expected_expenses),
-            "budget_committed": float(budget_committed),
+            "available": available,
+            "upcoming_payments": upcoming_payments,
+            "projected_available": available - upcoming_payments,
+            "cash_needed": cash_needed,
+            "expected_income": expected_income,
+            "expected_expenses": expected_expenses,
+            "budget_committed": budget_committed,
         }
 
     async def _get_budget_committed(self, household_id: str, date_from: date, date_to: date) -> Decimal:
@@ -123,8 +123,8 @@ class CalendarService:
         return {
             "month": f"{year}-{month:02d}",
             "scheduled_payments_count": len(scheduled_payments),
-            "scheduled_payments_amount": float(sum(Decimal(str(e["amount"])) for e in scheduled_payments)),
-            "expected_income": float(sum(Decimal(str(e["amount"])) for e in expected_income)),
+            "scheduled_payments_amount": sum(Decimal(str(e["amount"])) for e in scheduled_payments),
+            "expected_income": sum(Decimal(str(e["amount"])) for e in expected_income),
             "new_debts_count": len(new_debts),
             "new_recurring_count": len(recurring),
         }
@@ -134,61 +134,43 @@ class CalendarService:
         active_debts = [d for d in debts if d.get("status") == "active"]
         recurring = await self.recurring_repo.get_active(household_id)
 
-        created = 0
-        skipped = 0
-
+        debt_events = []
         for debt in active_debts:
-            events = self.engine.generate_events_from_debt(debt, months_ahead=6)
-            for ev in events:
-                exists = await self.event_repo.exists_for_source(
-                    household_id, ev.source, ev.source_id, ev.due_date
-                )
-                if not exists:
-                    await self.event_repo.create({
-                        "household_id": household_id,
-                        "source": ev.source,
-                        "source_id": ev.source_id,
-                        "type": ev.type,
-                        "title": ev.title,
-                        "amount": ev.amount,
-                        "due_date": ev.due_date,
-                        "recommended_date": ev.recommended_date,
-                        "cutoff_date": ev.cutoff_date,
-                        "account_id": ev.account_id,
-                        "is_recurrent": ev.is_recurrent,
-                        "recurrence_group_id": ev.recurrence_group_id,
-                        "confirmed": ev.confirmed,
-                        "status": self.engine.calculate_status(ev.due_date),
-                    })
-                    created += 1
-                else:
-                    skipped += 1
+            debt_events.extend(self.engine.generate_events_from_debt(debt, months_ahead=6))
 
+        recurring_events = []
         for rec in recurring:
-            events = self.engine.generate_events_from_recurring(rec, months_ahead=6)
-            for ev in events:
-                exists = await self.event_repo.exists_for_source(
-                    household_id, ev.source, ev.source_id, ev.due_date
-                )
-                if not exists:
-                    await self.event_repo.create({
-                        "household_id": household_id,
-                        "source": ev.source,
-                        "source_id": ev.source_id,
-                        "type": ev.type,
-                        "title": ev.title,
-                        "amount": ev.amount,
-                        "due_date": ev.due_date,
-                        "recommended_date": ev.recommended_date,
-                        "cutoff_date": ev.cutoff_date,
-                        "account_id": ev.account_id,
-                        "is_recurrent": ev.is_recurrent,
-                        "recurrence_group_id": ev.recurrence_group_id,
-                        "confirmed": ev.confirmed,
-                        "status": self.engine.calculate_status(ev.due_date),
-                    })
-                    created += 1
-                else:
-                    skipped += 1
+            recurring_events.extend(self.engine.generate_events_from_recurring(rec, months_ahead=6))
 
-        return {"created": created, "skipped": skipped}
+        created_debt, skipped_debt = await self._sync_event_batch(household_id, debt_events)
+        created_recurring, skipped_recurring = await self._sync_event_batch(household_id, recurring_events)
+
+        return {"created": created_debt + created_recurring, "skipped": skipped_debt + skipped_recurring}
+
+    async def _sync_event_batch(self, household_id: str, events: list) -> tuple[int, int]:
+        if not events:
+            return 0, 0
+        existing_keys = await self.event_repo.get_existing_event_keys(household_id, events)
+        to_create = []
+        for ev in events:
+            key = (ev.source, ev.source_id, ev.due_date)
+            if key not in existing_keys:
+                to_create.append({
+                    "household_id": household_id,
+                    "source": ev.source,
+                    "source_id": ev.source_id,
+                    "type": ev.type,
+                    "title": ev.title,
+                    "amount": ev.amount,
+                    "due_date": ev.due_date,
+                    "recommended_date": ev.recommended_date,
+                    "cutoff_date": ev.cutoff_date,
+                    "account_id": ev.account_id,
+                    "is_recurrent": ev.is_recurrent,
+                    "recurrence_group_id": ev.recurrence_group_id,
+                    "confirmed": ev.confirmed,
+                    "status": self.engine.calculate_status(ev.due_date),
+                })
+        created = await self.event_repo.bulk_create(to_create)
+        skipped = len(events) - created
+        return created, skipped

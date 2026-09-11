@@ -135,7 +135,7 @@ defineEmits(['pay', 'unpay', 'edit', 'delete', 'showObligationInfo'])
 .sheet-close { position: absolute; top: 14px; right: 14px; border: none; background: transparent; cursor: pointer; color: var(--color-neutral-500); }
 .sheet-head { display: flex; align-items: center; gap: var(--spacing-sm); }
 .sheet-head h3 { margin: 0; }
-.sheet-amount { font-size: 1.6rem; font-weight: 800; margin: var(--spacing-sm) 0 var(--spacing-md); }
+.sheet-amount { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 800; margin: var(--spacing-sm) 0 var(--spacing-md); }
 .sheet-row { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm) 0; border-bottom: 1.5px solid var(--color-neutral-100); }
 .sheet-row span { color: var(--color-neutral-500); margin-right: auto; }
 .sheet-row-ok { border-left: 3px solid var(--color-success-500); padding-left: var(--spacing-sm); }

@@ -43,7 +43,6 @@ class BudgetService:
         items = []
         for item in result.items:
             info = build_budget_item(item)
-            info["percentage"] = float(item.percentage)
             info["status"] = item.status if item.status != "exceeded" else "over"
             items.append(info)
 
@@ -51,9 +50,9 @@ class BudgetService:
             "month": m,
             "year": y,
             "items": items,
-            "total_budgeted": float(result.total_budgeted.amount),
-            "total_spent": float(result.total_spent.amount),
-            "total_remaining": float(result.total_remaining.amount),
+            "total_budgeted": result.total_budgeted.amount,
+            "total_spent": result.total_spent.amount,
+            "total_remaining": result.total_remaining.amount,
         }
 
     async def create(self, data, user: dict) -> dict:
@@ -67,7 +66,7 @@ class BudgetService:
         result = await repo.create({
             "category_id": data.category_id,
             "household_id": user["household_id"],
-            "amount": float(data.amount),
+            "amount": data.amount,
             "month": data.month,
             "year": data.year,
         })
@@ -83,7 +82,7 @@ class BudgetService:
         if not budget or budget["household_id"] != user["household_id"]:
             raise ValueError("Presupuesto no encontrado")
 
-        result = await repo.update({**budget, "amount": float(data.amount)})
+        result = await repo.update({**budget, "amount": data.amount})
         await log_action(
             self.db, user["household_id"], user["id"], user["email"],
             "update", "budget", budget_id, budget.get("category_id"),

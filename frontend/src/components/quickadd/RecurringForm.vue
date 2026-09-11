@@ -12,6 +12,8 @@
           class="amount-field"
           placeholder="Ej: 55.000"
           aria-label="Monto mensual"
+          id="recurring-amount"
+          name="amount"
         >
       </div>
       <span v-if="submitted && !amount" class="field-error">¿Cuánto es?</span>
@@ -24,6 +26,8 @@
         type="text"
         class="text-input"
         placeholder="Netflix, arriendo, celular..."
+        id="recurring-name"
+        name="name"
       >
       <span v-if="submitted && !name" class="field-error">¿Cómo se llama ese pago?</span>
     </div>
@@ -48,7 +52,7 @@
 
     <div class="form-field">
       <label class="form-question">¿El día qué?</label>
-      <select v-model.number="dayOfMonth" class="form-select" aria-label="Día del pago">
+      <select v-model.number="dayOfMonth" class="form-select" aria-label="Día del pago" id="recurring-day" name="day_of_month">
         <option :value="0" disabled>Seleccionar día</option>
         <option v-for="d in 28" :key="d" :value="d">Día {{ d }}</option>
       </select>
@@ -61,6 +65,8 @@
         type="text"
         class="text-input"
         placeholder="Nota rápida (si quieres)"
+        id="recurring-description"
+        name="description"
       >
     </div>
 
@@ -130,9 +136,8 @@ function handleSubmit() {
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
-
-.amount-input:focus-within { border-color: var(--color-primary-500); }
 .amount-input.error { border-color: var(--color-error-400); }
 
 .currency { font-size: var(--font-size-xl); color: var(--color-neutral-400); }
@@ -165,7 +170,7 @@ function handleSubmit() {
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-neutral-700);
-  transition: all var(--transition-fast);
+  min-height: 44px;
 }
 
 .freq-btn:hover { border-color: var(--color-primary-300); }
@@ -179,9 +184,8 @@ function handleSubmit() {
   font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
   background: var(--color-neutral-0);
+  min-height: 44px;
 }
-
-.form-select:focus { border-color: var(--color-primary-500); outline: none; }
 
 .text-input {
   width: 100%;
@@ -190,9 +194,8 @@ function handleSubmit() {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   color: var(--color-neutral-700);
+  min-height: 44px;
 }
-
-.text-input:focus { border-color: var(--color-primary-500); outline: none; }
 
 .field-error {
   display: block;

@@ -49,8 +49,9 @@ class AuthService:
             household = await self.household_repo.create({"name": f"{data.name}'s Household"})
             await self.household_repo.add_member(household["id"], user["id"], "owner")
 
-            for cat in DEFAULT_CATEGORIES:
-                await self.category_repo.create({**cat, "household_id": household["id"]})
+            await self.category_repo.bulk_create([
+                {**cat, "household_id": household["id"]} for cat in DEFAULT_CATEGORIES
+            ])
 
             updated_user = await self.user_repo.update({**user, "household_id": household["id"]})
             if not updated_user.get("household_id"):

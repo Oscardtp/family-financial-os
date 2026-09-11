@@ -127,6 +127,7 @@ class SavingsGoalModel(Base):
     target_date = Column(Date, nullable=True)
     monthly_contribution = Column(Numeric(15, 2), nullable=True)
     priority = Column(String(20), default="medium")
+    description = Column(Text, nullable=True)
     goal_type = Column(String(20), default="savings")
     expected_return_rate = Column(Numeric(5, 2), nullable=True)
     horizon_months = Column(Integer, nullable=True)
@@ -186,7 +187,7 @@ class RecurringPaymentModel(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
-    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False)
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
     category_id = Column(String(36), ForeignKey("categories.id"), nullable=True)
     name = Column(String(255), nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)

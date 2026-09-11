@@ -8,14 +8,15 @@
       <span class="goal-icon">{{ goal.goal_type === 'investment' ? '📈' : '🎯' }}</span>
       <div class="goal-title">
         <h3 class="goal-name">{{ goal.name }}</h3>
-        <span class="goal-badges">
-          <span class="goal-type-badge" :class="completed ? 'completed' : goal.goal_type">
-            {{ completed ? 'Lograda' : goal.goal_type === 'investment' ? 'Inversión' : 'Ahorro' }}
-          </span>
-          <span v-if="!completed && goal.priority" class="priority-badge" :class="goal.priority">
-            {{ goal.priority === 'high' ? 'Alta' : goal.priority === 'medium' ? 'Media' : 'Baja' }}
-          </span>
+      <span class="goal-badges">
+        <span class="goal-type-badge" :class="completed ? 'completed' : goal.goal_type">
+          {{ completed ? 'Lograda' : goal.goal_type === 'investment' ? 'Inversión' : 'Ahorro' }}
         </span>
+        <GoalStatusBadge v-if="!completed" :on-track="goal.on_track" :completed="completed" />
+        <span v-if="!completed && goal.priority" class="priority-badge" :class="goal.priority">
+          {{ goal.priority === 'high' ? 'Alta' : goal.priority === 'medium' ? 'Media' : 'Baja' }}
+        </span>
+      </span>
       </div>
     </div>
 
@@ -67,6 +68,7 @@
         <div v-if="goal.projected_value" class="projection-result">
           <span class="projection-label">Valor proyectado:</span>
           <span class="projection-amount">${{ fmt(goal.projected_value) }}</span>
+          <GoalVariance :projected-value="goal.projected_value" :target-amount="goal.target_amount" />
         </div>
       </div>
 
@@ -102,6 +104,8 @@
         <div v-else class="expanded-section">
           <p class="expanded-empty">Aún no hay aportes registrados</p>
         </div>
+        <GoalProjectionDetail v-if="goal.goal_type === 'investment'" :goal="goal" :projection="projection" />
+        <GoalScenarioSimulator :goal="goal" />
       </div>
     </template>
 
@@ -125,9 +129,15 @@ import { computed } from 'vue'
 import { Calendar, TrendingUp } from 'lucide-vue-next'
 import { useCurrency } from '@/composables/useCurrency'
 import { useFinancialHelpers } from '@/composables/useFinancialHelpers'
+import { useGoalsStore } from '@/stores/goals'
+import GoalStatusBadge from './GoalStatusBadge.vue'
+import GoalVariance from './GoalVariance.vue'
+import GoalProjectionDetail from './GoalProjectionDetail.vue'
+import GoalScenarioSimulator from './GoalScenarioSimulator.vue'
 
 const { fmt, fmtMonth } = useCurrency()
 const { calcPercentage } = useFinancialHelpers()
+const goalsStore = useGoalsStore()
 
 const props = defineProps({
   goal: { type: Object, required: true },
@@ -149,6 +159,11 @@ const monthsLeft = computed(() => {
   const now = new Date()
   const months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth())
   return months > 0 ? months : null
+})
+
+const projection = computed(() => {
+  if (!props.goal) return null
+  return goalsStore.getProjection(props.goal)
 })
 </script>
 <style scoped>

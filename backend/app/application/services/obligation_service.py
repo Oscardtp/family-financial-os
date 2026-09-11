@@ -2,7 +2,6 @@ from app.financial_engine.helpers import months_between
 from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal
-import uuid
 
 from app.infrastructure.repositories.obligation_repository import SQLAlchemyFinancialObligationRepository
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository

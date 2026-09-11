@@ -9,6 +9,7 @@
             <span class="modal-currency">$</span>
             <input
               id="contribution-amount"
+              name="amount"
               ref="amountField"
               :value="amount"
               @input="$emit('update:amount', $event.target.value); validate($event.target.value)"
@@ -22,8 +23,9 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="contribution-date">¿Cuándo?</label>
-          <input
+            <input
             id="contribution-date"
+            name="date"
             :value="date"
             @input="$emit('update:date', $event.target.value)"
             type="date"
@@ -91,7 +93,7 @@ onMounted(() => {
 .modal-title {
   font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--color-neutral-900);
 }
@@ -112,10 +114,7 @@ onMounted(() => {
   border-radius: var(--radius-md);
   padding: 10px 12px;
   transition: border-color var(--transition-fast);
-}
-
-.modal-amount-input:focus-within {
-  border-color: var(--color-primary-500);
+  min-height: 44px;
 }
 
 .modal-amount-input.error {
@@ -171,6 +170,7 @@ onMounted(() => {
   padding: 8px 20px;
   border-radius: var(--radius-pill);
   border: none;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;

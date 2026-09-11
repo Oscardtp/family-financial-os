@@ -4,8 +4,20 @@
 
     <template v-else>
       <div class="card">
-        <h3>{{ household.name }}</h3>
-        <p class="subtitle">{{ household.members?.length }} miembros</p>
+        <div class="household-header">
+          <div v-if="editingName" class="household-edit-row">
+            <input v-model="newName" class="household-name-input" maxlength="255" />
+            <button class="btn-sm btn-primary" :disabled="savingName" @click="saveName">Guardar</button>
+            <button class="btn-sm btn-secondary" :disabled="savingName" @click="cancelEditName">Cancelar</button>
+          </div>
+          <div v-else class="household-info-row">
+            <h3>{{ household.name }}</h3>
+            <button v-if="isOwner" class="btn-icon-edit" @click="startEditName" aria-label="Editar nombre del hogar">
+              <Pencil :size="14" />
+            </button>
+          </div>
+          <p class="subtitle">{{ household.members?.length }} miembros</p>
+        </div>
       </div>
 
       <div class="card">
@@ -22,7 +34,9 @@
                 v-if="isOwner && m.id !== currentUserId"
                 :value="m.role"
                 class="role-select"
-                @change="changeRole(m.id, $event.target.value)"
+                id="member-role"
+                name="role"
+                @change="changeRole(m.id, $event.target.value)">
               >
                 <option value="member">Miembro</option>
                 <option value="viewer">Observador</option>
@@ -43,8 +57,8 @@
         <h3>Invitar Miembro</h3>
         <form class="invite-form" @submit.prevent="inviteMember">
           <div class="form-row">
-            <input v-model="inviteEmail" type="email" placeholder="Correo de la persona" required />
-            <select v-model="inviteRole">
+            <input v-model="inviteEmail" type="email" placeholder="Correo de la persona" required id="invite-email" name="email" />
+            <select v-model="inviteRole" id="invite-role" name="role">
               <option value="member">Miembro</option>
               <option value="viewer">Observador</option>
             </select>
@@ -74,6 +88,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import { Pencil } from 'lucide-vue-next'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import api from '@/services/api'
 
@@ -93,6 +108,35 @@ const removing = ref(false)
 
 const isOwner = computed(() => auth.user?.role === 'owner')
 const currentUserId = computed(() => auth.user?.id)
+
+const editingName = ref(false)
+const newName = ref('')
+const savingName = ref(false)
+
+function startEditName() {
+  newName.value = household.value.name || ''
+  editingName.value = true
+}
+
+function cancelEditName() {
+  editingName.value = false
+  newName.value = ''
+}
+
+async function saveName() {
+  if (!newName.value.trim()) return
+  savingName.value = true
+  try {
+    const { data } = await api.put('/household', { name: newName.value.trim() })
+    household.value.name = data.name
+    editingName.value = false
+    toast.success('Nombre del hogar actualizado')
+  } catch (e) {
+    toast.error(e.response?.data?.detail || 'No pudimos actualizar el nombre del hogar')
+  } finally {
+    savingName.value = false
+  }
+}
 
 async function loadHousehold() {
   loading.value = true
@@ -189,28 +233,10 @@ onMounted(loadHousehold)
   background: var(--color-neutral-0);
   outline: none;
 }
-.role-select:focus { border-color: var(--color-primary-500); }
-.btn-sm {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
 .btn-danger { background: var(--color-error-100); color: var(--color-error-600); }
 .btn-danger:hover { background: var(--color-error-200); }
 .invite-form { display: flex; flex-direction: column; gap: var(--space-sm); }
 .form-row { display: flex; gap: var(--space-sm); }
-.form-row input, .form-row select {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-neutral-200);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  outline: none;
-  background: var(--color-neutral-0);
-  color: var(--color-neutral-900);
-}
-.form-row input:focus, .form-row select:focus { border-color: var(--color-primary-500); }
 .btn-primary {
   padding: var(--space-sm) var(--space-md);
   background: var(--color-primary-600);
@@ -225,6 +251,31 @@ onMounted(loadHousehold)
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .error-text { color: var(--color-error-500); font-size: 0.8rem; }
 .success-text { color: var(--color-success-500); font-size: 0.8rem; }
+
+.household-header { display: flex; flex-direction: column; gap: var(--space-xs); }
+.household-info-row { display: flex; align-items: center; gap: var(--space-sm); }
+.household-info-row h3 { margin: 0; }
+.household-edit-row { display: flex; align-items: center; gap: var(--space-sm); }
+.household-name-input {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: 1.5px solid var(--color-neutral-200);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-900);
+  outline: none;
+  min-height: 44px;
+}
+.household-name-input:focus { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12); }
+.btn-secondary { background: var(--color-neutral-100); color: var(--color-neutral-700); }
+.btn-secondary:hover { background: var(--color-neutral-200); }
+.btn-icon-edit {
+  background: none; border: none; color: var(--color-neutral-400); cursor: pointer;
+  padding: 4px; border-radius: var(--radius-sm); transition: all var(--transition-fast);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-icon-edit:hover { color: var(--color-primary-600); background: var(--color-primary-50); }
 
 @media (max-width: 640px) {
   .form-row {

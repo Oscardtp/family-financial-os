@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 import uuid
 
 
@@ -14,6 +14,10 @@ class CategoryRepository(ABC):
 
     @abstractmethod
     async def create(self, category: dict) -> dict:
+        ...
+
+    @abstractmethod
+    async def bulk_create(self, categories: List[dict]) -> List[dict]:
         ...
 
     @abstractmethod

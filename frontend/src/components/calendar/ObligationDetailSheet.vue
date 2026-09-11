@@ -99,7 +99,7 @@ watch(() => props.show, async (val) => {
   padding: var(--spacing-lg); position: relative; max-height: 88vh; overflow: auto;
 }
 .sheet-close { position: absolute; top: var(--spacing-sm); right: var(--spacing-md); border: none; background: transparent; cursor: pointer; color: var(--color-neutral-500); }
-.sheet-title { font-family: var(--font-display, 'Poppins', 'Inter', sans-serif); font-size: 1.1rem; font-weight: 700; color: var(--color-neutral-900); text-align: center; padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg); margin: 0; }
+.sheet-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--color-neutral-900); text-align: center; padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg); margin: 0; }
 .loading-state { text-align: center; color: var(--color-neutral-500); padding: var(--spacing-lg); }
 .empty-state-inline { text-align: center; color: var(--color-neutral-400); font-size: 0.85rem; padding: var(--spacing-lg); }
 .obligation-detail { display: flex; flex-direction: column; gap: var(--spacing-md); padding: 0 var(--spacing-sm); }
@@ -108,7 +108,7 @@ watch(() => props.show, async (val) => {
 .obligation-badge { padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; }
 .badge-active { background: var(--color-success-50); color: var(--color-success-700); border: 1px solid var(--color-success-200); }
 .badge-inactive { background: var(--color-neutral-100); color: var(--color-neutral-500); border: 1px solid var(--color-neutral-200); }
-.obligation-amount { font-family: var(--font-display, 'Poppins', 'Inter', sans-serif); font-size: 1.6rem; font-weight: 800; color: var(--color-neutral-900); }
+.obligation-amount { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 800; color: var(--color-neutral-900); }
 .obligation-period { font-size: 0.9rem; font-weight: 500; color: var(--color-neutral-500); margin-left: 4px; }
 .obligation-info { display: flex; flex-direction: column; gap: var(--spacing-sm); border-top: 1px solid var(--color-neutral-100); padding-top: var(--spacing-md); }
 .obligation-info-row { display: flex; justify-content: space-between; align-items: center; }
@@ -117,7 +117,7 @@ watch(() => props.show, async (val) => {
 .form-actions { display: flex; gap: var(--spacing-sm); padding: var(--spacing-md) var(--spacing-lg) 0; }
 .btn-ghost {
   flex: 1; border: 1.5px solid var(--color-neutral-200); background: var(--color-neutral-0);
-  border-radius: var(--radius-lg); padding: var(--spacing-md); font-weight: 600; cursor: pointer;
+  border-radius: var(--radius-lg); padding: var(--spacing-md); font-family: var(--font-sans); font-weight: 500; cursor: pointer;
   color: var(--color-neutral-700);
 }
 </style>

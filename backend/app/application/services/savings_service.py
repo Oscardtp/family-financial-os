@@ -32,17 +32,17 @@ class SavingsService:
         result = engine.calculate_progress(goals, monthly_income, monthly_expenses)
 
         return {
-            "total_target": float(result.total_target.amount),
-            "total_current": float(result.total_current.amount),
-            "overall_percentage": float(result.overall_percentage),
-            "savings_rate": float(result.savings_rate) if result.savings_rate is not None else None,
-            "monthly_income": float(monthly_income.amount),
-            "monthly_expenses": float(monthly_expenses.amount),
+            "total_target": result.total_target.amount,
+            "total_current": result.total_current.amount,
+            "overall_percentage": result.overall_percentage,
+            "savings_rate": result.savings_rate,
+            "monthly_income": monthly_income.amount,
+            "monthly_expenses": monthly_expenses.amount,
             "goals": [
                 {
                     "id": g.id, "name": g.name,
-                    "target": float(g.target.amount), "current": float(g.current.amount),
-                    "percentage": float(g.percentage), "remaining": float(g.remaining.amount),
+                    "target": g.target.amount, "current": g.current.amount,
+                    "percentage": g.percentage, "remaining": g.remaining.amount,
                     "on_track": g.on_track, "months_to_goal": g.months_to_goal,
                 }
                 for g in result.goals

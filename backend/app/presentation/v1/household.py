@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.presentation.deps import require_viewer, require_member, require_owner
@@ -16,6 +17,10 @@ class InviteMember(BaseModel):
 
 class UpdateRole(BaseModel):
     role: str = Field(..., pattern="^(owner|member|viewer)$")
+
+
+class HouseholdUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Nombre del hogar")
 
 
 @router.get("", summary="Get household info", description="Returns household details and all members")
@@ -43,6 +48,25 @@ async def get_household(
             for m in members
         ],
     }
+
+
+@router.put("", summary="Update household", description="Update household details like name")
+async def update_household(
+    data: HouseholdUpdate,
+    current_user: dict = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+):
+    household_id = current_user["household_id"]
+    if not household_id:
+        raise HTTPException(status_code=404, detail="No encontramos tu hogar")
+
+    repo = SQLAlchemyHouseholdRepository(db)
+    try:
+        result = await repo.update(household_id, data.model_dump(exclude_none=True))
+        await db.commit()
+        return result
+    except ValueError:
+        raise HTTPException(status_code=404, detail="No encontramos este hogar")
 
 
 @router.post("/invite", status_code=201, summary="Invite member", description="Invite a user to join the household by email")

@@ -22,7 +22,7 @@ const route = useRoute()
 const tabs = [
   { to: '/', label: 'Inicio', icon: LayoutDashboard },
   { to: '/debts', label: 'Deudas', icon: Receipt },
-  { to: '/calendar', label: 'Pagos', icon: Calendar },
+    { to: '/calendar', label: 'Calendario', icon: Calendar },
   { to: '/goals', label: 'Metas', icon: Target },
   { to: '/config', label: 'Perfil', icon: User },
 ]

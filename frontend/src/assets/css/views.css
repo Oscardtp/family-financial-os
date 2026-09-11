@@ -5,7 +5,7 @@
 .page-title {
   font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-neutral-900);
 }
 .card {
@@ -76,6 +76,7 @@
   color: var(--color-neutral-900);
   box-sizing: border-box;
   transition: border-color var(--transition-fast);
+  min-height: 44px;
 }
 .form-input:focus {
   outline: none;
@@ -90,6 +91,12 @@
   font-size: 0.875rem;
   background: var(--color-neutral-0);
   color: var(--color-neutral-900);
+  min-height: 44px;
+}
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12);
 }
 .input-prefix {
   display: flex;
@@ -103,9 +110,42 @@
   border-radius: var(--radius-md) 0 0 var(--radius-md);
   color: var(--color-neutral-500);
   font-size: 0.875rem;
+  min-height: 44px;
 }
 .input-prefix .with-prefix {
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  min-height: 44px;
+}
+.input-prefix:focus-within {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12);
+}
+.form-input-prefix {
+  display: flex;
+  align-items: center;
+}
+.form-input-prefix .prefix {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-neutral-100);
+  border: 1.5px solid var(--color-neutral-200);
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  color: var(--color-neutral-500);
+  font-size: 0.875rem;
+  min-height: 44px;
+}
+.form-input-prefix .with-prefix {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  min-height: 44px;
+}
+.form-input-prefix:focus-within {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12);
+}
+.form-input.with-prefix:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12);
 }
 
 /* Buttons — Tyba-inspired style */
@@ -113,10 +153,16 @@
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-md);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-weight: 500;
   cursor: pointer;
   border: none;
   transition: all var(--transition-fast);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .btn:disabled {
   opacity: 0.6;
@@ -125,10 +171,17 @@
 .btn-sm {
   font-size: 0.8rem;
   padding: var(--spacing-xs) var(--spacing-md);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 .btn-primary {
   background: var(--color-primary-600);
   color: white;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-700);
@@ -334,7 +387,7 @@
 .modal-title {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--color-neutral-900);
 }
@@ -620,7 +673,7 @@
 .step-title {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 .step-hint {
@@ -704,7 +757,7 @@
 .success-title {
   font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 8px;
   color: var(--color-neutral-900);
 }
@@ -838,14 +891,17 @@
   padding: 10px;
   border: none;
   border-radius: var(--radius-md);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 .action-btn.primary {
   background: var(--color-primary-500);
   color: white;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 .action-btn.primary:hover {
   background: var(--color-primary-600);
@@ -1044,7 +1100,7 @@
 .modal-title {
   font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--color-neutral-900);
 }
@@ -1116,6 +1172,7 @@
   padding: 8px 20px;
   border-radius: var(--radius-pill);
   border: none;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -1132,4 +1189,10 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Focus visible global */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
 }

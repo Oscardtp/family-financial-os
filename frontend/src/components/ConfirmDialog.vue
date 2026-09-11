@@ -2,28 +2,30 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="modelValue" class="confirm-overlay" @click="cancel" role="dialog" aria-modal="true" :aria-labelledby="titleId">
-        <div class="confirm-content" @click.stop>
-          <div class="confirm-icon" :class="'icon-' + type">
-            <AlertTriangle v-if="type === 'danger'" :size="24" />
-            <HelpCircle v-else-if="type === 'warning'" :size="24" />
-            <Info v-else :size="24" />
-          </div>
-          <h3 :id="titleId" class="confirm-title">{{ title }}</h3>
-          <p class="confirm-message">{{ message }}</p>
-          <div class="confirm-actions">
-            <button class="btn-cancel" @click="cancel" ref="cancelBtn">
-              {{ cancelText }}
-            </button>
-            <button
-              class="btn-confirm"
-              :class="'btn-' + type"
-              @click="confirm"
+        <FocusTrap :visible="modelValue">
+          <div class="confirm-content" @click.stop>
+            <div class="confirm-icon" :class="'icon-' + type">
+              <AlertTriangle v-if="type === 'danger'" :size="24" />
+              <HelpCircle v-else-if="type === 'warning'" :size="24" />
+              <Info v-else :size="24" />
+            </div>
+            <h3 :id="titleId" class="confirm-title">{{ title }}</h3>
+            <p class="confirm-message">{{ message }}</p>
+            <div class="confirm-actions">
+              <button class="btn-cancel" @click="cancel" ref="cancelBtn">
+                {{ cancelText }}
+              </button>
+              <button
+                class="btn-confirm"
+                :class="'btn-' + type"
+                @click="confirm"
               :disabled="loading"
             >
               {{ loading ? 'Procesando...' : confirmText }}
             </button>
           </div>
         </div>
+        </FocusTrap>
       </div>
     </Transition>
   </Teleport>
@@ -32,6 +34,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import { AlertTriangle, HelpCircle, Info } from 'lucide-vue-next'
+import FocusTrap from '@/components/FocusTrap.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -115,12 +118,12 @@ function cancel() {
   color: #dc2626;
 }
 
-.confirm-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 8px;
-}
+  .confirm-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+  }
 
 .confirm-message {
   color: #6b7280;
@@ -134,11 +137,11 @@ function cancel() {
   gap: 12px;
 }
 
-.btn-cancel,
-.btn-confirm {
+.btn-cancel {
   padding: 10px 20px;
   border-radius: 8px;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   border: none;
@@ -152,6 +155,17 @@ function cancel() {
 
 .btn-cancel:hover {
   background: #e5e7eb;
+}
+
+.btn-confirm {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: all 150ms ease;
 }
 
 .btn-info {

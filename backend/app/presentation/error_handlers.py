@@ -39,12 +39,20 @@ async def validation_error_handler(request: Request, exc: ValidationError) -> JS
 
 async def http_error_handler(request: Request, exc: HTTPException) -> JSONResponse:
     detail = _friendly_detail(exc.status_code, exc.detail or "Ocurrió un error.")
-    logger.warning(
-        "HTTPException: status=%s path=%s detail=%s",
-        exc.status_code,
-        request.url.path,
-        detail,
-    )
+    if exc.status_code in (400, 404, 405, 408, 422):
+        logger.debug(
+            "HTTPException: status=%s path=%s detail=%s",
+            exc.status_code,
+            request.url.path,
+            detail,
+        )
+    else:
+        logger.warning(
+            "HTTPException: status=%s path=%s detail=%s",
+            exc.status_code,
+            request.url.path,
+            detail,
+        )
     return JSONResponse(
         status_code=exc.status_code,
         content={

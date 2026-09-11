@@ -33,7 +33,8 @@ describe('GoalCreateModal', () => {
     expect(wrapper.find('#goal-name').exists()).toBe(true)
     expect(wrapper.find('#goal-target').exists()).toBe(true)
     expect(wrapper.find('#goal-type').exists()).toBe(true)
-    expect(wrapper.find('#goal-priority').exists()).toBe(true)
+    expect(wrapper.find('.priority-segment').exists()).toBe(true)
+    expect(wrapper.find('#goal-description').exists()).toBe(true)
   })
 
   it('renders modal title', () => {
@@ -91,6 +92,7 @@ describe('GoalCreateModal', () => {
     expect(data.target_amount).toBe(5000000)
     expect(data.goal_type).toBe('savings')
     expect(data.priority).toBe('medium')
+    expect(data.description).toBeNull()
   })
 
   it('shows submitting state', () => {

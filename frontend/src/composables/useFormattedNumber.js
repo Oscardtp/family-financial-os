@@ -6,9 +6,8 @@ export function useFormattedNumber(initialValue = 0, options = {}) {
   const rawValue = ref(initialValue)
 
   function formatNumber(num) {
-    if (num === null || num === undefined || num === '') return prefix ? prefix + ' 0' : '0'
-    const n = Number(num)
-    if (isNaN(n)) return prefix ? prefix + ' 0' : '0'
+    let n = Number(num)
+    if (isNaN(n)) n = 0
     const parts = n.toFixed(decimals).split('.')
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
     const formatted = parts.join(',')
@@ -24,15 +23,15 @@ export function useFormattedNumber(initialValue = 0, options = {}) {
     if (hasPrefix) {
       val = val.substring(prefix.length).trim()
     }
-    val = val.replace(/[^0-9]/g, '')
-    if (val === '') {
+    val = val.replace(/[.\s]/g, '').replace(',', '.')
+    if (val === '' || val === '.') {
       rawValue.value = 0
-      input.value = prefix ? prefix + ' 0' : '0'
+      input.value = formatNumber(0)
       return
     }
-    const num = parseInt(val, 10)
-    rawValue.value = num
-    input.value = formatNumber(num)
+    const num = parseFloat(val)
+    rawValue.value = Number.isFinite(num) ? num : 0
+    input.value = formatNumber(rawValue.value)
     const len = input.value.length
     input.setSelectionRange(len, len)
   }

@@ -2,11 +2,12 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="modal-overlay" @click="$emit('close')">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>Crear Deuda</h3>
-            <button class="modal-close" @click="$emit('close')">&times;</button>
-          </div>
+        <FocusTrap :visible="show">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <h3>Crear Deuda</h3>
+              <button class="modal-close" @click="$emit('close')">&times;</button>
+            </div>
 
           <form class="debt-form" @submit.prevent="submitCreate">
             <div class="form-group">
@@ -16,6 +17,8 @@
                 type="text"
                 class="form-input"
                 placeholder="Ej: Tarjeta de crédito Daviplata"
+                id="debt-name"
+                name="name"
                 required
               />
             </div>
@@ -27,6 +30,8 @@
                 type="text"
                 class="form-input"
                 placeholder="Ej: Daviplata"
+                id="debt-creditor"
+                name="creditor"
                 required
               />
             </div>
@@ -40,6 +45,8 @@
                   @input="fmtAmount.onInput"
                   @focus="fmtAmount.onFocus"
                   class="form-input with-prefix"
+                  id="debt-amount"
+                  name="amount"
                   required
                 />
               </div>
@@ -53,6 +60,8 @@
                   @input="fmtBalance.onInput"
                   @focus="fmtBalance.onFocus"
                   class="form-input with-prefix"
+                  id="debt-balance"
+                  name="current_balance"
                   required
                 />
               </div>
@@ -68,12 +77,14 @@
                   step="0.1"
                   min="0"
                   class="form-input"
+                  id="debt-interest-rate"
+                  name="interest_rate"
                 />
               </div>
 
               <div class="form-group">
                 <label class="form-label">Tipo de Tasa</label>
-                <select v-model="createForm.interest_rate_type" class="form-input">
+                <select v-model="createForm.interest_rate_type" class="form-input" id="debt-rate-type" name="interest_rate_type">
                   <option value="EA">EA (Efectiva Anual)</option>
                   <option value="EM">EM (Efectiva Mensual)</option>
                   <option value="nominal">Nominal Anual</option>
@@ -91,6 +102,8 @@
                   @input="fmtMinPay.onInput"
                   @focus="fmtMinPay.onFocus"
                   class="form-input with-prefix"
+                  id="debt-min-payment"
+                  name="minimum_payment"
                   required
                 />
               </div>
@@ -100,7 +113,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Tipo de Deuda</label>
-                <select v-model="createForm.debt_type" class="form-input">
+                <select v-model="createForm.debt_type" class="form-input" id="debt-type" name="debt_type">
                   <option value="loan">Prestamo</option>
                   <option value="credit_card">Tarjeta de crédito</option>
                   <option value="mortgage">Hipoteca</option>
@@ -117,6 +130,8 @@
                   min="1"
                   max="31"
                   class="form-input"
+                  id="debt-due-day"
+                  name="due_day"
                 />
               </div>
             </div>
@@ -127,6 +142,8 @@
                 v-model="createForm.start_date"
                 type="date"
                 class="form-input"
+                id="debt-start-date"
+                name="start_date"
               />
             </div>
 
@@ -137,6 +154,8 @@
                 type="text"
                 class="form-input"
                 placeholder="Ej: Pago fijo mensual"
+                id="debt-note"
+                name="note"
               />
             </div>
 
@@ -147,6 +166,7 @@
             </button>
           </form>
         </div>
+        </FocusTrap>
       </div>
     </Transition>
   </Teleport>
@@ -156,6 +176,7 @@
 import { ref, reactive, watch } from 'vue'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import api from '@/services/api'
+import FocusTrap from '@/components/FocusTrap.vue'
 
 const props = defineProps({
   show: { type: Boolean, default: false }
@@ -292,10 +313,6 @@ select.form-input {
   transition: border-color var(--transition-fast);
 }
 
-.input-prefix:focus-within {
-  border-color: var(--color-primary-500);
-}
-
 .prefix {
   padding: var(--spacing-md);
   background: var(--color-neutral-100);
@@ -303,16 +320,14 @@ select.form-input {
   font-size: 14px;
   font-weight: 500;
   border-right: 1px solid var(--color-neutral-200);
+  min-height: 44px;
 }
 
 .form-input.with-prefix {
   border: none;
   border-radius: 0;
   flex: 1;
-}
-
-.form-input.with-prefix:focus {
-  border: none;
+  min-height: 44px;
 }
 
 .form-row {

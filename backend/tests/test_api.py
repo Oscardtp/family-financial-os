@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 
 
 @pytest.mark.anyio

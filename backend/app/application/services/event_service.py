@@ -1,7 +1,6 @@
 import logging
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-import uuid
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
 from app.infrastructure.repositories.notification_repository import SQLAlchemyNotificationRepository

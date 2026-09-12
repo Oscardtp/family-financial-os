@@ -1,19 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { useRoute } from 'vue-router'
-
-vi.mock('vue-router', async () => {
-  const actual = await vi.importActual('vue-router')
-  return {
-    ...actual,
-    useRoute: () => ({ path: '/' }),
-  }
-})
 
 import BottomTabBar from '../BottomTabBar.vue'
 
 describe('BottomTabBar', () => {
-  it('shows Calendario label for calendar tab', () => {
+  it('has 4 tabs without Calendario', () => {
     const wrapper = mount(BottomTabBar, {
       global: {
         stubs: {
@@ -27,7 +18,7 @@ describe('BottomTabBar', () => {
         },
       },
     })
-    expect(wrapper.text()).toContain('Calendario')
-    expect(wrapper.text()).not.toContain(' Pagos ')
+    expect(wrapper.text()).not.toContain('Calendario')
+    expect(wrapper.findAll('.tab-item').length).toBe(4)
   })
 })

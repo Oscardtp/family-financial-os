@@ -44,10 +44,13 @@
       <div class="resumen-grid">
         <div class="resumen-main">
           <div class="card card-section">
-            <h3 class="card-title">
-              <span class="title-icon">📅</span> Hoy
-            </h3>
-            <div v-if="todayEvents.length === 0" class="empty-msg">Nada que pagar</div>
+            <h2 class="card-title">
+              <span class="title-icon"><Calendar :size="16" /></span> Hoy
+            </h2>
+            <div v-if="todayEvents.length === 0" class="empty-state empty-state--inline">
+              <Calendar :size="20" class="empty-icon" />
+              <p class="empty-text">Nada que pagar</p>
+            </div>
             <div v-else class="event-list">
               <div v-for="ev in todayEvents" :key="ev.id" class="event-item" :class="eventColor(ev)" @click="goEvent(ev)">
                 <span class="ev-item-title">{{ ev.title }}</span>
@@ -58,23 +61,9 @@
           </div>
 
           <div class="card card-section">
-            <h3 class="card-title">
-              <span class="title-icon">🔔</span> Próximamente
-            </h3>
-            <div v-if="upcomingEvents.length === 0" class="empty-msg">No hay pagos próximos</div>
-            <div v-else class="event-list">
-              <div v-for="ev in upcomingEvents" :key="ev.id" class="event-item" :class="eventColor(ev)" @click="goEvent(ev)">
-                <span class="ev-item-title">{{ ev.title }}</span>
-                <span class="ev-item-amount">{{ fmtFull(ev.amount) }}</span>
-                <span class="ev-item-meta">vence en {{ daysUntil(ev.due_date) }} días</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="card card-section">
-            <h3 class="card-title">
-              <span class="title-icon">📊</span> Este mes
-            </h3>
+            <h2 class="card-title">
+              <span class="title-icon"><BarChart3 :size="16" /></span> Este mes
+            </h2>
             <div class="month-grid">
               <div class="month-row">
                 <span>Ingresos</span>
@@ -92,10 +81,29 @@
             </div>
           </div>
 
+          <BudgetPanel @open-detail="openBudgetDetail" />
+
+          <div v-if="upcomingMovements.length" class="card card-section">
+            <div class="card-title-row">
+              <h2 class="card-title">
+                <span class="title-icon"><Bell :size="16" /></span> Próximos movimientos
+              </h2>
+              <router-link to="/agenda-financiera" class="btn-link">Ver agenda financiera →</router-link>
+            </div>
+            <div v-for="group in upcomingMovements" :key="group.dateStr" class="event-group">
+              <div class="event-group-header">{{ formatGroupLabel(group.dateStr) }}</div>
+              <div v-for="ev in group.events" :key="ev.id" class="event-item" :class="eventColor(ev)" @click="goEvent(ev)">
+                <span class="ev-item-title">{{ ev.title }}</span>
+                <span class="ev-item-amount">{{ fmtFull(ev.amount) }}</span>
+                <span class="ev-item-meta">{{ ev.type === 'income' ? 'Ingreso' : 'Pago' }}</span>
+              </div>
+            </div>
+          </div>
+
           <div v-if="topCategories.length" class="card card-section">
-            <h3 class="card-title">
-              <span class="title-icon">💸</span> ¿En qué se fue el dinero?
-            </h3>
+            <h2 class="card-title">
+              <span class="title-icon"><Wallet :size="16" /></span> ¿En qué se fue el dinero?
+            </h2>
             <div class="cat-bars">
               <div v-for="cat in topCategories.slice(0, showFullCat ? topCategories.length : 4)" :key="cat.name" class="cat-row">
                 <div class="cat-info">
@@ -114,9 +122,9 @@
           </div>
 
           <div class="card card-section">
-            <h3 class="card-title">
-              <span class="title-icon">📋</span> Últimos movimientos
-            </h3>
+            <h2 class="card-title">
+              <span class="title-icon"><ClipboardList :size="16" /></span> Últimos movimientos
+            </h2>
             <div v-if="d.recent_transactions?.length" class="tx-list">
               <div v-for="tx in d.recent_transactions.slice(0, 5)" :key="tx.id" class="tx-item">
                 <div class="tx-info">
@@ -128,13 +136,16 @@
                 </span>
               </div>
             </div>
-            <div v-else class="empty-msg">Registra tu primer movimiento con el botón +</div>
+            <div v-else class="empty-state empty-state--inline">
+              <Wallet :size="20" class="empty-icon" />
+              <p class="empty-text">Registra tu primer movimiento con el botón +</p>
+            </div>
           </div>
         </div>
 
         <div class="resumen-sidebar">
           <div class="card card-tinted card-deudas">
-            <h3 class="card-title">Lo que debemos</h3>
+            <h2 class="card-title">Lo que debemos</h2>
             <div class="side-rows">
               <div class="side-row">
                 <span class="side-label">Total</span>
@@ -153,7 +164,7 @@
           </div>
 
           <div v-if="d.savings_summary?.goals?.length" class="card card-tinted card-metas">
-            <h3 class="card-title">Nuestras metas</h3>
+            <h2 class="card-title">Nuestras metas</h2>
             <div class="side-list">
               <div v-for="g in d.savings_summary.goals.slice(0, 3)" :key="g.name" class="side-list-item">
                 <div class="side-list-info">
@@ -168,30 +179,14 @@
             <router-link to="/goals" class="card-link">Ver metas</router-link>
           </div>
 
-          <div v-if="d.budget_status?.length" class="card card-tinted card-presupuesto">
-            <h3 class="card-title">Cómo vamos con el presupuesto</h3>
-            <div class="budget-list">
-              <div v-for="b in d.budget_status.slice(0, 3)" :key="b.category" class="budget-item">
-                <div class="budget-header">
-                  <span class="budget-name">{{ b.category }}</span>
-                  <span class="budget-badge" :class="'badge-' + b.status">
-                    {{ b.status === 'ok' ? '✅' : b.status === 'warning' ? '⚠️' : '🚫' }}
-                  </span>
-                </div>
-                <div class="budget-bar">
-                  <div class="budget-fill" :class="'fill-' + b.status"
-                    :style="{ width: Math.min((b.spent / b.budgeted) * 100, 100) + '%' }" />
-                </div>
-                <span class="budget-detail">${{ fmt(b.spent) }} / ${{ fmt(b.budgeted) }}</span>
-              </div>
-            </div>
-          </div>
-
           <div class="card card-tinted card-coach">
-            <h3 class="card-title">
-              <span class="title-icon">🧠</span> Family Coach
-            </h3>
-            <div v-if="suggestions.length === 0" class="empty-msg">No hay sugerencias ahora</div>
+            <h2 class="card-title">
+              <span class="title-icon"><Brain :size="16" /></span> Family Coach
+            </h2>
+            <div v-if="suggestions.length === 0" class="empty-state empty-state--inline">
+              <Brain :size="20" class="empty-icon" />
+              <p class="empty-text">No hay sugerencias ahora</p>
+            </div>
             <div v-else class="coach-list">
               <div v-for="s in suggestions" :key="s.name" class="coach-item">
                 <p class="coach-text">{{ coachMessage(s) }}</p>
@@ -216,19 +211,24 @@
         </div>
       </div>
     </div>
+
+    <BudgetDetailModal :open="budgetModalOpen" @close="budgetModalOpen = false" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertTriangle, X } from 'lucide-vue-next'
+import { AlertTriangle, X, Calendar, Bell, BarChart3, Wallet, ClipboardList, Brain } from 'lucide-vue-next'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import BudgetPanel from '@/components/budget/BudgetPanel.vue'
+const BudgetDetailModal = defineAsyncComponent(() => import('@/components/budget/BudgetDetailModal.vue'))
 import { useCurrency } from '@/composables/useCurrency'
 import { useDashboard } from '@/composables/useDashboard'
 import { useCalendarStore } from '@/stores/useCalendar'
 import { useNotifications } from '@/composables/useNotifications'
 import { eventsService } from '@/services/events'
+import { useAgenda } from '@/composables/useAgenda'
 
 const router = useRouter()
 const { fmt, fmtFull } = useCurrency()
@@ -247,11 +247,14 @@ const error = computed(() => dashError.value)
 
 const alertDismissed = ref(false)
 const showFullCat = ref(false)
+const budgetModalOpen = ref(false)
 
 const availability = ref(null)
 const monthSummary = ref(null)
 const todayEvents = ref([])
-const upcomingEvents = ref([])
+const upcomingMovements = ref([])
+
+const { loadUpcoming, formatGroupLabel, groupByDate, upcomingEvents: agendaUpcoming } = useAgenda()
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -294,16 +297,18 @@ function coachMessage(s) {
 }
 
 function goEvent(ev) {
-  router.push({ path: '/calendar', query: { event_id: ev.id } })
+  router.push({ path: '/agenda-financiera', query: { event_id: ev.id } })
 }
 
 function handleAlertOption(option) {
   const opt = option.toLowerCase()
-  if (opt.includes('pago extra') || opt.includes('pago')) router.push('/calendar')
+  if (opt.includes('pago extra') || opt.includes('pago')) router.push('/agenda-financiera')
   else if (opt.includes('deuda') || opt.includes('reduci')) router.push('/debts')
   else if (opt.includes('gasto') || opt.includes('presupuesto')) router.push('/config')
   else if (opt.includes('ingreso') || opt.includes('ingres')) router.push('/config')
 }
+
+function openBudgetDetail() { budgetModalOpen.value = true }
 
 async function loadEvents() {
   try {
@@ -320,16 +325,23 @@ async function loadEvents() {
 
     const all = upcomingRes.data || []
     todayEvents.value = all.filter(e => e.due_date === todayStr && e.status !== 'paid').slice(0, 5)
-    upcomingEvents.value = all.filter(e => e.due_date > todayStr && e.status !== 'paid').slice(0, 5)
   } catch {
     availability.value = null
     todayEvents.value = []
-    upcomingEvents.value = []
   }
 }
 
+async function loadUpcomingMovements() {
+  await loadUpcoming(14)
+  upcomingMovements.value = groupByDate(agendaUpcoming.value || [])
+}
+
 async function loadAll() {
-  await Promise.all([loadData(), loadEvents(), loadSuggestions()])
+  try {
+    await Promise.all([loadData(), loadEvents(), loadSuggestions(), loadUpcomingMovements()])
+  } catch (e) {
+    console.error('[Resumen] loadAll failed', e)
+  }
 }
 
 onMounted(loadAll)
@@ -340,11 +352,11 @@ onMounted(loadAll)
 
 .resumen-header { margin-bottom: var(--spacing-md); }
 .resumen-greeting { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; margin: 0; color: var(--color-neutral-900); }
-.resumen-date { color: var(--color-neutral-500); font-size: 0.85rem; margin: 4px 0 0; }
+.resumen-date { color: var(--color-neutral-500); font-size: var(--font-size-sm-alt); margin: 4px 0 0; }
 
 .resumen-alert {
   display: flex; align-items: center; gap: 6px; padding: 8px 12px;
-  border-radius: var(--radius-md); font-size: 0.75rem; font-weight: 500;
+  border-radius: var(--radius-md); font-size: var(--font-size-xs); font-weight: 500;
   margin-bottom: var(--spacing-md); animation: fadeIn 200ms ease;
 }
 .resumen-alert.alert-critical { background: var(--color-error-50); color: var(--color-error-600); }
@@ -352,25 +364,27 @@ onMounted(loadAll)
 .resumen-alert.alert-info { background: var(--color-info-50); color: var(--color-info-600); }
 .alert-content { display: flex; flex-direction: column; gap: 6px; }
 .alert-header { display: flex; align-items: center; gap: 6px; }
-.alert-close { background: none; border: none; cursor: pointer; padding: 2px; margin-left: auto; color: inherit; opacity: 0.6; }
+.alert-close { background: none; border: none; cursor: pointer; padding: 2px; margin-left: auto; color: inherit; opacity: 0.6; transition: transform var(--transition-fast); }
 .alert-close:hover { opacity: 1; }
+.alert-close:active { transform: scale(0.94); }
 .alert-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .alert-action-btn {
-  padding: 3px 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-weight: 500;
-  border: 1px solid currentColor; background: transparent; cursor: pointer;
+  padding: 3px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-2xs); font-weight: 500;
+  border: 1px solid currentColor; background: transparent; cursor: pointer; transition: transform var(--transition-fast);
 }
 .alert-action-btn:hover { background: rgba(0,0,0,0.05); }
+.alert-action-btn:active { transform: scale(0.96); }
 
 .available-card {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff;
+  background: linear-gradient(135deg, var(--color-info-600), var(--color-primary-700)); color: var(--color-neutral-0);
   border-radius: 20px; padding: 20px; margin-bottom: var(--spacing-md);
 }
 .available-top { display: flex; justify-content: space-between; align-items: center; }
-.available-label { font-size: 0.8rem; opacity: 0.85; }
-.available-link { font-size: 0.75rem; color: #fff; opacity: 0.8; text-decoration: none; }
+.available-label { font-size: var(--font-size-xs-alt); opacity: 0.85; }
+.available-link { font-size: var(--font-size-xs); color: var(--color-neutral-0); opacity: 0.8; text-decoration: none; }
 .available-link:hover { opacity: 1; text-decoration: underline; }
-.available-value { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); display: block; margin: 4px 0; }
-.available-meta { display: flex; gap: 12px; font-size: 0.75rem; opacity: 0.8; font-family: var(--font-mono); }
+.available-value { font-size: var(--font-size-2xl-alt); font-weight: 800; font-family: var(--font-mono); display: block; margin: 4px 0; }
+.available-meta { display: flex; gap: 12px; font-size: var(--font-size-xs); opacity: 0.8; font-family: var(--font-mono); }
 
 .resumen-grid { display: grid; grid-template-columns: 1fr 300px; gap: var(--spacing-md); align-items: start; }
 .resumen-main { display: flex; flex-direction: column; gap: var(--spacing-md); }
@@ -395,8 +409,6 @@ onMounted(loadAll)
 .card-title-row .card-title { margin-bottom: 0; }
 .title-icon { margin-right: 4px; }
 
-.empty-msg { color: var(--color-neutral-500); font-size: 0.85rem; text-align: center; padding: var(--spacing-md) 0; }
-
 .event-list { display: flex; flex-direction: column; gap: 8px; }
 .event-item {
   display: flex; align-items: center; gap: 8px; padding: 10px 12px;
@@ -410,7 +422,16 @@ onMounted(loadAll)
 .ev-yellow { background: var(--color-warning-50); }
 .ev-red { background: var(--color-error-50); }
 .ev-blue { background: var(--color-info-50); }
-.ev-purple { background: #f3e8ff; }
+.ev-purple { background: var(--color-secondary-50); }
+
+.event-group { margin-bottom: 12px; }
+.event-group:last-child { margin-bottom: 0; }
+.event-group-header { font-size: 0.75rem; font-weight: 600; color: var(--color-neutral-500); text-transform: uppercase; margin-bottom: 4px; }
+
+.btn-link {
+  font-size: 0.8rem; color: var(--color-primary-600); text-decoration: none; font-weight: 500;
+}
+.btn-link:hover { text-decoration: underline; }
 
 .month-grid { display: flex; flex-direction: column; gap: 10px; }
 .month-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
@@ -469,10 +490,12 @@ onMounted(loadAll)
 .coach-item { background: var(--color-neutral-50); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .coach-text { font-size: 0.82rem; color: var(--color-neutral-700); margin: 0; }
 .coach-btn {
-  align-self: flex-start; border: none; background: var(--color-primary-600); color: #fff;
+  align-self: flex-start; border: none; background: var(--color-primary-600); color: var(--color-neutral-0);
   padding: 8px 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: transform var(--transition-fast);
 }
 .coach-btn:hover { background: var(--color-primary-700); }
+.coach-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .card-link {
   display: inline-block; margin-top: var(--spacing-md); font-size: 0.8rem;
@@ -483,11 +506,15 @@ onMounted(loadAll)
 .btn-expand {
   background: none; border: none; color: var(--color-primary-600); font-size: 0.8rem;
   font-weight: 500; cursor: pointer; padding: var(--spacing-xs) 0; text-decoration: none;
+  transition: opacity var(--transition-fast);
 }
 .btn-expand:hover { color: var(--color-primary-700); }
+.btn-expand:active { opacity: 0.7; }
 
-.btn { padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; }
-.btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); background: var(--color-neutral-100); color: var(--color-neutral-700); }
+.btn { padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: transform var(--transition-fast); }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); background: var(--color-neutral-100); color: var(--color-neutral-700); transition: transform var(--transition-fast); }
+.btn-sm:active:not(:disabled) { transform: scale(0.96); }
 
 .error-state { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-md); padding: var(--spacing-2xl); color: var(--color-error-500); }
 .loading-state { padding: var(--spacing-md) 0; }

@@ -49,7 +49,7 @@ defineEmits(['confirm', 'cancel'])
 }
 
 .confirm-modal {
-  background: #fff;
+  background: var(--color-neutral-0);
   border-radius: 16px;
   padding: 28px 24px 20px;
   width: 100%;
@@ -68,8 +68,8 @@ defineEmits(['confirm', 'cancel'])
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--color-error-100);
+  color: var(--color-error-600);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,13 +79,13 @@ defineEmits(['confirm', 'cancel'])
 .confirm-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #141b1f;
+  color: var(--color-neutral-900);
   margin: 0 0 8px;
 }
 
 .confirm-text {
   font-size: 0.88rem;
-  color: #536170;
+  color: var(--color-neutral-600);
   line-height: 1.45;
   margin: 0 0 20px;
 }
@@ -100,25 +100,26 @@ defineEmits(['confirm', 'cancel'])
   padding: 12px;
   border: none;
   border-radius: 12px;
-  background: #f2f2f2;
-  color: #536170;
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-600);
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: transform var(--transition-fast), background 0.15s ease;
 }
 
 .btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-neutral-200);
 }
+.btn-cancel:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-delete {
   flex: 1;
   padding: 12px;
   border: none;
   border-radius: 12px;
-  background: #dc2626;
-  color: #fff;
+  background: var(--color-error-600);
+  color: var(--color-neutral-0);
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
@@ -126,9 +127,13 @@ defineEmits(['confirm', 'cancel'])
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: #b91c1c;
+  background: var(--color-error-700);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+}
+.btn-delete:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.95);
 }
 
 .btn-delete:disabled {

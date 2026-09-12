@@ -1,7 +1,16 @@
 <template>
-  <div>
+  <div class="calendar-grid-view">
+    <div class="cal-header">
+      <h2 class="cal-month">{{ monthLabel }}</h2>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" @click="$emit('today')" aria-label="Hoy">Hoy</button>
+        <button class="cal-nav-btn" @click="$emit('prev')" aria-label="Mes anterior"><ChevronLeft :size="16" /></button>
+        <button class="cal-nav-btn" @click="$emit('next')" aria-label="Mes siguiente"><ChevronRight :size="16" /></button>
+      </div>
+    </div>
+
     <div class="cal-weekdays">
-      <span v-for="day in weekdays" :key="day" class="cal-weekday">{{ day }}</span>
+      <span v-for="day in WEEKDAYS" :key="day" class="cal-weekday">{{ day }}</span>
     </div>
 
     <div v-if="loading" class="cal-grid">
@@ -13,24 +22,22 @@
         v-for="(cell, i) in days"
         :key="i"
         class="cal-cell"
-        :class="{ 'out-month': !cell.inMonth, 'is-today': cell.isToday }"
-        @click.self="$emit('createOnDate', cell.dateStr)"
+        :class="{
+          'out-month': !cell.inMonth,
+          'is-today': cell.isToday,
+          'is-selected': cell.dateStr === selectedDate,
+          'has-events': cell.events.length > 0,
+        }"
+        @click="() => handleCellClick(cell)"
       >
-        <span class="cell-day" :class="{ 'today-pill': cell.isToday }" @click.stop>{{ cell.day }}</span>
-        <div class="cell-events">
-          <button
+        <span class="cell-day">{{ cell.day }}</span>
+        <div v-if="cell.events.length" class="cal-dot-row">
+          <span
             v-for="ev in cell.events"
             :key="ev.id"
-            class="ev-chip"
+            class="cal-dot"
             :class="eventColor(ev)"
-            @click.stop="$emit('openEvent', ev)"
-          >
-            <span class="ev-title">{{ ev.title }}</span>
-            <span v-if="ev.recommended_date && ev.due_date !== ev.recommended_date" class="ev-sub">{{ fmtDateShort(ev.recommended_date) }}</span>
-            <span v-if="isCutoffUrgent(ev)" class="ev-cutoff-badge">🔴</span>
-            <span v-if="ev.confidence < 100" class="ev-conf-badge">?</span>
-            <span class="ev-amount">${{ fmt(ev.amount) }}</span>
-          </button>
+          ></span>
         </div>
       </div>
     </div>
@@ -42,65 +49,129 @@
 </template>
 
 <script setup>
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+
+const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+const emit = defineEmits(['selectDay', 'createOnDate', 'prev', 'next', 'today'])
+
 defineProps({
   days: { type: Array, required: true },
-  weekdays: { type: Array, required: true },
+  monthLabel: { type: String, required: true },
   loading: { type: Boolean, default: false },
+  selectedDate: { type: String, default: '' },
   eventColor: { type: Function, required: true },
-  fmtDateShort: { type: Function, required: true },
-  isCutoffUrgent: { type: Function, required: true },
-  fmt: { type: Function, required: true },
 })
 
-defineEmits(['createOnDate', 'openEvent'])
+function handleCellClick(cell) {
+  if (cell.events.length > 0) {
+    emit('selectDay', cell.dateStr)
+  } else {
+    emit('createOnDate', cell.dateStr)
+  }
+}
 </script>
 
 <style scoped>
-.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
-.cal-weekday {
-  text-align: center; font-size: var(--font-size-xs, 0.75rem); font-weight: 700;
-  color: var(--color-neutral-400); padding: 4px 0; text-transform: uppercase;
-}
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.cal-cell {
-  background: var(--color-neutral-0); border: 1.5px solid var(--color-neutral-200);
-  border-radius: var(--radius-lg); min-height: 96px; padding: 6px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.out-month { background: var(--color-neutral-50); opacity: 0.6; }
-.is-today { border-color: var(--color-primary-500); }
-.cell-day { font-size: 0.8rem; font-weight: 600; color: var(--color-neutral-500); }
-.today-pill {
-  background: var(--color-primary-500); color: #fff; border-radius: 50%;
-  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
-}
-.cell-events { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+.calendar-grid-view { padding: var(--spacing-md); max-width: 980px; margin: 0 auto; }
 
-.ev-chip {
-  display: flex; align-items: center; gap: 4px; border: none; cursor: pointer;
-  border-radius: var(--radius-sm); padding: 3px 6px; font-size: 0.72rem;
-  text-align: left; color: var(--color-neutral-800); transition: filter var(--transition-fast);
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--spacing-md); padding: 0 var(--spacing-sm);
 }
-.ev-chip:hover { filter: brightness(0.95); }
-.ev-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ev-sub { font-size: 0.65rem; color: var(--color-neutral-500); white-space: nowrap; }
-.ev-cutoff-badge { font-size: 0.6rem; }
-.ev-conf-badge {
-  font-size: 0.6rem; background: var(--color-neutral-200); border-radius: 50%;
-  width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+.cal-month {
+  font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: 600;
+  color: var(--color-neutral-800); margin: 0; text-transform: capitalize;
 }
-.ev-amount { font-family: var(--font-mono); margin-left: auto; font-weight: 700; }
-.ev-income { background: var(--color-calendar-income-bg); }
-.ev-expense { background: var(--color-calendar-expense-bg); }
-.ev-debt { background: var(--color-calendar-debt-bg); }
-.ev-goal { background: var(--color-calendar-goal-bg); }
-.ev-paid { background: var(--color-calendar-paid-bg); }
-.ev-overdue { background: var(--color-calendar-overdue-bg); }
-.ev-upcoming { background: var(--color-calendar-upcoming-bg); }
-.ev-default { background: var(--color-calendar-default-bg); }
+.cal-nav { display: flex; gap: var(--spacing-xs); }
+.cal-nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 36px; min-width: 36px; padding: 0 var(--spacing-sm); border: 1px solid var(--color-neutral-200);
+  background: var(--color-neutral-0); color: var(--color-neutral-700);
+  border-radius: var(--radius-sm); cursor: pointer; font-size: var(--font-size-xs-alt);
+  font-weight: 500; transition: background var(--transition-fast);
+}
+.cal-nav-btn:hover { background: var(--color-neutral-100); }
+
+.cal-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  padding: 0 var(--spacing-sm) var(--spacing-sm);
+}
+.cal-weekday {
+  text-align: center; font-size: var(--font-size-3xs); font-weight: 700;
+  color: var(--color-neutral-500); padding: 8px 0; text-transform: uppercase;
+}
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 0 var(--spacing-sm); }
+.cal-cell {
+  min-height: 0; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  border-radius: var(--radius-lg); background: var(--color-neutral-0);
+  border: 1px solid var(--color-neutral-200); cursor: default;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  position: relative; gap: 4px; padding: 8px;
+}
+.cal-cell.has-events { cursor: pointer; }
+.cal-cell.has-events:hover { background: var(--color-neutral-50); }
+.cal-cell.out-month { opacity: 0.35; }
+.cal-cell.is-today { border-color: var(--color-primary-500); box-shadow: inset 0 0 0 1px var(--color-primary-500); }
+.cal-cell.is-selected { outline: 2px solid var(--color-warning-500); outline-offset: -2px; }
+
+.cell-day {
+  font-size: var(--font-size-xs-alt); font-weight: 700; color: var(--color-neutral-600);
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+}
+.cal-cell.is-today .cell-day {
+  background: var(--color-primary-500); color: #fff;
+}
+
+.cal-dot-row { display: flex; gap: 4px; margin-top: 6px; height: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.cal-dot { width: 8px; height: 8px; border-radius: 50%; }
+.cal-dot.ev-income { background: var(--color-calendar-income); }
+.cal-dot.ev-expense { background: var(--color-calendar-expense); }
+.cal-dot.ev-debt { background: var(--color-calendar-debt); }
+.cal-dot.ev-goal { background: var(--color-calendar-goal); }
+.cal-dot.ev-paid { background: var(--color-calendar-paid); }
+.cal-dot.ev-overdue { background: var(--color-calendar-overdue); }
+.cal-dot.ev-upcoming { background: var(--color-calendar-upcoming); }
+.cal-dot.ev-default { background: var(--color-calendar-default); }
 
 .skeleton-cell { background: var(--color-neutral-100); animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-.empty-state-inline { text-align: center; color: var(--color-neutral-400); margin-top: var(--spacing-lg); font-size: 0.85rem; }
+.empty-state-inline {
+  text-align: center; color: var(--color-neutral-500); margin-top: var(--spacing-lg);
+  font-size: var(--font-size-sm-alt);
+}
+
+@media (max-width: 1023px) {
+  .calendar-grid-view { padding: var(--spacing-sm); }
+  .cal-header { padding: 0; margin-bottom: var(--spacing-sm); }
+  .cal-month { font-size: var(--font-size-base); }
+  .cal-grid { gap: 3px; padding: 0 var(--spacing-xs); }
+  .cal-weekdays { padding: 0 var(--spacing-xs) var(--spacing-xs); gap: 3px; }
+  .cal-cell { padding: 6px; }
+  .cell-day { width: 26px; height: 26px; font-size: 0.75rem; }
+  .cal-dot { width: 7px; height: 7px; }
+}
+@media (max-width: 767px) {
+  .calendar-grid-view { padding: var(--spacing-sm); }
+  .cal-header { flex-direction: column; align-items: stretch; gap: var(--spacing-sm); }
+  .cal-month { text-align: center; font-size: var(--font-size-base); }
+  .cal-nav { justify-content: center; }
+  .cal-weekdays { padding: 0 0 var(--spacing-xs); }
+  .cal-grid {
+    grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0;
+    min-width: 320px;
+  }
+  .cal-cell {
+    border-radius: var(--radius-sm); padding: 4px;
+    aspect-ratio: 1 / 1; min-height: 0;
+    flex-direction: column; align-items: center; justify-content: flex-start;
+  }
+  .cell-day { width: 24px; height: 24px; font-size: 0.7rem; }
+  .cal-dot-row { margin-top: 4px; gap: 2px; }
+  .cal-dot { width: 6px; height: 6px; }
+  .cal-cell:first-child { border-top: 1px solid var(--color-neutral-200); }
+}
 </style>

@@ -72,7 +72,7 @@
           </label>
         </div>
 
-        <p v-if="error" class="form-error">{{ error }}</p>
+        <p v-if="error" class="form-error" role="alert" aria-live="assertive">{{ error }}</p>
 
         <div class="form-actions">
           <button type="button" class="btn-ghost" @click="$emit('close')">Cancelar</button>

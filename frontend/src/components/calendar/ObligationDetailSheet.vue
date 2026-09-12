@@ -36,8 +36,9 @@
         </div>
       </div>
 
-      <div v-else class="empty-state-inline">
-        <p>No pudimos cargar esta obligación.</p>
+      <div v-else class="empty-state empty-state--inline">
+        <AlertCircle :size="20" class="empty-icon" />
+        <p class="empty-text">No pudimos cargar esta obligación.</p>
       </div>
 
       <div class="form-actions">
@@ -98,10 +99,26 @@ watch(() => props.show, async (val) => {
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--spacing-lg); position: relative; max-height: 88vh; overflow: auto;
 }
-.sheet-close { position: absolute; top: var(--spacing-sm); right: var(--spacing-md); border: none; background: transparent; cursor: pointer; color: var(--color-neutral-500); }
+.sheet-close {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-neutral-500);
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition-fast);
+}
+.sheet-close:active { transform: scale(0.94); }
 .sheet-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--color-neutral-900); text-align: center; padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg); margin: 0; }
 .loading-state { text-align: center; color: var(--color-neutral-500); padding: var(--spacing-lg); }
-.empty-state-inline { text-align: center; color: var(--color-neutral-400); font-size: 0.85rem; padding: var(--spacing-lg); }
 .obligation-detail { display: flex; flex-direction: column; gap: var(--spacing-md); padding: 0 var(--spacing-sm); }
 .obligation-header { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
 .obligation-name { font-size: 1.1rem; font-weight: 700; color: var(--color-neutral-900); }
@@ -119,5 +136,7 @@ watch(() => props.show, async (val) => {
   flex: 1; border: 1.5px solid var(--color-neutral-200); background: var(--color-neutral-0);
   border-radius: var(--radius-lg); padding: var(--spacing-md); font-family: var(--font-sans); font-weight: 500; cursor: pointer;
   color: var(--color-neutral-700);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
+.btn-ghost:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 </style>

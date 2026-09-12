@@ -132,7 +132,24 @@ defineEmits(['pay', 'unpay', 'edit', 'delete', 'showObligationInfo'])
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--spacing-lg); position: relative; max-height: 88vh; overflow: auto;
 }
-.sheet-close { position: absolute; top: 14px; right: 14px; border: none; background: transparent; cursor: pointer; color: var(--color-neutral-500); }
+.sheet-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-neutral-500);
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition-fast);
+}
+.sheet-close:active { transform: scale(0.94); }
 .sheet-head { display: flex; align-items: center; gap: var(--spacing-sm); }
 .sheet-head h3 { margin: 0; }
 .sheet-amount { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 800; margin: var(--spacing-sm) 0 var(--spacing-md); }
@@ -147,24 +164,29 @@ defineEmits(['pay', 'unpay', 'edit', 'delete', 'showObligationInfo'])
 }
 .pay-btn {
   width: 100%; margin-top: var(--spacing-md); border: none;
-  background: var(--color-primary-500); color: #fff;
+  background: var(--color-primary-500); color: var(--color-neutral-0);
   padding: var(--spacing-md); border-radius: var(--radius-lg); font-weight: 700;
   cursor: pointer; display: flex; gap: 6px; justify-content: center;
+  transition: transform var(--transition-fast);
 }
+.pay-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .unpay-btn {
   width: 100%; margin-top: var(--spacing-md); border: 1.5px solid var(--color-warning-200);
   background: var(--color-warning-50); color: var(--color-warning-700);
   padding: var(--spacing-md); border-radius: var(--radius-lg); font-weight: 700;
   cursor: pointer; display: flex; gap: 6px; justify-content: center;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 .unpay-btn:hover { background: var(--color-warning-100); }
+.unpay-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .link-btn {
   width: 100%; margin-top: var(--spacing-sm); border: none; background: transparent;
   color: var(--color-primary-500); cursor: pointer; font-weight: 600;
   display: flex; gap: 4px; justify-content: center; align-items: center;
+  transition: opacity var(--transition-fast);
 }
 .sheet-divider { height: 1.5px; background: var(--color-neutral-200); margin: var(--spacing-md) 0; }
+.link-btn:active { opacity: 0.7; }
 .edit-btn {
   width: 100%; margin-top: var(--spacing-xs); border: none; background: transparent;
   color: var(--color-primary-500); padding: var(--spacing-sm); border-radius: var(--radius-lg);
@@ -172,6 +194,7 @@ defineEmits(['pay', 'unpay', 'edit', 'delete', 'showObligationInfo'])
   transition: background var(--transition-fast);
 }
 .edit-btn:hover { background: var(--color-primary-50); }
+.edit-btn:active { opacity: 0.7; }
 .delete-btn {
   width: 100%; margin-top: var(--spacing-xs); border: none; background: transparent;
   color: var(--color-error-500); padding: var(--spacing-sm); border-radius: var(--radius-lg);
@@ -179,6 +202,7 @@ defineEmits(['pay', 'unpay', 'edit', 'delete', 'showObligationInfo'])
   transition: background var(--transition-fast);
 }
 .delete-btn:hover { background: var(--color-error-50); }
+.delete-btn:active { opacity: 0.7; }
 .st-green { color: var(--color-success-700); }
 .st-yellow { color: var(--color-warning-700); }
 .st-red { color: var(--color-error-700); }

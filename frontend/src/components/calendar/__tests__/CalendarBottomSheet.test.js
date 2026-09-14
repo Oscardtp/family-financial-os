@@ -93,14 +93,14 @@ describe('CalendarBottomSheet', () => {
     expect(wrapper.find('.cal-sheet').exists()).toBe(true)
   })
 
-  it('renderiza el handle de arrastre', async () => {
+  it('renderiza el grip de arrastre', async () => {
     const wrapper = await openSheet()
-    expect(wrapper.find('.cal-sheet-handle').exists()).toBe(true)
+    expect(wrapper.find('.cal-sheet-grip').exists()).toBe(true)
   })
 
-  it('no renderiza el botón X de cerrar', async () => {
+  it('renderiza el botón X de cerrar', async () => {
     const wrapper = await openSheet()
-    expect(wrapper.find('.cal-sheet-close').exists()).toBe(false)
+    expect(wrapper.find('.cal-sheet-close').exists()).toBe(true)
   })
 
   it('no renderiza CalendarEventDetailSheet dentro del bottom sheet', async () => {

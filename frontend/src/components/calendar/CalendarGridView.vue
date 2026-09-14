@@ -38,6 +38,7 @@
           'is-selected': cell.dateStr === selectedDate,
           'has-events': cell.events.length > 0,
         }"
+        :aria-label="cellAriaLabel(cell)"
         @click="() => handleCellClick(cell)"
       >
         <span class="cell-day">{{ cell.day }}</span>
@@ -82,6 +83,20 @@ defineProps({
 
 const emit = defineEmits(['selectDay', 'createOnDate', 'prev', 'next', 'today', 'update:filter'])
 
+const TYPE_LABELS = {
+  income: 'Ingreso',
+  expense: 'Gasto',
+  debt: 'Pago',
+  goal: 'Meta',
+}
+
+function cellAriaLabel(cell) {
+  if (!cell.events.length) return ''
+  const types = [...new Set(cell.events.map(e => TYPE_LABELS[e.type] || 'Evento'))]
+  const count = cell.events.length
+  return `${cell.day} de ${cell.monthName || ''}: ${count} ${count === 1 ? 'evento' : 'eventos'}: ${types.join(', ')}`
+}
+
 function handleCellClick(cell) {
   if (cell.events.length > 0) {
     emit('selectDay', cell.dateStr)
@@ -105,7 +120,7 @@ function handleCellClick(cell) {
 }
 .cal-nav-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  height: 36px; min-width: 36px; padding: 0 var(--spacing-sm); border: 1px solid var(--color-neutral-200);
+  height: 44px; min-width: 44px; padding: 0 var(--spacing-sm); border: 1px solid var(--color-neutral-200);
   background: var(--color-neutral-0); color: var(--color-neutral-700);
   border-radius: var(--radius-sm); cursor: pointer; font-size: var(--font-size-xs-alt);
   font-weight: 500; transition: background var(--transition-fast);
@@ -139,6 +154,12 @@ function handleCellClick(cell) {
   transition: background var(--transition-fast), border-color var(--transition-fast);
   position: relative; gap: 4px; padding: 8px;
 }
+.cal-cell::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: var(--radius-md);
+}
 .cal-cell.has-events { cursor: pointer; }
 .cal-cell.has-events:hover { background: var(--color-neutral-50); }
 .cal-cell.out-month { opacity: 0.35; }
@@ -149,6 +170,8 @@ function handleCellClick(cell) {
   font-size: var(--font-size-xs-alt); font-weight: 700; color: var(--color-neutral-600);
   width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-full);
+  position: relative;
+  z-index: 1;
 }
 .cal-cell.is-today .cell-day {
   background: var(--color-primary-500); color: #fff;

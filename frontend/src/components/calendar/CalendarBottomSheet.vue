@@ -1,80 +1,61 @@
 <template>
   <div v-if="open" class="cal-sheet-backdrop" @click.self="$emit('close')">
-    <div
-      class="cal-sheet"
-      :class="'cal-sheet--' + heightState"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Agenda financiera"
-    >
-      <div class="cal-sheet-header">
-        <div class="cal-sheet-grip" role="button" aria-label="Cambiar tamaño" tabindex="0" @click="cycleHeight" @keydown.enter="cycleHeight"></div>
-        <span class="cal-sheet-title">Agenda</span>
-        <button class="cal-sheet-close" aria-label="Cerrar agenda" @click="$emit('close')">
-          <X :size="18" />
-        </button>
-      </div>
+    <div class="cal-sheet">
+      <div class="cal-sheet-handle" />
 
-      <div class="cal-sheet-body">
-        <CalendarGridView
-          v-if="storeReady"
-          :days="filteredCalendarDays"
-          :month-label="monthLabel"
-          :loading="store.loading"
-          :selected-date="selectedDate"
-          :filter="activeFilter"
-          :event-color="eventColorFn"
-          @update:filter="activeFilter = $event"
-          @select-day="handleSelectDay"
-          @create-on-date="handleCreateOnDate"
-          @prev="prevMonth"
-          @next="nextMonth"
-          @today="goToday"
-        />
+      <CalendarGridView
+        v-if="storeReady"
+        :days="filteredCalendarDays"
+        :month-label="monthLabel"
+        :loading="store.loading"
+        :selected-date="selectedDate"
+        :filter="activeFilter"
+        :event-color="eventColorFn"
+        @update:filter="activeFilter = $event"
+        @select-day="handleSelectDay"
+        @create-on-date="handleCreateOnDate"
+        @prev="prevMonth"
+        @next="nextMonth"
+        @today="goToday"
+      />
 
-        <div v-if="selectedDate && selectedEvents.length === 0" class="cal-day-detail-empty">
-          <p>No hay movimientos este día.</p>
+      <div v-if="selectedEvents.length" class="cal-day-detail">
+        <div class="cal-day-detail-date">
+          {{ selectedDateLabel }}
         </div>
-
-        <div v-if="selectedEvents.length" class="cal-day-detail">
-          <div class="cal-day-detail-date">
-            {{ selectedDateLabel }}
-          </div>
-          <div class="cal-day-detail-list">
-            <div
-              v-for="ev in selectedEvents"
-              :key="ev.id"
-              class="cal-day-detail-item"
-              :class="{ 'cal-day-detail-item--active': ev.id === selectedEventDetail?.id }"
-              :aria-label="eventAriaLabel(ev)"
-              @click="handleSelectEvent(ev)"
-            >
-              <div class="cal-day-detail-icon">
-                <component :is="typeIcon(ev.type)" :size="16" />
-              </div>
-              <div class="cal-day-detail-body">
-                <div class="cal-day-detail-title">{{ ev.title }}</div>
-              </div>
-              <div class="cal-day-detail-amount">{{ fmtAmount(ev.amount) }}</div>
+        <div class="cal-day-detail-list">
+          <div
+            v-for="ev in selectedEvents"
+            :key="ev.id"
+            class="cal-day-detail-item"
+            :class="{ 'cal-day-detail-item--active': ev.id === selectedEventDetail?.id }"
+            @click="handleSelectEvent(ev)"
+          >
+            <div class="cal-day-detail-icon">
+              <component :is="typeIcon(ev.type)" :size="16" />
             </div>
-          </div>
-          <div v-if="selectedEventDetail" class="cal-day-detail-extra">
-            <div v-if="selectedEventDetail.recommended_date" class="cal-day-detail-row">
-              <span class="cal-day-detail-label">Fecha recomendada</span>
-              <span class="cal-day-detail-value">{{ fmtDateShort(selectedEventDetail.recommended_date) }}</span>
+            <div class="cal-day-detail-body">
+              <div class="cal-day-detail-title">{{ ev.title }}</div>
             </div>
-            <div class="cal-day-detail-row">
-              <span class="cal-day-detail-label">Fecha límite</span>
-              <span class="cal-day-detail-value">{{ fmtDateShort(selectedEventDetail.due_date) }}</span>
-            </div>
-            <button
-              v-if="selectedEventDetail.obligation_id"
-              class="cal-day-detail-link"
-              @click="$emit('showObligationInfo', selectedEventDetail.obligation_id)"
-            >
-              Ver deuda
-            </button>
+            <div class="cal-day-detail-amount">{{ fmtAmount(ev.amount) }}</div>
           </div>
+        </div>
+        <div v-if="selectedEventDetail" class="cal-day-detail-extra">
+          <div v-if="selectedEventDetail.recommended_date" class="cal-day-detail-row">
+            <span class="cal-day-detail-label">Fecha recomendada</span>
+            <span class="cal-day-detail-value">{{ fmtDateShort(selectedEventDetail.recommended_date) }}</span>
+          </div>
+          <div class="cal-day-detail-row">
+            <span class="cal-day-detail-label">Fecha límite</span>
+            <span class="cal-day-detail-value">{{ fmtDateShort(selectedEventDetail.due_date) }}</span>
+          </div>
+          <button
+            v-if="selectedEventDetail.obligation_id"
+            class="cal-day-detail-link"
+            @click="$emit('showObligationInfo', selectedEventDetail.obligation_id)"
+          >
+            Ver deuda
+          </button>
         </div>
       </div>
     </div>
@@ -82,8 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { X } from 'lucide-vue-next'
+import { ref, computed, watch } from 'vue'
 import {
   TrendingUp, Target, CreditCard, Wallet, Bell,
 } from 'lucide-vue-next'
@@ -108,25 +88,10 @@ const storeReady = ref(false)
 const selectedDate = ref('')
 const selectedEvents = ref([])
 const selectedEventDetail = ref(null)
-const heightState = ref('half')
-
-const PRESETS = ['half', 'mid', 'high', 'full']
 
 function eventColorFn(ev) { return _eventColor(ev) }
 
 function typeIcon(type) { return _typeIcon(type, { TrendingUp, Target, CreditCard, Wallet, Bell }) }
-
-const TYPE_LABELS = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  debt: 'Pago',
-  goal: 'Meta',
-}
-
-function eventAriaLabel(ev) {
-  const type = TYPE_LABELS[ev.type] || 'Evento'
-  return `${type}: ${ev.title}. ${fmtAmount(ev.amount)}`
-}
 
 function fmtAmount(amount) {
   const n = Number(amount)
@@ -144,16 +109,6 @@ const selectedDateLabel = computed(() => {
   if (selectedDate.value === todayStr) return 'HOY'
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }).toUpperCase()
 })
-
-function cycleHeight() {
-  const idx = PRESETS.indexOf(heightState.value)
-  const next = (idx + 1) % PRESETS.length
-  heightState.value = PRESETS[next]
-  if (heightState.value === 'full') {
-    emit('close')
-    heightState.value = 'half'
-  }
-}
 
 function handleSelectDay(dateStr) {
   selectedDate.value = dateStr
@@ -180,20 +135,6 @@ function handleCreateOnDate(_dateStr) {
   emit('close')
 }
 
-function close() {
-  heightState.value = 'half'
-  emit('close')
-}
-
-function onKey(e) {
-  if (e.key === 'Escape' && props.open) {
-    close()
-  }
-  if (e.key === 'Backspace' && props.open) {
-    close()
-  }
-}
-
 watch(() => props.open, async (val) => {
   if (val) {
     storeReady.value = false
@@ -202,21 +143,13 @@ watch(() => props.open, async (val) => {
     selectedEventDetail.value = null
     await store.fetchRange()
     storeReady.value = true
-    heightState.value = 'half'
     if (props.selectedEvent) {
       handleSelectEvent(props.selectedEvent)
     }
   }
 })
 
-onMounted(() => {
-  window.addEventListener('keydown', onKey)
-})
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKey)
-})
-
-defineExpose({ handleSelectDay, handleSelectEvent, close })
+defineExpose({ handleSelectDay, handleSelectEvent })
 </script>
 
 <style scoped>
@@ -236,70 +169,19 @@ defineExpose({ handleSelectDay, handleSelectEvent, close })
   max-width: 980px;
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  max-height: 85vh;
+  overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
-  transition: max-height 200ms ease;
 }
-.cal-sheet--half { max-height: 50vh; }
-.cal-sheet--mid { max-height: 65vh; }
-.cal-sheet--high { max-height: 80vh; }
-.cal-sheet--full { max-height: 95vh; }
-
-.cal-sheet-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 2px 0 var(--spacing-sm);
-}
-.cal-sheet-grip {
-  width: 36px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: var(--radius-full);
-  transition: background var(--transition-fast);
-}
-.cal-sheet-grip::before {
-  content: '';
-  display: block;
-  width: 28px;
+.cal-sheet-handle {
+  width: 40px;
   height: 4px;
-  border-radius: 2px;
   background: var(--color-neutral-300);
-}
-.cal-sheet-grip:hover { background: var(--color-neutral-100); }
-.cal-sheet-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-neutral-900);
-}
-.cal-sheet-close {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: transparent;
-  color: var(--color-neutral-600);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.cal-sheet-close:hover { background: var(--color-neutral-100); }
-.cal-sheet-close:active { transform: scale(0.96); }
-
-.cal-sheet-body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  border-radius: 2px;
+  margin: 0 auto;
+  flex-shrink: 0;
 }
 
 .cal-sheet > :deep(.calendar-grid-view) {
@@ -331,13 +213,6 @@ defineExpose({ handleSelectDay, handleSelectEvent, close })
 }
 .cal-day-detail-item:hover { background: var(--color-neutral-50); }
 .cal-day-detail-item--active { background: var(--color-neutral-100); }
-.cal-day-detail-empty {
-  margin-top: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-sm);
-  text-align: center;
-  color: var(--color-neutral-500);
-  font-size: var(--font-size-sm-alt);
-}
 .cal-day-detail-icon {
   width: 28px; height: 28px; border-radius: var(--radius-md);
   background: var(--color-neutral-100); display: inline-flex; align-items: center; justify-content: center;
@@ -395,6 +270,7 @@ defineExpose({ handleSelectDay, handleSelectEvent, close })
 @media (max-width: 767px) {
   .cal-sheet {
     padding: var(--spacing-sm);
+    max-height: 90vh;
   }
 }
 </style>

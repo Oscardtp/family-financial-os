@@ -11,7 +11,7 @@
 
           <form class="debt-form" @submit.prevent="submitEdit">
             <div class="form-group">
-              <label class="form-label">Nombre</label>
+              <label class="form-label" for="edit-debt-name">Nombre</label>
               <input
                 v-model="editForm.name"
                 type="text"
@@ -23,7 +23,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Acreedor</label>
+              <label class="form-label" for="edit-debt-creditor">Acreedor</label>
               <input
                 v-model="editForm.creditor"
                 type="text"
@@ -35,7 +35,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Saldo Actual</label>
+                <label class="form-label" for="edit-debt-balance">Saldo Actual</label>
               <div class="input-prefix">
                 <input
                   :value="fmtBalance.displayValue.value"
@@ -51,7 +51,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Tasa Interes (%)</label>
+                <label class="form-label" for="edit-debt-interest-rate">Tasa Interes (%)</label>
                 <input
                   v-model.number="editForm.interest_rate"
                   type="number"
@@ -65,7 +65,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Tipo de Tasa</label>
+                <label class="form-label" for="edit-debt-rate-type">Tipo de Tasa</label>
                 <select v-model="editForm.interest_rate_type" class="form-input" id="edit-debt-rate-type" name="interest_rate_type">
                   <option value="EA">EA (Efectiva Anual)</option>
                   <option value="EM">EM (Efectiva Mensual)</option>
@@ -77,7 +77,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Pago Minimo</label>
+                <label class="form-label" for="edit-debt-min-payment">Pago Minimo</label>
                 <div class="input-prefix">
                   <input
                     :value="fmtMinPay.displayValue.value"
@@ -93,7 +93,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Dia Vencimiento</label>
+              <label class="form-label" for="edit-debt-due-day">Dia Vencimiento</label>
               <input
                 v-model.number="editForm.due_day"
                 type="number"
@@ -106,7 +106,7 @@
               />
             </div>
 
-            <p v-if="editError" class="form-error">{{ editError }}</p>
+            <p v-if="editError" class="form-error" role="alert" aria-live="assertive">{{ editError }}</p>
 
             <button type="submit" class="submit-btn" :disabled="editing">
               {{ editing ? 'Guardando...' : 'Guardar Cambios' }}
@@ -228,7 +228,9 @@ async function submitEdit() {
   cursor: pointer;
   color: var(--color-neutral-500);
   line-height: 1;
+  transition: transform var(--transition-fast);
 }
+.modal-close:active { transform: scale(0.94); }
 
 .debt-form {
   display: flex;
@@ -285,12 +287,13 @@ async function submitEdit() {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .submit-btn:hover:not(:disabled) {
   background: var(--color-primary-600);
 }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .submit-btn:disabled {
   opacity: 0.5;

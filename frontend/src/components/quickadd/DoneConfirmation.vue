@@ -59,7 +59,9 @@ const submessage = computed(() => messages[props.type]?.sub || '')
   color: white;
   background: var(--color-success-500);
   cursor: pointer;
+  transition: transform var(--transition-fast);
 }
 
 .close-btn:hover { opacity: 0.9; }
+.close-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 </style>

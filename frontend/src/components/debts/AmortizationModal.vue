@@ -69,7 +69,9 @@
           </div>
 
           <div v-else class="empty-state">
-            <span>No hay datos de amortización disponibles.</span>
+            <BarChart3 :size="48" class="empty-icon" />
+            <p class="empty-text">No hay datos de amortización disponibles.</p>
+            <span class="empty-hint">Esta deuda no tiene pagos registrados aún.</span>
           </div>
         </div>
       </div>
@@ -79,6 +81,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { BarChart3 } from 'lucide-vue-next'
 import api from '@/services/api'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -165,17 +168,9 @@ watch(
   cursor: pointer;
   color: var(--color-neutral-500);
   line-height: 1;
+  transition: transform var(--transition-fast);
 }
-
-.loading-state,
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  color: var(--color-neutral-500);
-  font-size: 14px;
-}
+.modal-close:active { transform: scale(0.94); }
 
 .amort-summary {
   display: grid;

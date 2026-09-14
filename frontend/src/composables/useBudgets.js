@@ -42,6 +42,44 @@ export function useBudgets() {
     scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + fmt(v) } }, x: { grid: { display: false } } },
   }
 
+  const budgetProjection = computed(() => {
+    if (!statusData.value) return null
+    return {
+      total_projected_spent: statusData.value.total_projected_spent ?? 0,
+      total_projected_remaining: statusData.value.total_projected_remaining ?? 0,
+      total_will_exceed: statusData.value.total_will_exceed ?? false,
+    }
+  })
+
+  const budgetTotals = computed(() => {
+    const sd = statusData.value
+    if (!sd) return { planificado: 0, ejecutado: 0, disponible: 0, proyectado: 0 }
+    return {
+      planificado: Number(sd.total_budgeted ?? 0),
+      ejecutado: Number(sd.total_spent ?? 0),
+      disponible: Number(sd.total_remaining ?? 0),
+      proyectado: Number(sd.total_projected_spent ?? 0),
+    }
+  })
+
+  function budgetStatusLabel(projection) {
+    if (!projection) return 'Vamos bien'
+    if (projection.total_will_exceed) return 'Probablemente excederemos'
+    return 'Vamos bien'
+  }
+
+  const budgetAlertMessage = computed(() => {
+    const proj = budgetProjection.value
+    if (!proj || !proj.total_will_exceed) return ''
+    const total = budgetTotals.value.planificado
+    const projected = proj.total_projected_spent
+    const overrun = projected - total
+    if (total > 0 && overrun > 0) {
+      return `Según el ritmo actual, podríamos terminar en $${fmt(projected)}, excediendo el presupuesto en $${fmt(overrun)}.`
+    }
+    return ''
+  })
+
   function prevMonth() {
     if (month.value === 1) { month.value = 12; year.value-- }
     else { month.value-- }
@@ -101,6 +139,7 @@ export function useBudgets() {
   return {
     loading, error, month, year, monthLabel, statusData, rawBudgets,
     budgetItems, unbudgetedCategories, chartData, chartOptions,
+    budgetProjection, budgetTotals, budgetStatusLabel, budgetAlertMessage,
     prevMonth, nextMonth, statusLabel, loadBudgets, loadCategories,
     createBudget, editBudget, deleteBudget,
   }

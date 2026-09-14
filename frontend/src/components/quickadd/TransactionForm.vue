@@ -46,7 +46,10 @@
           <span class="cat-name">{{ cat.name }}</span>
         </button>
       </div>
-      <p v-else class="empty-msg">{{ catSearch ? 'No encontré esa categoría' : 'Primero crea categorías en ajustes' }}</p>
+      <div v-else class="empty-state empty-state--inline">
+        <Tag :size="20" class="empty-icon" />
+        <p class="empty-text">{{ catSearch ? 'No encontré esa categoría' : 'Primero crea categorías en ajustes' }}</p>
+      </div>
       <span v-if="submitted && !categoryId" class="field-error">¿En qué te gastaste?</span>
     </div>
 
@@ -81,6 +84,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { Tag } from 'lucide-vue-next'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -203,6 +207,7 @@ function handleSubmit() {
 
 .category-btn:hover { border-color: var(--color-primary-300); }
 .category-btn.selected { border-color: var(--color-primary-500); background: var(--color-primary-50); }
+.category-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 .category-btn.selected::after {
   content: '✓';
   position: absolute;
@@ -222,13 +227,6 @@ function handleSubmit() {
 
 .cat-emoji { font-size: 20px; }
 .cat-name { font-size: var(--font-size-xs); color: var(--color-neutral-600); text-align: center; }
-
-.empty-msg {
-  text-align: center;
-  color: var(--color-neutral-400);
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-md);
-}
 
 .cat-search {
   width: 100%;
@@ -291,6 +289,7 @@ function handleSubmit() {
 .submit-btn.expense { background: var(--color-error-500); }
 .submit-btn.income { background: var(--color-success-500); }
 .submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .spinner {

@@ -414,6 +414,10 @@ class BudgetStatusItem(BaseModel):
     spent: Decimal = Field(..., description="Amount spent")
     status: str = Field(..., description="Budget status: ok, warning, or over")
     message: Optional[str] = Field(None, description="Explanatory message")
+    projected_spent: Optional[Decimal] = Field(None, description="Projected spending at month-end based on current pace")
+    projected_remaining: Optional[Decimal] = Field(None, description="Projected remaining at month-end")
+    will_exceed: Optional[bool] = Field(None, description="Whether the budget is likely to be exceeded by month-end")
+    projected_overrun: Optional[Decimal] = Field(None, description="Projected amount over budget if will_exceed is true")
 
 
 class DashboardResponse(BaseModel):
@@ -426,6 +430,7 @@ class DashboardResponse(BaseModel):
     net_worth: Decimal = Field(..., description="Net worth (assets - liabilities)")
     recent_transactions: list[TransactionResponse] = Field(..., description="List of recent transactions")
     budget_status: list[BudgetStatusItem] = Field(..., description="Budget status for current month")
+    budget_projection: Optional[dict] = Field(None, description="Budget projection totals for current month")
     upcoming_payments: list["RecurringPaymentResponse"] = Field(default=[], description="Upcoming recurring payments")
     savings_summary: Optional["SavingsSummary"] = Field(None, description="Savings goals summary")
     financial_alert: Optional[dict] = Field(None, description="Financial emergency alert")

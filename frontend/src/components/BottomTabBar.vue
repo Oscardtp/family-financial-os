@@ -15,17 +15,16 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
-import { LayoutDashboard, Receipt, Calendar, Target, User } from 'lucide-vue-next'
+import { LayoutDashboard, Receipt, Target, User } from 'lucide-vue-next'
 
 const route = useRoute()
 
-const tabs = [
-  { to: '/', label: 'Inicio', icon: LayoutDashboard },
-  { to: '/debts', label: 'Deudas', icon: Receipt },
-    { to: '/calendar', label: 'Calendario', icon: Calendar },
-  { to: '/goals', label: 'Metas', icon: Target },
-  { to: '/config', label: 'Perfil', icon: User },
-]
+  const tabs = [
+    { to: '/', label: 'Inicio', icon: LayoutDashboard },
+    { to: '/debts', label: 'Deudas', icon: Receipt },
+    { to: '/goals', label: 'Metas', icon: Target },
+    { to: '/config', label: 'Perfil', icon: User },
+  ]
 </script>
 
 <style scoped>
@@ -71,6 +70,8 @@ const tabs = [
   .tab-item.active {
     color: var(--color-primary-600);
   }
+
+  .tab-item:active { opacity: 0.7; }
 
   [data-theme="dark"] .tab-item.active {
     color: var(--color-primary-400);

@@ -121,6 +121,7 @@ function handleConfirm() {
 
 .source-btn:hover { border-color: var(--color-primary-300); }
 .source-btn.selected { border-color: var(--color-primary-500); background: var(--color-primary-50); }
+.source-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .source-icon { font-size: var(--font-size-xl); }
 .source-name { font-size: var(--font-size-xs); font-weight: 500; color: var(--color-neutral-700); }
@@ -146,8 +147,10 @@ function handleConfirm() {
   color: white;
   background: var(--color-primary-500);
   cursor: pointer;
+  transition: transform var(--transition-fast);
 }
 
 .confirm-btn:hover:not(:disabled) { opacity: 0.9; }
 .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.confirm-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 </style>

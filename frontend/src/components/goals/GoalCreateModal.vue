@@ -45,13 +45,14 @@
             </div>
           </div>
           <div v-if="fechaObjetivoInfo" class="form-group goal-date-estimate">
-            <label class="form-label">Fecha objetivo estimada</label>
+            <label class="form-label" for="goal-date-estimate">Fecha objetivo estimada</label>
             <div class="goal-date-display">
               <input
                 type="text"
                 class="goal-date-input"
                 :value="fechaObjetivoInfo.fechaObjetivo"
                 readonly
+                id="goal-date-estimate"
                 aria-label="Fecha objetivo estimada"
               />
             </div>
@@ -84,8 +85,8 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Prioridad</label>
-            <div class="priority-segment">
+            <label class="form-label" for="goal-priority">Prioridad</label>
+            <div class="priority-segment" id="goal-priority" role="group">
               <button type="button" class="priority-btn" :class="{ active: form.priority === 'low' }" @click="form.priority = 'low'">Baja</button>
               <button type="button" class="priority-btn" :class="{ active: form.priority === 'medium' }" @click="form.priority = 'medium'">Media</button>
               <button type="button" class="priority-btn" :class="{ active: form.priority === 'high' }" @click="form.priority = 'high'">Alta</button>
@@ -269,6 +270,7 @@ function handleSubmit() {
   color: var(--color-primary-700);
   font-weight: 600;
 }
+.priority-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .modal-actions.symmetric {
   display: grid;

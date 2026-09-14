@@ -60,6 +60,20 @@ class DashboardService:
         net_worth = await self._get_net_worth(household_id, total_balance)
 
         budget_status = self._build_budget_status(budgets, spending)
+        today = date.today()
+        days_in_month = (
+            date(today.year, today.month + 1, 1) - timedelta(days=1)
+            if today.month < 12
+            else date(today.year, 12, 31)
+        ).day
+        engine = BudgetEngine()
+        status_result = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status_result, today.day, days_in_month)
+        budget_projection = {
+            "total_projected_spent": projection.total_projected_spent.amount,
+            "total_projected_remaining": projection.total_projected_remaining.amount,
+            "total_will_exceed": projection.total_will_exceed,
+        }
         upcoming, savings_summary, financial_alert = await asyncio.gather(
             self._get_upcoming_payments(household_id),
             self._get_savings_summary(household_id, total_savings),
@@ -77,6 +91,7 @@ class DashboardService:
             net_worth=net_worth,
             recent_transactions=recent_txs,
             budget_status=budget_status,
+            budget_projection=budget_projection,
             upcoming_payments=upcoming,
             savings_summary=savings_summary,
             financial_alert=financial_alert,
@@ -115,7 +130,19 @@ class DashboardService:
     def _build_budget_status(self, budgets: list, spending: list) -> list[dict]:
         engine = BudgetEngine()
         result = engine.calculate_budget_status(budgets, spending)
-        return [build_budget_item(item) for item in result.items]
+        today = date.today()
+        days_in_month = (
+            date(today.year, today.month + 1, 1) - timedelta(days=1)
+            if today.month < 12
+            else date(today.year, 12, 31)
+        ).day
+        days_elapsed = today.day
+        projection = engine.project_budget_status(result, days_elapsed, days_in_month)
+        proj_map = {p.category_id: p for p in projection.items}
+        return [
+            build_budget_item(item, proj_map.get(item.category_id))
+            for item in result.items
+        ]
 
     async def _get_upcoming_payments(self, household_id: str) -> list:
         upcoming = await self.recurring_repo.get_active(household_id)
@@ -182,7 +209,7 @@ class DashboardService:
         return None
 
 
-def build_budget_item(item) -> dict:
+def build_budget_item(item, projection=None) -> dict:
     budgeted = item.budgeted.amount
     spent = item.spent.amount
     status = item.status
@@ -198,10 +225,16 @@ def build_budget_item(item) -> dict:
     else:
         remaining = budgeted - spent
         message = f"{item.category_name} esta dentro del presupuesto. Le quedan ${remaining:,.0f}."
-    return {
+    result = {
         "category": item.category_name,
         "budgeted": budgeted,
         "spent": spent,
         "status": status,
         "message": message,
     }
+    if projection:
+        result["projected_spent"] = projection.projected_spent.amount
+        result["projected_remaining"] = projection.projected_remaining.amount
+        result["will_exceed"] = projection.will_exceed
+        result["projected_overrun"] = projection.projected_overrun.amount
+    return result

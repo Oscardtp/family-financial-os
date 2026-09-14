@@ -29,7 +29,9 @@
         </div>
 
         <div v-if="!accounts.length" class="empty-state">
-          <p>No tienes cuentas creadas</p>
+          <Wallet :size="48" class="empty-icon" />
+          <p class="empty-text">No tienes cuentas creadas</p>
+          <span class="empty-hint">Crea tu primera cuenta para comenzar</span>
         </div>
       </div>
 
@@ -71,7 +73,7 @@
             </div>
           </div>
           <div class="form-actions">
-            <span v-if="accFormError" class="form-error">{{ accFormError }}</span>
+            <span v-if="accFormError" class="form-error" role="alert" aria-live="assertive">{{ accFormError }}</span>
             <button v-if="editingAccountId" class="btn btn-secondary" type="button" @click="cancelEditAccount">
               Cancelar
             </button>
@@ -289,26 +291,38 @@ onMounted(loadAccounts)
 .account-actions { flex-shrink: 0; }
 
 .btn-icon-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--color-neutral-400);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 .btn-icon-edit:hover { color: var(--color-primary-600); background: var(--color-primary-50); }
+.btn-icon-edit:active:not(:disabled) { transform: scale(0.94); }
 
 .btn-icon-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--color-neutral-400);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 .btn-icon-danger:hover { color: var(--color-error-500); background: var(--color-error-50); }
+.btn-icon-danger:active:not(:disabled) { transform: scale(0.94); }
 
 .form-card { margin-bottom: var(--spacing-md); }
 .form { display: flex; flex-direction: column; gap: var(--spacing-md); }
@@ -355,8 +369,6 @@ onMounted(loadAccounts)
   min-height: 44px;
   min-width: 0;
 }
-
-.empty-state { grid-column: 1 / -1; text-align: center; padding: var(--spacing-2xl); color: var(--color-neutral-400); font-size: 0.875rem; }
 
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }

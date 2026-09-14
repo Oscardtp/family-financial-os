@@ -1,9 +1,9 @@
 ﻿<template>
   <div class="goals-page">
     <div class="page-header">
-      <h2 class="page-title">
+      <h1 class="page-title">
         Mis Metas
-      </h2>
+      </h1>
       <button
         class="btn btn-primary"
         @click="showCreateModal = true"
@@ -125,9 +125,9 @@
         v-if="completedGoals.length"
         class="completed-section"
       >
-        <h3 class="section-title">
+        <h2 class="section-title">
           Completadas
-        </h3>
+        </h2>
         <div class="goals-list">
           <GoalCard
             v-for="goal in completedGoals"
@@ -175,17 +175,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Target } from 'lucide-vue-next'
 import { useGoalsStore } from '@/stores/goals'
+import { useToast } from '@/composables/useToast'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import GoalCard from '@/components/goals/GoalCard.vue'
 import GoalFilters from '@/components/goals/GoalFilters.vue'
-import GoalContributionModal from '@/components/goals/GoalContributionModal.vue'
-import GoalCreateModal from '@/components/goals/GoalCreateModal.vue'
-import GoalEditModal from '@/components/goals/GoalEditModal.vue'
+const GoalContributionModal = defineAsyncComponent(() => import('@/components/goals/GoalContributionModal.vue'))
+const GoalCreateModal = defineAsyncComponent(() => import('@/components/goals/GoalCreateModal.vue'))
+const GoalEditModal = defineAsyncComponent(() => import('@/components/goals/GoalEditModal.vue'))
 import GoalDeleteConfirm from '@/components/goals/GoalDeleteConfirm.vue'
+
+const toast = useToast()
 
 const goalsStore = useGoalsStore()
 const {
@@ -204,11 +207,11 @@ const showCreateModal = ref(false)
 async function submitContribution() {
   const { error: err } = await goalsStore.submitContribution(contributionAmount.value, contributionDate.value)
   if (err) {
-    window.$toast?.error(err)
+    toast.error(err)
   } else {
     contributionAmount.value = ''
     contributionDate.value = new Date().toISOString().split('T')[0]
-    window.$toast?.success('Aporte registrado')
+    toast.success('Aporte registrado')
   }
 }
 
@@ -217,28 +220,28 @@ async function handleCreateGoal(data) {
   const { error: err } = await goalsStore.createGoal(data)
   creating.value = false
   if (err) {
-    window.$toast?.error(err)
+    toast.error(err)
   } else {
     showCreateModal.value = false
-    window.$toast?.success('Meta creada')
+    toast.success('Meta creada')
   }
 }
 
 async function submitEdit(data) {
   const { error: err } = await goalsStore.submitEdit(data)
   if (err) {
-    window.$toast?.error(err)
+    toast.error(err)
   } else {
-    window.$toast?.success('Meta actualizada')
+    toast.success('Meta actualizada')
   }
 }
 
 async function submitDeleteGoal() {
   const { error: err } = await goalsStore.submitDelete()
   if (err) {
-    window.$toast?.error(err)
+    toast.error(err)
   } else {
-    window.$toast?.success('Meta eliminada')
+    toast.success('Meta eliminada')
   }
 }
 

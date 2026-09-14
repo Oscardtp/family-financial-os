@@ -31,18 +31,25 @@ class BudgetService:
             if m < 12
             else date(y, 12, 31)
         )
+        is_current_month = (m == today.month and y == today.year)
+        date_to = today if is_current_month else end_of_month
         spending = await self.tx_repo.get_totals_by_category(
             household_id,
             date_from=date(y, m, 1),
-            date_to=today if (m == today.month and y == today.year) else end_of_month,
+            date_to=date_to,
         )
 
         engine = BudgetEngine()
         result = engine.calculate_budget_status(budgets, spending)
 
+        days_in_month = end_of_month.day
+        days_elapsed = today.day if is_current_month else days_in_month
+        projection = engine.project_budget_status(result, days_elapsed, days_in_month)
+
         items = []
         for item in result.items:
-            info = build_budget_item(item)
+            proj_item = projection.items[result.items.index(item)]
+            info = build_budget_item(item, proj_item)
             info["status"] = item.status if item.status != "exceeded" else "over"
             items.append(info)
 
@@ -53,6 +60,9 @@ class BudgetService:
             "total_budgeted": result.total_budgeted.amount,
             "total_spent": result.total_spent.amount,
             "total_remaining": result.total_remaining.amount,
+            "total_projected_spent": projection.total_projected_spent.amount,
+            "total_projected_remaining": projection.total_projected_remaining.amount,
+            "total_will_exceed": projection.total_will_exceed,
         }
 
     async def create(self, data, user: dict) -> dict:

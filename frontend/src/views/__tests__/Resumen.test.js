@@ -67,6 +67,9 @@ vi.mock('@/composables/useAgenda', () => ({
       value: [
         { id: '1', title: 'Pago luz', amount: 150000, due_date: '2026-09-12', type: 'expense', status: 'pending' },
         { id: '2', title: 'Salario', amount: 3000000, due_date: '2026-09-13', type: 'income', status: 'pending' },
+        { id: '3', title: 'Pago internet', amount: 80000, due_date: '2026-09-14', type: 'expense', status: 'pending' },
+        { id: '4', title: 'Pago arriendo', amount: 1200000, due_date: '2026-09-15', type: 'expense', status: 'pending' },
+        { id: '5', title: 'Pago gimnasio', amount: 60000, due_date: '2026-09-16', type: 'expense', status: 'pending' },
       ],
     },
     availability: { value: null },
@@ -99,6 +102,12 @@ vi.mock('@/services/events', () => ({
     availability: vi.fn(),
     accounts: vi.fn(),
     household: vi.fn(),
+  },
+  obligationsService: {
+    list: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    create: vi.fn(),
   },
 }))
 
@@ -138,7 +147,7 @@ describe('Resumen', () => {
     expect(wrapper.text()).toContain('Próximos movimientos')
   })
 
-  it('renderiza link Ver agenda financiera', async () => {
+  it('renderiza boton Ver calendario', async () => {
     const wrapper = mount(Resumen, {
       global: {
         plugins: [createPinia()],
@@ -152,6 +161,24 @@ describe('Resumen', () => {
     })
     await nextTick()
     await nextTick()
-    expect(wrapper.text()).toContain('Ver agenda financiera')
+    expect(wrapper.text()).toContain('Ver calendario')
+  })
+
+  it('limita Proximos movimientos a maximo 4 eventos', async () => {
+    const wrapper = mount(Resumen, {
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          RouterLink: {
+            name: 'RouterLink',
+            template: '<a><slot/></a>',
+          },
+        },
+      },
+    })
+    await nextTick()
+    await nextTick()
+    const items = wrapper.findAll('.event-item')
+    expect(items.length).toBeLessThanOrEqual(4)
   })
 })

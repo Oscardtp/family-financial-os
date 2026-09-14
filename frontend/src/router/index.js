@@ -14,9 +14,8 @@ import { createRouter, createWebHistory } from 'vue-router'
       children: [
         { path: '', name: 'Resumen', component: () => import('@/views/Resumen.vue') },
         { path: 'debts', name: 'Debts', component: () => import('@/views/Debts.vue') },
-        { path: 'calendar', name: 'Calendar', component: () => import('@/views/Calendar.vue') },
-        { path: 'goals', name: 'Goals', component: () => import('@/views/Goals.vue') },
-        { path: 'config', name: 'Config', component: () => import('@/views/Config.vue') },
+         { path: 'goals', name: 'Goals', component: () => import('@/views/Goals.vue') },
+         { path: 'config', name: 'Config', component: () => import('@/views/Config.vue') },
       ],
     },
   ]

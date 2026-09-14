@@ -19,7 +19,7 @@ async def list_budgets(
     return await service.list(current_user["household_id"], month, year)
 
 
-@router.get("/status", summary="Budget status with context", description="Returns budget status with explanatory messages for each category")
+@router.get("/status", summary="Budget status with context", description="Returns budget status with projection and explanatory messages for each category")
 async def budget_status(
     month: int | None = None,
     year: int | None = None,

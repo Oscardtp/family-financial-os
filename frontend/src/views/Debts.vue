@@ -1,7 +1,7 @@
 <template>
   <div class="debts-page">
     <div class="page-header">
-      <h2 class="page-title">Mis Deudas</h2>
+      <h1 class="page-title">Mis Deudas</h1>
       <button class="btn btn-primary btn-add" @click="showNewDebtModal = true">
         + Nueva Deuda
       </button>
@@ -119,17 +119,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import api from '@/services/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import DebtSummary from '@/components/debts/DebtSummary.vue'
 import DebtRow from '@/components/debts/DebtRow.vue'
-import NewDebtModal from '@/components/debts/NewDebtModal.vue'
-import EditDebtModal from '@/components/debts/EditDebtModal.vue'
-import PaymentModal from '@/components/debts/PaymentModal.vue'
-import AmortizationModal from '@/components/debts/AmortizationModal.vue'
+const NewDebtModal = defineAsyncComponent(() => import('@/components/debts/NewDebtModal.vue'))
+const EditDebtModal = defineAsyncComponent(() => import('@/components/debts/EditDebtModal.vue'))
+const PaymentModal = defineAsyncComponent(() => import('@/components/debts/PaymentModal.vue'))
+const AmortizationModal = defineAsyncComponent(() => import('@/components/debts/AmortizationModal.vue'))
 import PaymentHistoryDropdown from '@/components/debts/PaymentHistoryDropdown.vue'
 
 const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
@@ -364,11 +364,14 @@ onMounted(loadDebts)
 .loading-state { display: flex; flex-direction: column; gap: var(--spacing-md); }
 .error-state { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-md); padding: var(--spacing-2xl); color: var(--color-error-500); font-size: 0.875rem; }
 
-.btn { padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: background var(--transition-fast); }
+.btn { padding: var(--spacing-sm) var(--spacing-lg); border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: transform var(--transition-fast), background var(--transition-fast); }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); }
+.btn-sm { font-size: 0.8rem; padding: var(--spacing-xs) var(--spacing-md); transition: transform var(--transition-fast); }
+.btn-sm:active:not(:disabled) { transform: scale(0.96); }
 .btn-primary { background: var(--color-primary-600); color: white; }
 .btn-primary:hover:not(:disabled) { background: var(--color-primary-700); }
+.btn-primary:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .expand-enter-active, .expand-leave-active { transition: all 0.2s ease; }
 .expand-enter-from, .expand-leave-to { opacity: 0; max-height: 0; }

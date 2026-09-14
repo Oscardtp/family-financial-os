@@ -85,7 +85,7 @@ function cancel() {
 }
 
 .confirm-content {
-  background: white;
+  background: var(--color-neutral-0);
   border-radius: 16px;
   padding: 24px;
   max-width: 400px;
@@ -104,29 +104,29 @@ function cancel() {
 }
 
 .icon-info {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-info-50);
+  color: var(--color-info-600);
 }
 
 .icon-warning {
-  background: #fffbeb;
-  color: #d97706;
+  background: var(--color-warning-50);
+  color: var(--color-warning-600);
 }
 
 .icon-danger {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error-50);
+  color: var(--color-error-600);
 }
 
   .confirm-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-neutral-900);
     margin-bottom: 8px;
   }
 
 .confirm-message {
-  color: #6b7280;
+  color: var(--color-neutral-500);
   font-size: 0.9375rem;
   margin-bottom: 24px;
 }
@@ -145,17 +145,18 @@ function cancel() {
   font-size: 0.875rem;
   cursor: pointer;
   border: none;
-  transition: all 150ms ease;
+  transition: transform var(--transition-fast), background 150ms ease;
 }
 
 .btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
 }
 
 .btn-cancel:hover {
-  background: #e5e7eb;
+  background: var(--color-neutral-200);
 }
+.btn-cancel:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-confirm {
   padding: 10px 20px;
@@ -169,36 +170,40 @@ function cancel() {
 }
 
 .btn-info {
-  background: #2563eb;
-  color: white;
+  background: var(--color-info-600);
+  color: var(--color-neutral-0);
 }
 
 .btn-info:hover {
-  background: #1d4ed8;
+  background: var(--color-primary-700);
 }
+.btn-info:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-warning {
-  background: #d97706;
-  color: white;
+  background: var(--color-warning-600);
+  color: var(--color-neutral-0);
 }
 
 .btn-warning:hover {
-  background: #b45309;
+  background: var(--color-warning-700);
 }
+.btn-warning:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-danger {
-  background: #dc2626;
-  color: white;
+  background: var(--color-error-600);
+  color: var(--color-neutral-0);
 }
 
 .btn-danger:hover {
-  background: #b91c1c;
+  background: var(--color-error-700);
 }
+.btn-danger:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-confirm:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.btn-confirm:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .modal-enter-active,
 .modal-leave-active {

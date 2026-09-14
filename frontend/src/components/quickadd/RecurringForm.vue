@@ -171,10 +171,12 @@ function handleSubmit() {
   font-weight: 500;
   color: var(--color-neutral-700);
   min-height: 44px;
+  transition: transform var(--transition-fast);
 }
 
 .freq-btn:hover { border-color: var(--color-primary-300); }
 .freq-btn.selected { border-color: var(--color-primary-500); background: var(--color-primary-50); color: var(--color-primary-700); }
+.freq-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .form-select {
   width: 100%;
@@ -218,9 +220,11 @@ function handleSubmit() {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
+  transition: transform var(--transition-fast);
 }
 
 .submit-btn:hover:not(:disabled) { opacity: 0.9; }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .spinner {

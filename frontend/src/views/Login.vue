@@ -14,7 +14,7 @@
           v-if="!isLogin"
           class="form-group"
         >
-          <label>Nombre</label>
+          <label for="login-name">Nombre</label>
           <input
             v-model="form.name"
             type="text"
@@ -25,7 +25,7 @@
           >
         </div>
         <div class="form-group">
-          <label>Email</label>
+          <label for="login-email">Email</label>
           <input
             v-model="form.email"
             type="email"
@@ -36,7 +36,7 @@
           >
         </div>
         <div class="form-group">
-          <label>Contraseña</label>
+          <label for="login-password">Contraseña</label>
           <input
             v-model="form.password"
             type="password"
@@ -165,9 +165,10 @@ async function handleSubmit() {
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 .btn-primary:hover { background: var(--color-primary-700); }
+.btn-primary:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .error-text {
   color: var(--color-error-500);
@@ -184,8 +185,10 @@ async function handleSubmit() {
   color: var(--color-primary-600);
   font-size: 0.8rem;
   cursor: pointer;
+  transition: opacity var(--transition-fast);
 }
 .btn-text:hover { text-decoration: underline; }
+.btn-text:active { opacity: 0.7; }
 
 @media (max-width: 480px) {
   .login-card {

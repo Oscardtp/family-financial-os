@@ -61,12 +61,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
 import api from '@/services/api'
 import { useGoalsStore } from '@/stores/goals'
+import { useToast } from '@/composables/useToast'
 import TypeSelector from './TypeSelector.vue'
 import TransactionForm from './TransactionForm.vue'
 import RecurringForm from './RecurringForm.vue'
 import GoalForm from './GoalForm.vue'
 import SourcePicker from './SourcePicker.vue'
 import DoneConfirmation from './DoneConfirmation.vue'
+
+const toast = useToast()
 
 const goalsStore = useGoalsStore()
 
@@ -147,7 +150,7 @@ async function handleTransactionSubmit(data) {
     step.value = 'source'
     emit('transaction-created')
   } catch (e) {
-    window.$toast?.error(e.response?.data?.detail || 'No pudimos guardar. Revisa los datos e inténtalo de nuevo.')
+    toast.error(e.response?.data?.detail || 'No pudimos guardar. Revisa los datos e inténtalo de nuevo.')
   } finally {
     submitting.value = false
   }
@@ -169,7 +172,7 @@ async function handleGoalSubmit(data) {
   const { error: err } = await goalsStore.createGoal(data)
   submitting.value = false
   if (err) {
-    window.$toast?.error(err)
+    toast.error(err)
   } else {
     step.value = 'done'
     emit('transaction-created')
@@ -192,7 +195,7 @@ async function handleSourceConfirm({ account_id, remember }) {
       step.value = 'done'
       emit('transaction-created')
     } catch (e) {
-      window.$toast?.error(e.response?.data?.detail || 'No pudimos activar el pago. Revisa los datos e inténtalo de nuevo.')
+      toast.error(e.response?.data?.detail || 'No pudimos activar el pago. Revisa los datos e inténtalo de nuevo.')
     } finally {
       submitting.value = false
       pendingRecurringData.value = null
@@ -295,9 +298,11 @@ async function handleSourceConfirm({ account_id, remember }) {
   color: var(--color-neutral-500);
   padding: var(--spacing-xs);
   border-radius: var(--radius-md);
+  transition: transform var(--transition-fast);
 }
 
 .fab-close:hover { background: var(--color-neutral-100); }
+.fab-close:active { transform: scale(0.94); }
 
 .back-btn {
   background: none;
@@ -308,9 +313,11 @@ async function handleSourceConfirm({ account_id, remember }) {
   cursor: pointer;
   padding: 0;
   margin-bottom: var(--spacing-md);
+  transition: opacity var(--transition-fast);
 }
 
 .back-btn:hover { color: var(--color-primary-700); }
+.back-btn:active { opacity: 0.7; }
 
 @media (max-width: 640px) {
   .fab-container { bottom: 80px; right: 16px; }

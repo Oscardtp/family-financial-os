@@ -54,6 +54,7 @@ defineEmits(['edit', 'pay'])
 .action-btn:hover {
   background: var(--color-neutral-100);
 }
+.action-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .action-btn.primary {
   background: var(--color-primary-500);
@@ -66,4 +67,5 @@ defineEmits(['edit', 'pay'])
 .action-btn.primary:hover {
   background: var(--color-primary-600);
 }
+.action-btn.primary:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 </style>

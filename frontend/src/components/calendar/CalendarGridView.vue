@@ -1,11 +1,21 @@
 <template>
   <div class="calendar-grid-view">
     <div class="cal-header">
-      <h2 class="cal-month">{{ monthLabel }}</h2>
       <div class="cal-nav">
-        <button class="cal-nav-btn" @click="$emit('today')" aria-label="Hoy">Hoy</button>
         <button class="cal-nav-btn" @click="$emit('prev')" aria-label="Mes anterior"><ChevronLeft :size="16" /></button>
         <button class="cal-nav-btn" @click="$emit('next')" aria-label="Mes siguiente"><ChevronRight :size="16" /></button>
+        <h2 class="cal-month">{{ monthLabel }}</h2>
+      </div>
+      <div class="cal-filters">
+        <button
+          v-for="f in FILTERS"
+          :key="f.key"
+          class="cal-filter-chip"
+          :class="{ 'cal-filter-chip--active': filter === f.key }"
+          @click="$emit('update:filter', f.key)"
+        >
+          {{ f.label }}
+        </button>
       </div>
     </div>
 
@@ -53,15 +63,24 @@ import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-const emit = defineEmits(['selectDay', 'createOnDate', 'prev', 'next', 'today'])
+const FILTERS = [
+  { key: 'all', label: 'Todo' },
+  { key: 'income', label: 'Ingresos' },
+  { key: 'expense', label: 'Gastos' },
+  { key: 'debt', label: 'Pagos' },
+  { key: 'goal', label: 'Metas' },
+]
 
 defineProps({
   days: { type: Array, required: true },
   monthLabel: { type: String, required: true },
   loading: { type: Boolean, default: false },
   selectedDate: { type: String, default: '' },
+  filter: { type: String, default: 'all' },
   eventColor: { type: Function, required: true },
 })
+
+const emit = defineEmits(['selectDay', 'createOnDate', 'prev', 'next', 'today', 'update:filter'])
 
 function handleCellClick(cell) {
   if (cell.events.length > 0) {
@@ -77,13 +96,13 @@ function handleCellClick(cell) {
 
 .cal-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: var(--spacing-md); padding: 0 var(--spacing-sm);
+  margin-bottom: var(--spacing-md); padding: 0 var(--spacing-sm); gap: var(--spacing-sm); flex-wrap: wrap;
 }
+.cal-nav { display: flex; align-items: center; gap: var(--spacing-xs); }
 .cal-month {
   font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: 600;
   color: var(--color-neutral-800); margin: 0; text-transform: capitalize;
 }
-.cal-nav { display: flex; gap: var(--spacing-xs); }
 .cal-nav-btn {
   display: inline-flex; align-items: center; justify-content: center;
   height: 36px; min-width: 36px; padding: 0 var(--spacing-sm); border: 1px solid var(--color-neutral-200);
@@ -92,6 +111,16 @@ function handleCellClick(cell) {
   font-weight: 500; transition: background var(--transition-fast);
 }
 .cal-nav-btn:hover { background: var(--color-neutral-100); }
+
+.cal-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.cal-filter-chip {
+  padding: 8px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-neutral-200);
+  background: var(--color-neutral-0); color: var(--color-neutral-700); font-size: var(--font-size-3xs);
+  font-weight: 600; cursor: pointer; transition: all var(--transition-fast); white-space: nowrap;
+  min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+}
+.cal-filter-chip:hover { background: var(--color-neutral-50); }
+.cal-filter-chip--active { background: var(--color-neutral-900); color: var(--color-neutral-0); border-color: var(--color-neutral-900); }
 
 .cal-weekdays {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
@@ -159,10 +188,11 @@ function handleCellClick(cell) {
   .cal-header { flex-direction: column; align-items: stretch; gap: var(--spacing-sm); }
   .cal-month { text-align: center; font-size: var(--font-size-base); }
   .cal-nav { justify-content: center; }
+  .cal-filters { justify-content: center; }
   .cal-weekdays { padding: 0 0 var(--spacing-xs); }
   .cal-grid {
     grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0;
-    min-width: 320px;
+    width: 100%;
   }
   .cal-cell {
     border-radius: var(--radius-sm); padding: 4px;

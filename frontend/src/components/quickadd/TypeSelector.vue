@@ -56,6 +56,7 @@ onMounted(() => firstBtn.value?.focus())
   border-color: var(--color-primary-300);
   background: var(--color-primary-50);
 }
+.type-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .type-btn.expense:hover { border-color: var(--color-error-300); background: var(--color-error-50); }
 .type-btn.income:hover { border-color: var(--color-success-300); background: var(--color-success-50); }

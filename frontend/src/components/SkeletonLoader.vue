@@ -35,7 +35,7 @@ const skeletonStyle = computed(() => ({
 
 <style scoped>
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--color-neutral-100) 25%, var(--color-neutral-200) 50%, var(--color-neutral-100) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
 }

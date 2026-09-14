@@ -4,10 +4,11 @@ import { useCalendarStore } from '@/stores/useCalendar'
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 const FILTERS = [
-  { key: 'all', label: 'Todos' },
-  { key: 'payments', label: 'Pagos' },
-  { key: 'recurring', label: 'Recurrentes' },
+  { key: 'all', label: 'Todo' },
   { key: 'income', label: 'Ingresos' },
+  { key: 'expense', label: 'Gastos' },
+  { key: 'debt', label: 'Pagos' },
+  { key: 'goal', label: 'Metas' },
 ]
 
 export function useCalendarFilters() {
@@ -16,10 +17,7 @@ export function useCalendarFilters() {
 
   function matchesFilter(ev) {
     if (activeFilter.value === 'all') return true
-    if (activeFilter.value === 'income') return ev.type === 'income'
-    if (activeFilter.value === 'recurring') return ev.is_recurrent === true
-    if (activeFilter.value === 'payments') return ev.type !== 'income' && !ev.is_recurrent
-    return true
+    return ev.type === activeFilter.value
   }
 
   const calendarDays = computed(() => {

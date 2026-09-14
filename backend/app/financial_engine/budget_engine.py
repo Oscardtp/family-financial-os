@@ -23,6 +23,32 @@ class BudgetStatusResult:
     total_remaining: Money
 
 
+@dataclass
+class BudgetProjectionItem:
+    category_id: str
+    category_name: str
+    budgeted: Money
+    spent: Money
+    remaining: Money
+    percentage: Decimal
+    status: str
+    projected_spent: Money
+    projected_remaining: Money
+    will_exceed: bool
+    projected_overrun: Money
+
+
+@dataclass
+class BudgetProjectionResult:
+    items: list[BudgetProjectionItem]
+    total_budgeted: Money
+    total_spent: Money
+    total_remaining: Money
+    total_projected_spent: Money
+    total_projected_remaining: Money
+    total_will_exceed: bool
+
+
 class BudgetEngine:
     def calculate_budget_status(
         self,
@@ -71,3 +97,64 @@ class BudgetEngine:
 
     def detect_overruns(self, status: BudgetStatusResult) -> list[BudgetStatusItem]:
         return [item for item in status.items if item.status == "exceeded"]
+
+    def project_budget_status(
+        self,
+        status: BudgetStatusResult,
+        days_elapsed: int,
+        days_in_month: int,
+    ) -> BudgetProjectionResult:
+        if days_elapsed <= 0:
+            factor = Decimal("1")
+        elif days_elapsed >= days_in_month:
+            factor = Decimal("1")
+        else:
+            factor = Decimal(str(days_in_month)) / Decimal(str(days_elapsed))
+
+        items = []
+        total_projected_spent = Money.zero()
+        total_will_exceed = False
+
+        for item in status.items:
+            projected_spent = item.spent * factor
+            projected_remaining = item.budgeted - projected_spent
+            will_exceed = projected_spent > item.budgeted
+            overrun = projected_spent - item.budgeted if will_exceed else Money.zero()
+            if will_exceed and not item.budgeted.is_zero():
+                overrun_pct = (overrun.amount / item.budgeted.amount) * Decimal("100")
+                if overrun_pct > Decimal("10"):
+                    proj_status = "over"
+                else:
+                    proj_status = "warning"
+            else:
+                proj_status = item.status
+
+            items.append(BudgetProjectionItem(
+                category_id=item.category_id,
+                category_name=item.category_name,
+                budgeted=item.budgeted,
+                spent=item.spent,
+                remaining=item.remaining,
+                percentage=item.percentage,
+                status=proj_status,
+                projected_spent=projected_spent,
+                projected_remaining=projected_remaining,
+                will_exceed=will_exceed,
+                projected_overrun=overrun,
+            ))
+
+            total_projected_spent = total_projected_spent + projected_spent
+            if will_exceed:
+                total_will_exceed = True
+
+        total_projected_remaining = status.total_budgeted - total_projected_spent
+
+        return BudgetProjectionResult(
+            items=items,
+            total_budgeted=status.total_budgeted,
+            total_spent=status.total_spent,
+            total_remaining=status.total_remaining,
+            total_projected_spent=total_projected_spent,
+            total_projected_remaining=total_projected_remaining,
+            total_will_exceed=total_will_exceed,
+        )

@@ -233,8 +233,9 @@ onMounted(loadHousehold)
   background: var(--color-neutral-0);
   outline: none;
 }
-.btn-danger { background: var(--color-error-100); color: var(--color-error-600); }
+.btn-danger { background: var(--color-error-100); color: var(--color-error-600); transition: transform var(--transition-fast); }
 .btn-danger:hover { background: var(--color-error-200); }
+.btn-danger:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 .invite-form { display: flex; flex-direction: column; gap: var(--space-sm); }
 .form-row { display: flex; gap: var(--space-sm); }
 .btn-primary {
@@ -246,8 +247,10 @@ onMounted(loadHousehold)
   font-size: 0.875rem;
   cursor: pointer;
   white-space: nowrap;
+  transition: transform var(--transition-fast);
 }
 .btn-primary:hover { background: var(--color-primary-700); }
+.btn-primary:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .error-text { color: var(--color-error-500); font-size: 0.8rem; }
 .success-text { color: var(--color-success-500); font-size: 0.8rem; }
@@ -268,14 +271,25 @@ onMounted(loadHousehold)
   min-height: 44px;
 }
 .household-name-input:focus { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgba(47, 113, 229, 0.12); }
-.btn-secondary { background: var(--color-neutral-100); color: var(--color-neutral-700); }
+.btn-secondary { background: var(--color-neutral-100); color: var(--color-neutral-700); transition: transform var(--transition-fast); }
 .btn-secondary:hover { background: var(--color-neutral-200); }
+.btn-secondary:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 .btn-icon-edit {
-  background: none; border: none; color: var(--color-neutral-400); cursor: pointer;
-  padding: 4px; border-radius: var(--radius-sm); transition: all var(--transition-fast);
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  color: var(--color-neutral-400);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 .btn-icon-edit:hover { color: var(--color-primary-600); background: var(--color-primary-50); }
+.btn-icon-edit:active { transform: scale(0.94); }
 
 @media (max-width: 640px) {
   .form-row {

@@ -281,6 +281,43 @@ async def test_budget_service_status(client):
     data = resp.json()
     assert len(data["items"]) == 1
     assert data["items"][0]["status"] == "ok"
+    assert "projected_spent" in data["items"][0]
+    assert "projected_remaining" in data["items"][0]
+    assert "will_exceed" in data["items"][0]
+    assert "projected_overrun" in data["items"][0]
+    assert "total_projected_spent" in data
+    assert "total_projected_remaining" in data
+    assert "total_will_exceed" in data
+
+
+@pytest.mark.anyio
+async def test_budget_service_projection_alerts(client):
+    reg = await client.post("/api/v1/auth/register", json={
+        "email": "svc_budget_proj@example.com", "name": "Budget Proj", "password": "password123",
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+    acc = await client.post("/api/v1/accounts",
+        json={"name": "Checking", "type": "bank", "balance": 1000000}, headers=headers)
+    cat = await client.post("/api/v1/categories",
+        json={"name": "Food", "type": "expense", "icon": "🍎", "color": "#ef4444"},
+        headers=headers)
+
+    await client.post("/api/v1/budgets", json={
+        "category_id": cat.json()["id"], "amount": 500000, "month": 1, "year": 2026,
+    }, headers=headers)
+
+    await client.post("/api/v1/transactions", json={
+        "account_id": acc.json()["id"], "category_id": cat.json()["id"],
+        "type": "expense", "amount": 600000, "description": "Groceries",
+        "date": "2026-01-15",
+    }, headers=headers)
+
+    resp = await client.get("/api/v1/budgets/status?month=1&year=2026", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_will_exceed"] is True
+    assert data["items"][0]["will_exceed"] is True
+    assert data["items"][0]["projected_overrun"] > 0
 
 
 # ─── SavingsService ───────────────────────────────────────────────────

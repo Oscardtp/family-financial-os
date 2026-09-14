@@ -8,7 +8,8 @@
     </div>
 
     <div v-if="error" class="error-state">
-      <span>{{ error }}</span>
+      <span>No pudimos cargar tu resumen financiero.</span>
+      <span class="error-hint">Revisa tu conexión e inténtalo de nuevo.</span>
       <button class="btn btn-sm btn-click" @click="loadAll">Reintentar</button>
     </div>
 
@@ -88,9 +89,9 @@
               <h2 class="card-title">
                 <span class="title-icon"><Bell :size="16" /></span> Próximos movimientos
               </h2>
-              <router-link to="/agenda-financiera" class="btn-link">Ver agenda financiera →</router-link>
+              <button class="btn-link" @click="calendarOpen = true">Ver calendario</button>
             </div>
-            <div v-for="group in upcomingMovements" :key="group.dateStr" class="event-group">
+            <div v-for="group in limitedUpcoming" :key="group.dateStr" class="event-group">
               <div class="event-group-header">{{ formatGroupLabel(group.dateStr) }}</div>
               <div v-for="ev in group.events" :key="ev.id" class="event-item" :class="eventColor(ev)" @click="goEvent(ev)">
                 <span class="ev-item-title">{{ ev.title }}</span>
@@ -213,6 +214,12 @@
     </div>
 
     <BudgetDetailModal :open="budgetModalOpen" @close="budgetModalOpen = false" />
+    <CalendarBottomSheet
+      :open="calendarOpen"
+      :selected-event="selectedEvent"
+      @close="calendarOpen = false; selectedEvent = null"
+      @showObligationInfo="onShowObligationInfo"
+    />
   </div>
 </template>
 
@@ -223,16 +230,15 @@ import { AlertTriangle, X, Calendar, Bell, BarChart3, Wallet, ClipboardList, Bra
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import BudgetPanel from '@/components/budget/BudgetPanel.vue'
 const BudgetDetailModal = defineAsyncComponent(() => import('@/components/budget/BudgetDetailModal.vue'))
+import CalendarBottomSheet from '@/components/calendar/CalendarBottomSheet.vue'
 import { useCurrency } from '@/composables/useCurrency'
 import { useDashboard } from '@/composables/useDashboard'
-import { useCalendarStore } from '@/stores/useCalendar'
 import { useNotifications } from '@/composables/useNotifications'
 import { eventsService } from '@/services/events'
 import { useAgenda } from '@/composables/useAgenda'
 
 const router = useRouter()
 const { fmt, fmtFull } = useCurrency()
-const store = useCalendarStore()
 const { suggestions, loadSuggestions, acceptSuggestion } = useNotifications()
 
 const {
@@ -248,11 +254,30 @@ const error = computed(() => dashError.value)
 const alertDismissed = ref(false)
 const showFullCat = ref(false)
 const budgetModalOpen = ref(false)
+const calendarOpen = ref(false)
+const selectedEvent = ref(null)
 
 const availability = ref(null)
 const monthSummary = ref(null)
 const todayEvents = ref([])
 const upcomingMovements = ref([])
+
+const limitedUpcoming = computed(() => {
+  const groups = upcomingMovements.value || []
+  const result = []
+  let count = 0
+  const max = 4
+  for (const group of groups) {
+    if (count >= max) break
+    const remaining = max - count
+    const events = group.events.slice(0, remaining)
+    if (events.length > 0) {
+      result.push({ ...group, events })
+      count += events.length
+    }
+  }
+  return result
+})
 
 const { loadUpcoming, formatGroupLabel, groupByDate, upcomingEvents: agendaUpcoming } = useAgenda()
 
@@ -297,18 +322,27 @@ function coachMessage(s) {
 }
 
 function goEvent(ev) {
-  router.push({ path: '/agenda-financiera', query: { event_id: ev.id } })
+  selectedEvent.value = ev
+  calendarOpen.value = true
 }
 
 function handleAlertOption(option) {
   const opt = option.toLowerCase()
-  if (opt.includes('pago extra') || opt.includes('pago')) router.push('/agenda-financiera')
+  if (opt.includes('pago extra') || opt.includes('pago')) {
+    calendarOpen.value = true
+    selectedEvent.value = null
+  }
   else if (opt.includes('deuda') || opt.includes('reduci')) router.push('/debts')
   else if (opt.includes('gasto') || opt.includes('presupuesto')) router.push('/config')
   else if (opt.includes('ingreso') || opt.includes('ingres')) router.push('/config')
 }
 
 function openBudgetDetail() { budgetModalOpen.value = true }
+
+function onShowObligationInfo(obligationId) {
+  if (!obligationId) return
+  router.push(`/debts?obligation_id=${obligationId}`)
+}
 
 async function loadEvents() {
   try {

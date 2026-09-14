@@ -87,23 +87,23 @@ defineExpose({ addToast, removeToast, success, error, info, warning })
 }
 
 .toast-success {
-  background: #16a34a;
-  color: white;
+  background: var(--color-success-600);
+  color: var(--color-neutral-0);
 }
 
 .toast-error {
-  background: #dc2626;
-  color: white;
+  background: var(--color-error-600);
+  color: var(--color-neutral-0);
 }
 
 .toast-info {
-  background: #2563eb;
-  color: white;
+  background: var(--color-info-600);
+  color: var(--color-neutral-0);
 }
 
 .toast-warning {
-  background: #d97706;
-  color: white;
+  background: var(--color-warning-600);
+  color: var(--color-neutral-0);
 }
 
 .toast-message {
@@ -113,18 +113,20 @@ defineExpose({ addToast, removeToast, success, error, info, warning })
 .toast-close {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--color-neutral-0);
   cursor: pointer;
   padding: 4px;
   opacity: 0.7;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .toast-close:hover {
   opacity: 1;
 }
+.toast-close:active { transform: scale(0.94); }
 
 .toast-enter-active,
 .toast-leave-active {

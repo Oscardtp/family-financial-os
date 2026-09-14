@@ -19,7 +19,7 @@
               min="1"
             />
           </div>
-          <span v-if="amountError" class="form-error">{{ amountError }}</span>
+          <span v-if="amountError" class="form-error" role="alert" aria-live="assertive">{{ amountError }}</span>
         </div>
         <div class="form-group">
           <label class="form-label" for="contribution-date">¿Cuándo?</label>
@@ -163,6 +163,7 @@ onMounted(() => {
 .btn-cancel:hover {
   background: var(--color-neutral-200);
 }
+.btn-cancel:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-confirm {
   background: var(--color-primary-500);
@@ -183,6 +184,7 @@ onMounted(() => {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
+.btn-confirm:active:not(:disabled) { transform: translateY(0); filter: brightness(0.95); }
 
 .btn-confirm:disabled {
   background: var(--color-primary-300);

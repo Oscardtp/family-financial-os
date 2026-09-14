@@ -184,6 +184,7 @@ defineExpose({ runSimulation })
 .preset-btn:hover {
   background: var(--color-neutral-200);
 }
+.preset-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 
 .preset-btn.active {
   background: var(--color-primary-100);
@@ -206,6 +207,7 @@ defineExpose({ runSimulation })
 .simulate-btn:hover:not(:disabled) {
   background: var(--color-info-600);
 }
+.simulate-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .simulate-btn:disabled {
   opacity: 0.6;

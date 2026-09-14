@@ -58,7 +58,7 @@
             </div>
           </div>
           <div class="form-actions">
-            <span v-if="catFormError" class="form-error">{{ catFormError }}</span>
+            <span v-if="catFormError" class="form-error" role="alert" aria-live="assertive">{{ catFormError }}</span>
             <button class="btn btn-primary" type="submit" :disabled="catSubmitting">
               {{ catSubmitting ? 'Creando...' : 'Crear categoría' }}
             </button>
@@ -94,7 +94,7 @@ const categories = ref([])
 const catLoading = ref(true)
 const catSubmitting = ref(false)
 const catFormError = ref('')
-const catForm = reactive({ name: '', type: 'expense', icon: '', color: '#6366f1' })
+const catForm = reactive({ name: '', type: 'expense', icon: '', color: 'var(--color-secondary-500)' })
 
 const catToDelete = ref(null)
 const showCatConfirm = ref(false)
@@ -142,7 +142,7 @@ async function createCategory() {
     catForm.name = ''
     catForm.type = 'expense'
     catForm.icon = ''
-    catForm.color = '#6366f1'
+    catForm.color = 'var(--color-secondary-500)'
     toast.success('Categoría creada')
   } catch (e) {
     catFormError.value = e.response?.data?.detail || 'No pudimos crear la categoría'
@@ -236,19 +236,21 @@ onMounted(loadCategories)
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-sm); }
 .form-error { color: var(--color-error-500); font-size: 0.8rem; margin-right: auto; }
 .btn-icon-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--color-neutral-400);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 .btn-icon-danger:hover { color: var(--color-error-500); background: var(--color-error-50); }
-
-.empty-state { grid-column: 1 / -1; text-align: center; padding: var(--spacing-2xl); color: var(--color-neutral-400); font-size: 0.875rem; }
-.empty-icon { margin-bottom: var(--spacing-sm); }
-.empty-hint { display: block; font-size: 0.8rem; color: var(--color-neutral-400); margin-top: var(--spacing-xs); }
+.btn-icon-danger:active:not(:disabled) { transform: scale(0.94); }
 
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }

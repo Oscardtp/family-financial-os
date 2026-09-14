@@ -69,6 +69,7 @@ defineEmits(['close', 'confirm'])
 .btn-cancel:hover {
   background: var(--color-neutral-200);
 }
+.btn-cancel:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .btn-confirm {
   background: var(--color-primary-500);
@@ -96,4 +97,6 @@ defineEmits(['close', 'confirm'])
 .btn-confirm.btn-danger:hover {
   background: var(--color-error-600);
 }
+.btn-confirm:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
+.btn-confirm.btn-danger:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 </style>

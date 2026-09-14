@@ -165,6 +165,14 @@
   --font-size-xl: 1.5rem;
   --font-size-2xl: 1.75rem;
 
+  /* Font Sizes — extended scale for body/labels */
+  --font-size-2xs: 0.7rem;
+  --font-size-3xs: 0.65rem;
+  --font-size-xs-alt: 0.8rem;
+  --font-size-sm-alt: 0.85rem;
+  --font-size-base-alt: 0.9rem;
+  --font-size-lg-alt: 1.25rem;
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
@@ -270,4 +278,13 @@
   --color-surface-tinted-orange: #1a120a;
   --color-surface-tinted-pink: #1a0f18;
   --color-surface-tinted-lime: #0f1a0a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

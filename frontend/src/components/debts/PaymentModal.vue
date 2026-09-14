@@ -15,7 +15,7 @@
 
           <form class="payment-form" @submit.prevent="submitPayment">
             <div class="form-group">
-              <label class="form-label">Monto del Pago</label>
+              <label class="form-label" for="payment-amount">Monto del Pago</label>
               <div class="input-prefix">
                 <input
                   :value="fmtPay.displayValue.value"
@@ -31,7 +31,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Fecha del Pago</label>
+              <label class="form-label" for="payment-date">Fecha del Pago</label>
                 <input
                   v-model="paymentForm.payment_date"
                   type="date"
@@ -42,7 +42,7 @@
               />
             </div>
 
-            <p v-if="paymentError" class="form-error">{{ paymentError }}</p>
+            <p v-if="paymentError" class="form-error" role="alert" aria-live="assertive">{{ paymentError }}</p>
 
             <button type="submit" class="submit-btn" :disabled="paying">
               {{ paying ? 'Procesando...' : 'Registrar Pago' }}
@@ -150,7 +150,9 @@ async function submitPayment() {
   cursor: pointer;
   color: var(--color-neutral-500);
   line-height: 1;
+  transition: transform var(--transition-fast);
 }
+.modal-close:active { transform: scale(0.94); }
 
 .debt-info {
   display: flex;
@@ -223,12 +225,13 @@ async function submitPayment() {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .submit-btn:hover:not(:disabled) {
   background: var(--color-success-600);
 }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .submit-btn:disabled {
   opacity: 0.5;

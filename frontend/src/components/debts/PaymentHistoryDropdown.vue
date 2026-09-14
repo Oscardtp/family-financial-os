@@ -216,12 +216,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform var(--transition-fast);
 }
 
 .ph-close:hover {
   background: var(--color-neutral-100);
   color: var(--color-neutral-600);
 }
+.ph-close:active { transform: scale(0.94); }
 
 .ph-debt-info {
   display: flex;
@@ -291,11 +293,13 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--color-primary-600);
   cursor: pointer;
+  transition: transform var(--transition-fast);
 }
 
 .ph-retry:hover {
   background: var(--color-primary-50);
 }
+.ph-retry:active { transform: scale(0.96); }
 
 .ph-empty {
   display: flex;

@@ -131,6 +131,74 @@ class TestBudgetEngine:
         assert len(overruns) == 1
         assert overruns[0].category_name == "Fun"
 
+    def test_projection_basic(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "1000"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "500", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 15, 30)
+        assert projection.items[0].projected_spent == Money("1000")
+        assert projection.items[0].will_exceed is False
+        assert projection.total_projected_spent == Money("1000")
+
+    def test_projection_zero_days_elapsed(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "1000"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "300", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 0, 30)
+        assert projection.items[0].projected_spent == Money("300")
+
+    def test_projection_month_end(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "1000"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "800", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 30, 30)
+        assert projection.items[0].projected_spent == Money("800")
+
+    def test_projection_detects_exceed(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "800"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "500", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 10, 30)
+        assert projection.items[0].will_exceed is True
+
+    def test_projection_no_exceed(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "1000"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "300", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 15, 30)
+        assert projection.items[0].will_exceed is False
+
+    def test_projection_overrun_amount(self):
+        engine = BudgetEngine()
+        budgets = [{"category_id": "cat1", "amount": "800"}]
+        spending = [{"category_id": "cat1", "category_name": "Food", "total": "500", "type": "expense"}]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 10, 30)
+        assert projection.items[0].projected_spent == Money("1500")
+        assert projection.items[0].projected_overrun == Money("700")
+
+    def test_projection_totals(self):
+        engine = BudgetEngine()
+        budgets = [
+            {"category_id": "cat1", "amount": "1000"},
+            {"category_id": "cat2", "amount": "500"},
+        ]
+        spending = [
+            {"category_id": "cat1", "category_name": "Food", "total": "500", "type": "expense"},
+            {"category_id": "cat2", "category_name": "Transport", "total": "200", "type": "expense"},
+        ]
+        status = engine.calculate_budget_status(budgets, spending)
+        projection = engine.project_budget_status(status, 15, 30)
+        assert projection.total_budgeted == Money("1500")
+        assert projection.total_projected_spent == Money("1400")
+        assert projection.total_projected_remaining == Money("100")
+        assert projection.total_will_exceed is False
+
 
 class TestDebtEngine:
     def test_calculate_summary(self):

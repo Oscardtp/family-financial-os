@@ -83,7 +83,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
-  LayoutDashboard, Receipt, Calendar, Target,
+  LayoutDashboard, Receipt, Target,
   User, PanelLeftClose, PanelLeftOpen,
   LogOut, Menu
 } from 'lucide-vue-next'
@@ -133,12 +133,6 @@ const navSections = [
     items: [
       { to: '/', label: 'Resumen', icon: LayoutDashboard },
       { to: '/debts', label: 'Mis Deudas', icon: Receipt },
-    ]
-  },
-  {
-    label: 'PAGOS',
-    items: [
-      { to: '/calendar', label: 'Calendario', icon: Calendar },
     ]
   },
   {
@@ -194,7 +188,21 @@ watch(() => route.path, () => {
 }
 .sidebar.collapsed { width: 60px; }
 .sidebar-overlay { display: none; }
-.hamburger-btn { display: none; }
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  color: var(--color-neutral-700);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition-fast);
+}
+.hamburger-btn:active { transform: scale(0.94); }
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -208,14 +216,21 @@ watch(() => route.path, () => {
   color: var(--color-primary-400);
 }
 .collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--color-neutral-400);
   cursor: pointer;
-  padding: var(--space-xs);
+  padding: 0;
   border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 .collapse-btn:hover { color: var(--color-neutral-100); background: var(--color-neutral-600); }
+.collapse-btn:active { transform: scale(0.94); }
 .sidebar-nav {
   flex: 1;
   padding: var(--space-sm);
@@ -240,6 +255,7 @@ watch(() => route.path, () => {
   cursor: pointer;
 }
 .nav-item:hover { color: var(--color-neutral-100); background: var(--color-neutral-600); }
+.nav-item:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); }
 .nav-item.active { color: white; background: var(--color-primary-600); }
 .nav-section-label {
   font-family: var(--font-display);

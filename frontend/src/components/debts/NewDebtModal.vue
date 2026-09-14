@@ -9,9 +9,9 @@
               <button class="modal-close" @click="$emit('close')">&times;</button>
             </div>
 
-          <form class="debt-form" @submit.prevent="submitCreate">
+          <form class="debt-form" @submit.prevent="submitCreate" aria-live="polite">
             <div class="form-group">
-              <label class="form-label">Nombre de la deuda</label>
+              <label class="form-label" for="debt-name">Nombre de la deuda</label>
               <input
                 v-model="createForm.name"
                 type="text"
@@ -24,7 +24,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Acreedor</label>
+              <label class="form-label" for="debt-creditor">Acreedor</label>
               <input
                 v-model="createForm.creditor"
                 type="text"
@@ -38,39 +38,39 @@
 
             <div class="form-row">
               <div class="form-group">
-              <label class="form-label">Monto Original</label>
-              <div class="input-prefix">
-                <input
-                  :value="fmtAmount.displayValue.value"
-                  @input="fmtAmount.onInput"
-                  @focus="fmtAmount.onFocus"
-                  class="form-input with-prefix"
-                  id="debt-amount"
-                  name="amount"
-                  required
-                />
-              </div>
+                <label class="form-label" for="debt-amount">Monto Original</label>
+                <div class="input-prefix">
+                  <input
+                    :value="fmtAmount.displayValue.value"
+                    @input="fmtAmount.onInput"
+                    @focus="fmtAmount.onFocus"
+                    class="form-input with-prefix"
+                    id="debt-amount"
+                    name="amount"
+                    required
+                  />
+                </div>
               </div>
 
               <div class="form-group">
-              <label class="form-label">Saldo Actual</label>
-              <div class="input-prefix">
-                <input
-                  :value="fmtBalance.displayValue.value"
-                  @input="fmtBalance.onInput"
-                  @focus="fmtBalance.onFocus"
-                  class="form-input with-prefix"
-                  id="debt-balance"
-                  name="current_balance"
-                  required
-                />
-              </div>
+                <label class="form-label" for="debt-balance">Saldo Actual</label>
+                <div class="input-prefix">
+                  <input
+                    :value="fmtBalance.displayValue.value"
+                    @input="fmtBalance.onInput"
+                    @focus="fmtBalance.onFocus"
+                    class="form-input with-prefix"
+                    id="debt-balance"
+                    name="current_balance"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Tasa Interes (%)</label>
+                <label class="form-label" for="debt-interest-rate">Tasa Interes (%)</label>
                 <input
                   v-model.number="createForm.interest_rate"
                   type="number"
@@ -83,7 +83,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Tipo de Tasa</label>
+                <label class="form-label" for="debt-rate-type">Tipo de Tasa</label>
                 <select v-model="createForm.interest_rate_type" class="form-input" id="debt-rate-type" name="interest_rate_type">
                   <option value="EA">EA (Efectiva Anual)</option>
                   <option value="EM">EM (Efectiva Mensual)</option>
@@ -95,24 +95,24 @@
 
             <div class="form-row">
               <div class="form-group">
-              <label class="form-label">Pago Minimo</label>
-              <div class="input-prefix">
-                <input
-                  :value="fmtMinPay.displayValue.value"
-                  @input="fmtMinPay.onInput"
-                  @focus="fmtMinPay.onFocus"
-                  class="form-input with-prefix"
-                  id="debt-min-payment"
-                  name="minimum_payment"
-                  required
-                />
-              </div>
+                <label class="form-label" for="debt-min-payment">Pago Minimo</label>
+                <div class="input-prefix">
+                  <input
+                    :value="fmtMinPay.displayValue.value"
+                    @input="fmtMinPay.onInput"
+                    @focus="fmtMinPay.onFocus"
+                    class="form-input with-prefix"
+                    id="debt-min-payment"
+                    name="minimum_payment"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Tipo de Deuda</label>
+                <label class="form-label" for="debt-type">Tipo de Deuda</label>
                 <select v-model="createForm.debt_type" class="form-input" id="debt-type" name="debt_type">
                   <option value="loan">Prestamo</option>
                   <option value="credit_card">Tarjeta de crédito</option>
@@ -123,7 +123,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Dia Vencimiento</label>
+                <label class="form-label" for="debt-due-day">Dia Vencimiento</label>
                 <input
                   v-model.number="createForm.due_day"
                   type="number"
@@ -137,7 +137,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Fecha Inicio</label>
+              <label class="form-label" for="debt-start-date">Fecha Inicio</label>
               <input
                 v-model="createForm.start_date"
                 type="date"
@@ -148,7 +148,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Nota (opcional)</label>
+              <label class="form-label" for="debt-note">Nota (opcional)</label>
               <input
                 v-model="createForm.note"
                 type="text"
@@ -159,7 +159,7 @@
               />
             </div>
 
-            <p v-if="createError" class="form-error">{{ createError }}</p>
+            <p v-if="createError" class="form-error" role="alert" aria-live="assertive">{{ createError }}</p>
 
             <button type="submit" class="submit-btn" :disabled="creating">
               {{ creating ? 'Creando...' : 'Crear Deuda' }}
@@ -290,7 +290,9 @@ async function submitCreate() {
   cursor: pointer;
   color: var(--color-neutral-500);
   line-height: 1;
+  transition: transform var(--transition-fast);
 }
+.modal-close:active { transform: scale(0.94); }
 
 .debt-form {
   display: flex;
@@ -351,12 +353,13 @@ select.form-input {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .submit-btn:hover:not(:disabled) {
   background: var(--color-primary-600);
 }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 
 .submit-btn:disabled {
   opacity: 0.5;

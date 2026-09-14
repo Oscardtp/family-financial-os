@@ -319,9 +319,10 @@ function handleSubmit() {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
+  transition: transform var(--transition-fast);
 }
-
 .submit-btn:hover:not(:disabled) { opacity: 0.9; }
+.submit-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.95); }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .smart-summary {

@@ -30,47 +30,47 @@
           >
             <MoreVertical :size="16" />
           </button>
-          <Transition name="menu">
-            <div v-if="showKebab" class="kebab-menu">
-              <button class="kebab-item" @click="handleMenuAction('history')">
-                <Clock :size="14" />
-                Historial de pagos
-              </button>
-              <button class="kebab-item" @click="handleMenuAction('amortization')">
-                <Table2 :size="14" />
-                Amortización
-              </button>
-              <button
-                v-if="debt.status === 'active'"
-                class="kebab-item"
-                @click="handleMenuAction('deactivate')"
-              >
-                <Pause :size="14" />
-                Pausar
-              </button>
-              <button
-                v-else-if="debt.status === 'paused' && debt.current_balance > 0"
-                class="kebab-item"
-                @click="handleMenuAction('activate')"
-              >
-                <Play :size="14" />
-                Activar
-              </button>
-              <button
-                v-else-if="debt.status === 'paid_off'"
-                class="kebab-item"
-                @click="handleMenuAction('reactivate')"
-              >
-                <RotateCcw :size="14" />
-                Reactivar
-              </button>
-              <div class="kebab-divider"></div>
-              <button class="kebab-item kebab-danger" @click="handleMenuAction('request-delete')">
-                <Trash2 :size="14" />
-                Eliminar
-              </button>
-            </div>
-          </Transition>
+  <Transition name="menu">
+             <div v-if="showKebab" class="kebab-menu">
+               <button class="kebab-item" @click="handleMenuAction('history', $event)">
+                 <Clock :size="14" />
+                 Historial de pagos
+               </button>
+               <button class="kebab-item" @click="handleMenuAction('amortization', $event)">
+                 <Table2 :size="14" />
+                 Amortización
+               </button>
+               <button
+                 v-if="debt.status === 'active'"
+                 class="kebab-item"
+                 @click="handleMenuAction('deactivate', $event)"
+               >
+                 <Pause :size="14" />
+                 Pausar
+               </button>
+               <button
+                 v-else-if="debt.status === 'paused' && debt.current_balance > 0"
+                 class="kebab-item"
+                 @click="handleMenuAction('activate', $event)"
+               >
+                 <Play :size="14" />
+                 Activar
+               </button>
+               <button
+                 v-else-if="debt.status === 'paid_off'"
+                 class="kebab-item"
+                 @click="handleMenuAction('reactivate', $event)"
+               >
+                 <RotateCcw :size="14" />
+                 Reactivar
+               </button>
+               <div class="kebab-divider"></div>
+               <button class="kebab-item kebab-danger" @click="handleMenuAction('request-delete', $event)">
+                 <Trash2 :size="14" />
+                 Eliminar
+               </button>
+             </div>
+           </Transition>
         </div>
       </div>
     </div>
@@ -137,8 +137,8 @@ function toggleKebab() {
   showKebab.value = !showKebab.value
 }
 
-function handleMenuAction(action) {
-  const kebabBtn = event?.target?.closest('.kebab-btn')
+function handleMenuAction(action, ev) {
+  const kebabBtn = ev?.target?.closest('.kebab-btn')
   showKebab.value = false
   if (action === 'history') {
     emit('open-history', props.debt, kebabBtn)
@@ -209,6 +209,7 @@ onUnmounted(() => {
 .expand-btn.expanded {
   transform: rotate(90deg);
 }
+.expand-btn:active { transform: scale(0.94); }
 
 .debt-identity {
   min-width: 0;
@@ -313,13 +314,15 @@ onUnmounted(() => {
 .kebab-btn {
   background: none;
   border: none;
-  padding: 4px;
+  padding: 8px;
   cursor: pointer;
   color: var(--color-neutral-400);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   transition: all var(--transition-fast);
 }
 
@@ -328,6 +331,7 @@ onUnmounted(() => {
   background: var(--color-neutral-100);
   color: var(--color-neutral-600);
 }
+.kebab-btn:active { transform: scale(0.94); }
 
 .kebab-menu {
   position: absolute;

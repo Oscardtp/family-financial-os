@@ -5,7 +5,9 @@
     :class="{ expanded: expanded, 'highlight-new': highlighted, completed: completed }"
   >
     <div class="goal-header">
-      <span class="goal-icon">{{ goal.goal_type === 'investment' ? '📈' : '🎯' }}</span>
+      <span class="goal-icon">
+        <component :is="goal.goal_type === 'investment' ? 'TrendingUp' : 'Target'" :size="24" />
+      </span>
       <div class="goal-title">
         <h3 class="goal-name">{{ goal.name }}</h3>
       <span class="goal-badges">
@@ -83,14 +85,14 @@
 
       <div v-if="expanded" class="goal-expanded">
         <div class="expanded-section">
-          <div class="expanded-actions">
-            <button class="expanded-btn" @click="$emit('edit', goal)">
-              ✏️ Editar
-            </button>
-            <button class="expanded-btn danger" @click="$emit('delete', goal)">
-              🗑️ Eliminar
-            </button>
-          </div>
+            <div class="expanded-actions">
+              <button class="expanded-btn" @click="$emit('edit', goal)">
+                <Pencil :size="14" /> Editar
+              </button>
+              <button class="expanded-btn danger" @click="$emit('delete', goal)">
+                <Trash2 :size="14" /> Eliminar
+              </button>
+            </div>
         </div>
         <div v-if="goal.history?.length" class="expanded-section">
           <h4 class="expanded-title">Historial de aportes</h4>
@@ -126,7 +128,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Calendar, TrendingUp } from 'lucide-vue-next'
+import { Calendar, TrendingUp, Target, CircleDot, Pencil, Trash2 } from 'lucide-vue-next'
 import { useCurrency } from '@/composables/useCurrency'
 import { useFinancialHelpers } from '@/composables/useFinancialHelpers'
 import { useGoalsStore } from '@/stores/goals'

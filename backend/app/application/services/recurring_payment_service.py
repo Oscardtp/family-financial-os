@@ -93,6 +93,7 @@ class RecurringPaymentService:
             "amount": payment["amount"],
             "description": payment["name"],
             "date": today,
+            "recurring_payment_id": payment["id"],
         })
 
         amount = Decimal(str(payment["amount"]))

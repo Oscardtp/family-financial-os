@@ -42,6 +42,10 @@ vi.mock('@/components/goals/GoalScenarioSimulator.vue', () => ({
 vi.mock('lucide-vue-next', () => ({
   Calendar: { template: '<span />' },
   TrendingUp: { template: '<span />' },
+  Target: { template: '<span />' },
+  CircleDot: { template: '<span />' },
+  Pencil: { template: '<span />' },
+  Trash2: { template: '<span />' },
 }))
 
 function makeGoal(overrides = {}) {

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 from typing import Optional
 from datetime import date
 import uuid
@@ -46,7 +47,7 @@ class FinancialEventRepository(ABC):
         ...
 
     @abstractmethod
-    async def mark_as_paid(self, id: uuid.UUID, paid_by: str, paid_amount, paid_at) -> dict:
+    async def mark_as_paid(self, id: uuid.UUID, paid_by: str, paid_amount: Decimal, paid_at) -> dict:
         ...
 
     @abstractmethod

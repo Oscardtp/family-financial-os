@@ -66,10 +66,10 @@ class CalendarMonthResponse(BaseModel):
 
 
 class CalendarProjectionResponse(BaseModel):
-    available_balance: float
-    pending_payments: float
-    expected_income: float
-    projected_balance: float
+    available_balance: Decimal
+    pending_payments: Decimal
+    expected_income: Decimal
+    projected_balance: Decimal
     events_7_days: list[dict]
     events_30_days_count: int
 
@@ -85,7 +85,7 @@ class MarkPaidRequest(BaseModel):
 
 class PatternSuggestionResponse(BaseModel):
     title: str
-    avg_amount: float
+    avg_amount: Decimal
     avg_day: int
     occurrences: int
     source: str

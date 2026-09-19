@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 from typing import Optional
 import uuid
 
@@ -25,5 +26,5 @@ class LiabilityRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_total_balance(self, household_id: uuid.UUID) -> float:
+    async def get_total_balance(self, household_id: uuid.UUID) -> Decimal:
         ...

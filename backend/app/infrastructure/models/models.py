@@ -127,7 +127,7 @@ class DebtPaymentModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     debt_id = Column(String(36), ForeignKey("debts.id"), nullable=False)
     household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
-    transaction_id = Column(String(36), ForeignKey("transactions.id"), nullable=True)
+    transaction_id = Column(String(36), ForeignKey("transactions.id", ondelete="RESTRICT"), nullable=True)
     amount = Column(Numeric(15, 2), nullable=False)
     principal = Column(Numeric(15, 2), nullable=True)
     interest = Column(Numeric(15, 2), nullable=True)

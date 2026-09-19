@@ -68,8 +68,9 @@ backend/backend_error.log
 .opencode/
 .claude/
 .firecrawl/
-.agents/skills/
-.agents/state/
+agents/skills/
+agents/state/
+agent/skills/
 
 # Project-specific
 DEUDAS PROYECCION 2026.xlsx

@@ -134,5 +134,20 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             "description": model.description,
             "date": model.date,
             "to_account_id": model.to_account_id,
+            "recurring_payment_id": model.recurring_payment_id,
             "created_at": model.created_at,
         }
+
+    async def get_by_recurring(
+        self, recurring_payment_id: str, household_id: str, skip: int = 0, limit: int = 100
+    ) -> list[dict]:
+        query = (
+            select(TransactionModel)
+            .where(TransactionModel.recurring_payment_id == recurring_payment_id)
+            .where(TransactionModel.household_id == household_id)
+            .order_by(TransactionModel.date.desc(), TransactionModel.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.session.execute(query)
+        return [self._to_dict(m) for m in result.scalars().all()]

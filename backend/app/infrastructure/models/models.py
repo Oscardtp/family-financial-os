@@ -80,6 +80,7 @@ class TransactionModel(Base):
     date = Column(Date, nullable=False)
     status = Column(String(20), default="completed")
     to_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
+    recurring_payment_id = Column(String(36), ForeignKey("recurring_payments.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

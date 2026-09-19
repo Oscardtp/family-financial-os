@@ -6,6 +6,7 @@ from app.presentation.schemas.schemas import (
     RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentResponse,
 )
 from app.application.services.recurring_payment_service import RecurringPaymentService
+from app.application.services.recurring_payment_history_service import RecurringPaymentHistoryService
 from app.application.services.obligation_sync_service import ObligationSyncService
 
 router = APIRouter(prefix="/recurring-payments", tags=["Recurring Payments"])
@@ -110,3 +111,20 @@ async def process_due_payments(
     result = await service.process_due(current_user["household_id"], current_user["id"])
     await db.commit()
     return result
+
+
+@router.get("/{payment_id}/payments")
+async def get_payment_history(
+    payment_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(require_viewer),
+    db: AsyncSession = Depends(get_db),
+):
+    service = RecurringPaymentService(db)
+    try:
+        await service.get(payment_id, current_user["household_id"])
+    except ValueError:
+        raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
+    history = RecurringPaymentHistoryService(db)
+    return await history.get_payments(payment_id, current_user["household_id"], skip, limit)

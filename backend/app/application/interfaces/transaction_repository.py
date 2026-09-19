@@ -41,3 +41,9 @@ class TransactionRepository(ABC):
         self, household_id: uuid.UUID, year: int, month: int
     ) -> dict:
         ...
+
+    @abstractmethod
+    async def get_by_recurring(
+        self, recurring_payment_id: str, household_id: str, skip: int = 0, limit: int = 100
+    ) -> list[dict]:
+        ...

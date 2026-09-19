@@ -222,7 +222,7 @@ class AuditLogModel(Base):
     __tablename__ = "audit_logs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    household_id = Column(String(36), nullable=False, index=True)
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
     user_id = Column(String(36), nullable=False)
     user_email = Column(String(255), nullable=False)
     action = Column(String(50), nullable=False)

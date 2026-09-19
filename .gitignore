@@ -66,6 +66,8 @@ backend/backend_error.log
 # Tool output folders
 .kilo/
 .opencode/
+.claude/
+.firecrawl/
 .agents/skills/
 .agents/state/
 

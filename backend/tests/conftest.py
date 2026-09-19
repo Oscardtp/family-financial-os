@@ -1,13 +1,15 @@
 import os
 os.environ["DEBUG"] = "true"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
 
 import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from contextlib import asynccontextmanager
+from app.config import get_settings, DB_FILE
+get_settings.cache_clear()
 from app.main import app
 from app.database import Base, get_db, engine
-from app.config import DB_FILE
 
 TEST_DB_FILE = DB_FILE.parent / "test_family_financial.db"
 TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_FILE}"

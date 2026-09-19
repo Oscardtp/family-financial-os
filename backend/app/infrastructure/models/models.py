@@ -9,7 +9,11 @@ class HouseholdModel(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
+    base_currency = Column(String(3), default="COP")
+    timezone = Column(String(50), default="America/Bogota")
+    status = Column(String(20), default="active")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class UserModel(Base):
@@ -21,7 +25,10 @@ class UserModel(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50), default="member")
     household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
+    status = Column(String(20), default="active")
+    last_login_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class AccountModel(Base):
@@ -31,10 +38,15 @@ class AccountModel(Base):
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
+    institution = Column(String(255), nullable=True)
     balance = Column(Numeric(15, 2), default=0)
+    opening_balance = Column(Numeric(15, 2), default=0)
+    credit_limit = Column(Numeric(15, 2), nullable=True)
     currency = Column(String(3), default="COP")
     is_active = Column(Boolean, default=True)
+    status = Column(String(20), default="active")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class CategoryModel(Base):
@@ -44,23 +56,32 @@ class CategoryModel(Base):
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
     name = Column(String(255), nullable=False)
     type = Column(String(20), nullable=False)
+    parent_id = Column(String(36), nullable=True)
+    is_active = Column(Boolean, default=True)
     icon = Column(String(50), nullable=True)
     color = Column(String(7), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class TransactionModel(Base):
     __tablename__ = "transactions"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
     account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False)
     category_id = Column(String(36), ForeignKey("categories.id"), nullable=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     type = Column(String(20), nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)
+    currency = Column(String(3), default="COP")
     description = Column(Text, nullable=True)
     date = Column(Date, nullable=False)
+    status = Column(String(20), default="completed")
     to_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class BudgetModel(Base):
@@ -70,8 +91,11 @@ class BudgetModel(Base):
     category_id = Column(String(36), ForeignKey("categories.id"), nullable=False)
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)
+    period = Column(String(20), default="monthly")
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class DebtModel(Base):
@@ -80,7 +104,9 @@ class DebtModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
     name = Column(String(255), nullable=False)
+    type = Column(String(50), default="loan")
     creditor = Column(String(255), nullable=True)
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
     total_amount = Column(Numeric(15, 2), nullable=False)
     current_balance = Column(Numeric(15, 2), nullable=False)
     interest_rate = Column(Numeric(5, 2), default=0)
@@ -90,6 +116,9 @@ class DebtModel(Base):
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     status = Column(String(50), default="active")
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class DebtPaymentModel(Base):
@@ -97,11 +126,16 @@ class DebtPaymentModel(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     debt_id = Column(String(36), ForeignKey("debts.id"), nullable=False)
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
+    transaction_id = Column(String(36), ForeignKey("transactions.id"), nullable=True)
     amount = Column(Numeric(15, 2), nullable=False)
     principal = Column(Numeric(15, 2), nullable=True)
     interest = Column(Numeric(15, 2), nullable=True)
+    fees_amount = Column(Numeric(15, 2), default=0)
     payment_date = Column(Date, nullable=False)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     is_reversed = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class DebtPaymentOverrideModel(Base):
@@ -124,13 +158,19 @@ class SavingsGoalModel(Base):
     name = Column(String(255), nullable=False)
     target_amount = Column(Numeric(15, 2), nullable=False)
     current_amount = Column(Numeric(15, 2), default=0)
+    start_date = Column(Date, nullable=True)
     target_date = Column(Date, nullable=True)
+    contribution_frequency = Column(String(20), default="monthly")
     monthly_contribution = Column(Numeric(15, 2), nullable=True)
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
+    status = Column(String(20), default="active")
     priority = Column(String(20), default="medium")
     description = Column(Text, nullable=True)
     goal_type = Column(String(20), default="savings")
     expected_return_rate = Column(Numeric(5, 2), nullable=True)
     horizon_months = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class SavingsContributionModel(Base):
@@ -138,8 +178,12 @@ class SavingsContributionModel(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     goal_id = Column(String(36), ForeignKey("savings_goals.id"), nullable=False)
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
+    transaction_id = Column(String(36), ForeignKey("transactions.id"), nullable=True)
     amount = Column(Numeric(15, 2), nullable=False)
     contribution_date = Column(Date, nullable=False)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class AssetModel(Base):
@@ -150,7 +194,11 @@ class AssetModel(Base):
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
     value = Column(Numeric(15, 2), nullable=False)
+    currency = Column(String(3), default="COP")
+    valuation_date = Column(Date, nullable=True)
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
     purchase_date = Column(Date, nullable=True)
+    status = Column(String(20), default="active")
 
 
 class LiabilityModel(Base):
@@ -162,9 +210,12 @@ class LiabilityModel(Base):
     type = Column(String(50), nullable=False)
     total_amount = Column(Numeric(15, 2), nullable=False)
     current_balance = Column(Numeric(15, 2), nullable=False)
+    currency = Column(String(3), default="COP")
+    valuation_date = Column(Date, nullable=True)
     interest_rate = Column(Numeric(5, 2), default=0)
     interest_rate_type = Column(String(20), default="EA")
     monthly_payment = Column(Numeric(15, 2), default=0)
+    status = Column(String(20), default="active")
 
 
 class AuditLogModel(Base):
@@ -193,11 +244,17 @@ class RecurringPaymentModel(Base):
     amount = Column(Numeric(15, 2), nullable=False)
     type = Column(String(20), nullable=False, default="expense")
     frequency = Column(String(20), nullable=False, default="monthly")
+    interval = Column(Integer, default=1)
     day_of_month = Column(Integer, default=1)
+    start_date = Column(Date, nullable=True)
     next_due_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True)
+    status = Column(String(20), default="active")
     description = Column(Text, nullable=True)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class NotificationModel(Base):
@@ -283,3 +340,108 @@ class FinancialEventModel(Base):
     consequence_note = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AccountBalanceHistoryModel(Base):
+    __tablename__ = "account_balance_history"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False, index=True)
+    transaction_id = Column(String(36), ForeignKey("transactions.id"), nullable=True, index=True)
+    balance_before = Column(Numeric(15, 2), nullable=False)
+    balance_after = Column(Numeric(15, 2), nullable=False)
+    change_amount = Column(Numeric(15, 2), nullable=False)
+    change_type = Column(String(20), nullable=False)  # income, expense, transfer, adjustment
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AmortizationScheduleModel(Base):
+    __tablename__ = "amortization_schedules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    debt_id = Column(String(36), ForeignKey("debts.id"), nullable=False, index=True)
+    month_number = Column(Integer, nullable=False)
+    payment_date = Column(Date, nullable=False)
+    payment_amount = Column(Numeric(15, 2), nullable=False)
+    principal_portion = Column(Numeric(15, 2), nullable=False)
+    interest_portion = Column(Numeric(15, 2), nullable=False)
+    remaining_balance = Column(Numeric(15, 2), nullable=False)
+    cumulative_interest = Column(Numeric(15, 2), nullable=False)
+    is_paid = Column(Boolean, default=False, nullable=False)
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class DetectedPatternModel(Base):
+    __tablename__ = "detected_patterns"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    type = Column(String(20), nullable=False)  # income, expense
+    avg_amount = Column(Numeric(15, 2), nullable=False)
+    avg_day_of_month = Column(Integer, nullable=True)
+    frequency = Column(String(20), nullable=False)  # monthly, weekly, biweekly
+    occurrences = Column(Integer, nullable=False, default=1)
+    confidence = Column(Integer, nullable=False, default=50)  # 0-100
+    source = Column(String(50), nullable=False)  # transaction, event, manual
+    source_id = Column(String(36), nullable=True)
+    category_id = Column(String(36), ForeignKey("categories.id"), nullable=True)
+    account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
+    first_seen = Column(Date, nullable=False)
+    last_seen = Column(Date, nullable=False)
+    is_confirmed = Column(Boolean, default=False, nullable=False)
+    is_rejected = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class TransferModel(Base):
+    __tablename__ = "transfers"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
+    from_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False)
+    to_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False)
+    amount = Column(Numeric(15, 2), nullable=False)
+    currency = Column(String(3), default="COP")
+    transaction_date = Column(Date, nullable=False)
+    description = Column(Text, nullable=True)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class HouseholdMemberModel(Base):
+    __tablename__ = "household_members"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    role = Column(String(20), default="member")
+    status = Column(String(20), default="active")
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ImportBatchModel(Base):
+    __tablename__ = "import_batches"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
+    source_file = Column(String(500), nullable=False)
+    imported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    status = Column(String(20), default="pending")
+    records_detected = Column(Integer, default=0)
+    records_imported = Column(Integer, default=0)
+    records_rejected = Column(Integer, default=0)
+    error_report = Column(Text, nullable=True)
+
+
+class RefreshTokenModel(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    jti = Column(String(36), unique=True, nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    revoked = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    expires_at = Column(DateTime, nullable=False)

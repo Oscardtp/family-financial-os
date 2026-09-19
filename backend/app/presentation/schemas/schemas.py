@@ -670,3 +670,24 @@ class ObligationResponse(BaseModel):
     notes: Optional[str] = Field(None, description="Notes")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Update timestamp")
+
+
+class DetectedPatternResponse(BaseModel):
+    id: UUID = Field(..., description="Pattern UUID")
+    household_id: UUID = Field(..., description="Household UUID")
+    name: str = Field(..., description="Pattern name")
+    type: str = Field(..., description="Pattern type: income or expense")
+    avg_amount: Decimal = Field(..., description="Average amount")
+    avg_day_of_month: Optional[int] = Field(None, description="Average day of month")
+    frequency: str = Field(..., description="Frequency: monthly, weekly, biweekly")
+    occurrences: int = Field(..., description="Number of occurrences")
+    confidence: int = Field(..., description="Confidence score 0-100")
+    source: str = Field(..., description="Source: transaction, event, manual")
+    first_seen: DateType = Field(..., description="First occurrence date")
+    last_seen: DateType = Field(..., description="Last occurrence date")
+    is_confirmed: bool = Field(..., description="Whether confirmed by user")
+    is_rejected: bool = Field(..., description="Whether rejected by user")
+
+
+class PatternConfirmRequest(BaseModel):
+    is_confirmed: bool = Field(..., description="Confirm or reject pattern")

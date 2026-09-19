@@ -13,8 +13,10 @@ from app.presentation.v1 import (
     auth, accounts, transactions, categories, budgets, debts, savings,
     dashboard, projections, household, reports, audit,
     recurring_payments, notifications, preferences, events, obligations, coach, month,
+    patterns, balance_history,
 )
-from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler
+from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler, register_rate_limit_handler
+from app.presentation.middleware.rate_limit import RateLimitMiddleware
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
@@ -52,10 +54,14 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
+if settings.RATE_LIMIT_ENABLED:
+    app.add_middleware(RateLimitMiddleware)
+
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(HTTPException, http_error_handler)
 app.add_exception_handler(500, generic_error_handler)
 app.add_exception_handler(Exception, generic_error_handler)
+register_rate_limit_handler(app)
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(accounts.router, prefix="/api/v1")
@@ -76,6 +82,8 @@ app.include_router(events.router, prefix="/api/v1")
 app.include_router(obligations.router, prefix="/api/v1")
 app.include_router(coach.router, prefix="/api/v1")
 app.include_router(month.router, prefix="/api/v1")
+app.include_router(patterns.router, prefix="/api/v1")
+app.include_router(balance_history.router, prefix="/api/v1")
 
 
 @app.get("/health")

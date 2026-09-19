@@ -145,7 +145,12 @@ Administrar economía real de manera simple, privada y rápida.
 
 ## Decisiones y Hechos del Proyecto (Referencia Rápida)
 
-Estos puntos son conocimiento projecto; tenlos en cuenta antes de implementar:
+**Documentos de referencia:**
+- `docs/PERSISTENCE_AND_DATA_SECURITY_AUDIT.md` — Auditoría completa de persistencia y seguridad (2026-09-18)
+- `docs/REGLA_DE_MIGRACION.md` — Regla de migración de datos financieros desde Excel
+- `docs/ARCHITECTURE-REVIEW.md` — Revisión de arquitectura del backend
+
+Estos puntos son conocimiento del proyecto; tenlos en cuenta antes de implementar:
 
 - **Calendario único**: El proyecto tiene una pantalla/Calendario dedicada. Los calendarios embebidos en otras vistas se eliminan para evitar duplicidad.
 - **Diseño 100% responsive**: Toda UI debe funcionar en mobile y desktop.
@@ -210,3 +215,102 @@ Estos puntos son conocimiento projecto; tenlos en cuenta antes de implementar:
 - En listas de deudas (`Debts.vue`), coerción numérica con `Number(...)` antes de sumar para evitar `NaN`
 - Mantener selector `rate_type` sincronizado con backend enum (`EA`, `EM`, `nominal`, `daily`)
 - Labels de tasa: mostrar "Tasa Interés" (no "Tasa Mensual") cuando se refiere a la tasa anual
+
+### Importación de Datos Financieros (Excel → BD)
+
+**REGLA**: La importación inicial desde Excel es una migración de datos financieros reales. Aplica las siguientes restricciones absolutas.
+
+**Prohibido:**
+- Importar directamente a producción
+- Modificar la base anterior
+- Eliminar la base anterior
+- Sobrescribir registros existentes sin identificación explícita
+- Inventar categorías, cuentas, fechas o saldos
+- Convertir automáticamente datos ambiguos
+- Crear transacciones a partir de datos que no representen movimientos reales
+- Convertir automáticamente pagos recurrentes en transacciones
+- Convertir proyecciones en transacciones reales
+- Alterar cantidades para hacer coincidir un total esperado
+
+**Proceso obligatorio (12 pasos):**
+```
+Excel original
+    ↓
+Archivo preservado sin modificar
+    ↓
+Lectura / inventario
+    ↓
+Normalización
+    ↓
+Staging
+    ↓
+Validación
+    ↓
+Reporte de registros ambiguos
+    ↓
+Aprobación
+    ↓
+Importación
+    ↓
+Reconciliación
+    ↓
+Financial Invariants
+    ↓
+Backup
+```
+
+**Registros ambiguos:** Si un registro no puede clasificarse con seguridad, NO se importa automáticamente. Debe aparecer en un reporte con: fila, descripción, valor, fecha, problema y estado `REQUIERE REVISIÓN`.
+
+**Reconciliación obligatoria:**
+```
+Total Excel = Total importado + Total rechazado + Total pendiente de revisión
+```
+Debe ser matemáticamente explicable.
+
+**Snapshot:** Antes de considerar terminada la migración, generar conteos y totales (cuentas, transacciones, ingresos, gastos, transferencias, deudas, pagos de deuda, ahorros, inversiones, metas, saldos) y comparar con el Excel original.
+
+**Criterio de éxito:** La migración solamente es exitosa cuando:
+```
+DATA PERSISTENCE = PASS
+DATA INTEGRITY = PASS
+FINANCIAL RECONCILIATION = PASS
+HOUSEHOLD ISOLATION = PASS
+BACKUP = PASS
+RECOVERY TEST = PASS
+```
+
+---
+
+## Protocolos Operativos (Obligatorios)
+
+**DOCUMENTOS DE REFERENCIA PERMANENTE:**
+- `docs/REGLA_DE_MIGRACION.md` — Regla de migración de datos financieros desde Excel
+- `docs/PROTOCOLO_MAESTRO.md` — Protocolo maestro de recuperación, desarrollo y QA
+
+**REGLA:** El agente DEBE leer y seguir estos protocolos antes de cualquier tarea que involucre base de datos, datos financieros, o migraciones. No asumir que "ya se hizo" sin verificar.
+
+### Estado Operativo Actual
+
+El proyecto esta en modo:
+
+```
+DATABASE RECOVERY MODE
+```
+
+No desarrollar nuevas funcionalidades financieras hasta completar todas las fases del Protocolo Maestro (Fase 0 a Fase 6).
+
+### Ciclo de Desarrollo Obligatorio
+
+Después de recuperar la DB, toda funcionalidad debe seguir:
+
+```
+ANALIZAR → DISEÑAR → IMPLEMENTAR → MIGRAR → TESTEAR → PERSISTIR → REINICIAR → VERIFICAR → SEGURIDAD → INTEGRIDAD FINANCIERA → REGRESIÓN → QA GATE → READY
+```
+
+### Regla de Pausa Operativa
+
+Entre cada fase del protocolo, el agente DEBE:
+1. Resumir lo realizado
+2. Documentar decisiones clave tomadas
+3. Confirmar si todo va de acuerdo al plan
+4. Esperar confirmación antes de continuar a la siguiente fase

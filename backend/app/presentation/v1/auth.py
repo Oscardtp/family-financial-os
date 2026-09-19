@@ -4,12 +4,14 @@ from app.database import get_db
 from app.presentation.schemas.schemas import UserRegister, UserLogin, TokenResponse, TokenRefresh, UserResponse
 from app.presentation.deps import get_current_user
 from app.application.services.auth_service import AuthService
+from app.api.deps_rate_limit import RateLimitDependency
+from app.core.rate_limit import RateLimitTier
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
+async def register(data: UserRegister, db: AsyncSession = Depends(get_db), _rate=Depends(RateLimitDependency(tier=RateLimitTier.AUTH))):
     service = AuthService(db)
     result = await service.register(data)
     await db.commit()
@@ -17,13 +19,13 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(data: UserLogin, db: AsyncSession = Depends(get_db), _rate=Depends(RateLimitDependency(tier=RateLimitTier.AUTH))):
     service = AuthService(db)
     return await service.login(data)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(data: TokenRefresh, db: AsyncSession = Depends(get_db)):
+async def refresh_token(data: TokenRefresh, db: AsyncSession = Depends(get_db), _rate=Depends(RateLimitDependency(tier=RateLimitTier.AUTH))):
     service = AuthService(db)
     return await service.refresh(data.refresh_token)
 

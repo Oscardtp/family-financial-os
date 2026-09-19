@@ -1,5 +1,5 @@
 import logging
-from fastapi import Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -71,3 +71,18 @@ async def generic_error_handler(request: Request, exc: Exception) -> JSONRespons
             "detail": "Algo salió mal de nuestro lado. Inténtalo en un momento.",
         },
     )
+
+
+async def rate_limit_error_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Handle 429 Too Many Requests with Retry-After header."""
+    retry_after = exc.headers.get("Retry-After", "60") if exc.headers else "60"
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests"},
+        headers={"Retry-After": retry_after},
+    )
+
+
+def register_rate_limit_handler(app: FastAPI) -> None:
+    """Register the 429 exception handler on the app."""
+    app.add_exception_handler(429, rate_limit_error_handler)

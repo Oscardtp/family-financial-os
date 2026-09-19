@@ -33,7 +33,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({"exp": expire, "type": "refresh", "jti": str(uuid.uuid4())})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
@@ -47,6 +47,42 @@ def decode_token(token: str) -> dict:
             detail="Sesión expirada o inválida",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def store_refresh_token(db: AsyncSession, jti: str, user_id: str, expires_at: datetime) -> None:
+    from app.infrastructure.models.models import RefreshTokenModel
+    token_record = RefreshTokenModel(
+        jti=jti,
+        user_id=str(user_id),
+        revoked=False,
+        expires_at=expires_at,
+    )
+    db.add(token_record)
+    await db.flush()
+
+
+async def revoke_refresh_token(db: AsyncSession, jti: str) -> None:
+    from sqlalchemy import update
+    from app.infrastructure.models.models import RefreshTokenModel
+    await db.execute(
+        update(RefreshTokenModel)
+        .where(RefreshTokenModel.jti == jti)
+        .values(revoked=True)
+    )
+    await db.flush()
+
+
+async def is_refresh_token_revoked(db: AsyncSession, jti: str) -> bool:
+    from sqlalchemy import select
+    from app.infrastructure.models.models import RefreshTokenModel
+    result = await db.execute(
+        select(RefreshTokenModel.revoked)
+        .where(RefreshTokenModel.jti == jti)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return True
+    return row
 
 
 async def get_current_user(

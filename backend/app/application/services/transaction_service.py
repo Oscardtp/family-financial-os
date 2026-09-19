@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
 from app.infrastructure.repositories.category_repository import SQLAlchemyCategoryRepository
+from app.infrastructure.repositories.balance_history_repository import SQLAlchemyAccountBalanceHistoryRepository
 from app.presentation.audit_helper import log_action
 
 
@@ -13,6 +14,7 @@ class TransactionService:
         self.tx_repo = SQLAlchemyTransactionRepository(db)
         self.account_repo = SQLAlchemyAccountRepository(db)
         self.category_repo = SQLAlchemyCategoryRepository(db)
+        self.balance_history_repo = SQLAlchemyAccountBalanceHistoryRepository(db)
 
     async def list(
         self,
@@ -51,8 +53,6 @@ class TransactionService:
 
         self._check_balance(account, data.type, amount)
 
-        await self._adjust_balances(data)
-
         transaction = await self.tx_repo.create({
             "account_id": data.account_id,
             "category_id": data.category_id,
@@ -63,6 +63,8 @@ class TransactionService:
             "date": data.date,
             "to_account_id": data.to_account_id,
         })
+
+        await self._adjust_balances(data, transaction["id"])
 
         await log_action(
             self.db, household_id, user["id"], user["email"],
@@ -128,22 +130,67 @@ class TransactionService:
                     f"Disponible: ${account['balance']:,.2f}, necesitas: ${Decimal(str(amount)):,.2f}"
                 )
 
-    async def _adjust_balances(self, data):
+    async def _adjust_balances(self, data, transaction_id: str = None):
         amount = Decimal(str(data.amount))
 
         if data.type == "income":
+            account = await self.account_repo.get_by_id(data.account_id)
+            balance_before = account["balance"]
             await self.account_repo.update_balance(data.account_id, amount)
+            account_after = await self.account_repo.get_by_id(data.account_id)
+            await self._record_balance_history(
+                data.account_id, transaction_id, balance_before,
+                account_after["balance"], amount, "income"
+            )
 
         elif data.type == "expense":
+            account = await self.account_repo.get_by_id(data.account_id)
+            balance_before = account["balance"]
             deducted = await self.account_repo.deduct_balance(data.account_id, amount)
             if not deducted:
                 raise ValueError("No tienes suficiente plata para este pago")
+            account_after = await self.account_repo.get_by_id(data.account_id)
+            await self._record_balance_history(
+                data.account_id, transaction_id, balance_before,
+                account_after["balance"], -amount, "expense"
+            )
 
         elif data.type == "transfer" and data.to_account_id:
+            # Origen
+            account_from = await self.account_repo.get_by_id(data.account_id)
+            balance_before_from = account_from["balance"]
             deducted = await self.account_repo.deduct_balance(data.account_id, amount)
             if not deducted:
                 raise ValueError("No tienes suficiente plata en la cuenta origen")
+            account_after_from = await self.account_repo.get_by_id(data.account_id)
+            await self._record_balance_history(
+                data.account_id, transaction_id, balance_before_from,
+                account_after_from["balance"], -amount, "transfer"
+            )
+
+            # Destino
+            account_to = await self.account_repo.get_by_id(data.to_account_id)
+            balance_before_to = account_to["balance"]
             await self.account_repo.update_balance(data.to_account_id, amount)
+            account_after_to = await self.account_repo.get_by_id(data.to_account_id)
+            await self._record_balance_history(
+                data.to_account_id, transaction_id, balance_before_to,
+                account_after_to["balance"], amount, "transfer"
+            )
+
+    async def _record_balance_history(
+        self, account_id: str, transaction_id: str | None,
+        balance_before: Decimal, balance_after: Decimal,
+        change_amount: Decimal, change_type: str
+    ):
+        await self.balance_history_repo.create({
+            "account_id": account_id,
+            "transaction_id": transaction_id,
+            "balance_before": balance_before,
+            "balance_after": balance_after,
+            "change_amount": change_amount,
+            "change_type": change_type,
+        })
 
     async def _reverse_balances(self, transaction: dict):
         amount = transaction["amount"]
@@ -151,9 +198,39 @@ class TransactionService:
             amount = Decimal(str(amount))
 
         if transaction["type"] == "income":
+            account = await self.account_repo.get_by_id(transaction["account_id"])
+            balance_before = account["balance"]
             await self.account_repo.update_balance(transaction["account_id"], -amount)
+            account_after = await self.account_repo.get_by_id(transaction["account_id"])
+            await self._record_balance_history(
+                transaction["account_id"], transaction["id"], balance_before,
+                account_after["balance"], -amount, "adjustment"
+            )
         elif transaction["type"] == "expense":
+            account = await self.account_repo.get_by_id(transaction["account_id"])
+            balance_before = account["balance"]
             await self.account_repo.update_balance(transaction["account_id"], amount)
+            account_after = await self.account_repo.get_by_id(transaction["account_id"])
+            await self._record_balance_history(
+                transaction["account_id"], transaction["id"], balance_before,
+                account_after["balance"], amount, "adjustment"
+            )
         elif transaction["type"] == "transfer" and transaction.get("to_account_id"):
-            await self.account_repo.update_balance(transaction["account_id"], amount)
+            # Revertir destino
+            account_to = await self.account_repo.get_by_id(transaction["to_account_id"])
+            balance_before_to = account_to["balance"]
             await self.account_repo.update_balance(transaction["to_account_id"], -amount)
+            account_after_to = await self.account_repo.get_by_id(transaction["to_account_id"])
+            await self._record_balance_history(
+                transaction["to_account_id"], transaction["id"], balance_before_to,
+                account_after_to["balance"], -amount, "adjustment"
+            )
+            # Revertir origen
+            account_from = await self.account_repo.get_by_id(transaction["account_id"])
+            balance_before_from = account_from["balance"]
+            await self.account_repo.update_balance(transaction["account_id"], amount)
+            account_after_from = await self.account_repo.get_by_id(transaction["account_id"])
+            await self._record_balance_history(
+                transaction["account_id"], transaction["id"], balance_before_from,
+                account_after_from["balance"], amount, "adjustment"
+            )

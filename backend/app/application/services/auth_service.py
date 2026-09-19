@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 from app.infrastructure.repositories.household_repository import SQLAlchemyHouseholdRepository
 from app.infrastructure.repositories.category_repository import SQLAlchemyCategoryRepository
-from app.presentation.deps import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.presentation.deps import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, store_refresh_token, revoke_refresh_token
 from app.presentation.schemas.schemas import TokenResponse
 
 
@@ -59,6 +59,10 @@ class AuthService:
 
         access = create_access_token({"sub": str(user["id"])})
         refresh = create_refresh_token({"sub": str(user["id"])})
+        refresh_payload = decode_token(refresh)
+        from datetime import datetime, timezone
+        expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+        await store_refresh_token(self.db, refresh_payload["jti"], str(user["id"]), expires_at)
         return TokenResponse(access_token=access, refresh_token=refresh)
 
     async def login(self, data) -> TokenResponse:
@@ -68,6 +72,10 @@ class AuthService:
 
         access = create_access_token({"sub": str(user["id"])})
         refresh = create_refresh_token({"sub": str(user["id"])})
+        refresh_payload = decode_token(refresh)
+        from datetime import datetime, timezone
+        expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+        await store_refresh_token(self.db, refresh_payload["jti"], str(user["id"]), expires_at)
         return TokenResponse(access_token=access, refresh_token=refresh)
 
     async def refresh(self, token: str) -> TokenResponse:
@@ -75,11 +83,24 @@ class AuthService:
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="Sesión no válida")
 
+        jti = payload.get("jti")
+        if jti:
+            from app.presentation.deps import is_refresh_token_revoked
+            if await is_refresh_token_revoked(self.db, jti):
+                raise HTTPException(status_code=401, detail="Token de sesión ya utilizado")
+
         user_id = payload.get("sub")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=401, detail="No encontramos tu cuenta")
 
+        if jti:
+            await revoke_refresh_token(self.db, jti)
+
         access = create_access_token({"sub": str(user["id"])})
         refresh = create_refresh_token({"sub": str(user["id"])})
+        refresh_payload = decode_token(refresh)
+        from datetime import datetime, timezone
+        expires_at = datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+        await store_refresh_token(self.db, refresh_payload["jti"], str(user["id"]), expires_at)
         return TokenResponse(access_token=access, refresh_token=refresh)

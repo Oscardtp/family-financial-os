@@ -7,11 +7,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base
-from app.config import DB_FILE
+from app.config import get_settings
 from app.infrastructure.models.models import *  # noqa: F401, F403
 
+settings = get_settings()
 config = context.config
-config.set_main_option("sqlalchemy.url", f"sqlite:///{DB_FILE}")
+# Use sync URL for Alembic (asyncpg is async-only, Alembic needs sync)
+url = settings.DATABASE_SYNC_URL or settings.DATABASE_URL
+# Replace async driver with sync driver if needed
+if "asyncpg" in url:
+    url = url.replace("postgresql+asyncpg://", "postgresql://")
+config.set_main_option("sqlalchemy.url", url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

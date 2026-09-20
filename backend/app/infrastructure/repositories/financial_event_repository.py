@@ -190,6 +190,29 @@ class SQLAlchemyFinancialEventRepository:
         result = await self.session.execute(query.order_by(FinancialEventModel.due_date).limit(limit))
         return [self._to_dict(m) for m in result.scalars().all()]
 
+    async def get_pending_for_recurring(self, household_id: str, recurring_payment_id: str) -> Optional[dict]:
+        """Find the nearest pending FinancialEvent for a RecurringPayment.
+
+        Linkage: RecurringPayment.id → Obligation.source_id → Event.obligation_id
+        """
+        from app.infrastructure.models.models import FinancialObligationModel
+        result = await self.session.execute(
+            select(FinancialEventModel)
+            .join(
+                FinancialObligationModel,
+                FinancialEventModel.obligation_id == FinancialObligationModel.id,
+            )
+            .where(FinancialEventModel.household_id == _to_str_id(household_id))
+            .where(FinancialObligationModel.source == "SYSTEM")
+            .where(FinancialObligationModel.source_id == _to_str_id(recurring_payment_id))
+            .where(FinancialEventModel.status == "pending")
+            .where(FinancialEventModel.is_recurrent == True)  # noqa: E712
+            .order_by(FinancialEventModel.due_date)
+            .limit(1)
+        )
+        model = result.scalar_one_or_none()
+        return self._to_dict(model) if model else None
+
     async def delete_upcoming_by_obligation(self, household_id, obligation_id: str, as_of: date) -> int:
         result = await self.session.execute(
             delete(FinancialEventModel)

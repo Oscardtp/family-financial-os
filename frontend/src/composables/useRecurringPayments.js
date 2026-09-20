@@ -5,6 +5,7 @@ export function useRecurringPayments() {
   const history = ref([])
   const historyLoading = ref(false)
   const historyError = ref(null)
+  const executing = ref(false)
 
   async function getPaymentHistory(paymentId) {
     if (!paymentId) return []
@@ -23,10 +24,27 @@ export function useRecurringPayments() {
     }
   }
 
+  async function getPendingEvent(paymentId) {
+    const { data } = await api.get(`/recurring-payments/${paymentId}/pending-event`)
+    return data
+  }
+
+  async function executeRecurringPayment(eventId) {
+    executing.value = true
+    try {
+      await api.post(`/events/${eventId}/pay`)
+    } finally {
+      executing.value = false
+    }
+  }
+
   return {
     history,
     historyLoading,
     historyError,
+    executing,
     getPaymentHistory,
+    getPendingEvent,
+    executeRecurringPayment,
   }
 }

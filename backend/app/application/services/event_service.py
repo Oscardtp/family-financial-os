@@ -4,6 +4,10 @@ from decimal import Decimal
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
 from app.infrastructure.repositories.notification_repository import SQLAlchemyNotificationRepository
+from app.infrastructure.repositories.transaction_repository import SQLAlchemyTransactionRepository
+from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
+from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
+from app.infrastructure.repositories.obligation_repository import SQLAlchemyFinancialObligationRepository
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +97,84 @@ class FinancialEventService:
         sync = CalendarDebtSyncService(self.db)
         await sync.on_event_paid(event, user["household_id"], user["id"])
 
+        await self._create_transaction_for_recurring_event(updated, user)
+
         return updated
+
+    async def _create_transaction_for_recurring_event(self, event: dict, user: dict) -> None:
+        """Create a Transaction when a recurring payment event is marked as paid.
+
+        Only applies to events linked to a RecurringPayment (via obligation).
+        Debt events are handled by CalendarDebtSyncService.
+        """
+        if not event.get("obligation_id"):
+            return
+
+        obligation_repo = SQLAlchemyFinancialObligationRepository(self.db)
+        obligation = await obligation_repo.get_by_id(event["obligation_id"])
+        if not obligation:
+            return
+
+        if obligation["source"] != "SYSTEM" or not obligation.get("source_id"):
+            return
+
+        recurring_id = obligation["source_id"]
+        rp_repo = SQLAlchemyRecurringPaymentRepository(self.db)
+        recurring = await rp_repo.get_by_id(recurring_id)
+        if not recurring:
+            return
+
+        account_id = event.get("account_id") or recurring.get("account_id")
+        if not account_id:
+            return
+
+        amount = Decimal(str(event["amount"]))
+
+        tx_repo = SQLAlchemyTransactionRepository(self.db)
+        await tx_repo.create({
+            "household_id": event["household_id"],
+            "account_id": account_id,
+            "category_id": event.get("category_id"),
+            "user_id": user["id"],
+            "type": event["type"],
+            "amount": amount,
+            "description": event["title"],
+            "date": event["due_date"],
+            "recurring_payment_id": recurring_id,
+        })
+
+        acc_repo = SQLAlchemyAccountRepository(self.db)
+        if event["type"] == "income":
+            await acc_repo.update_balance(account_id, amount)
+        elif event["type"] == "expense":
+            await acc_repo.deduct_balance(account_id, amount)
+        else:
+            await acc_repo.update_balance(account_id, amount)
+
+        from calendar import monthrange
+        from datetime import date as date_type
+        from_date = date_type.today()
+        frequency = recurring.get("frequency", "monthly")
+        day_of_month = recurring.get("day_of_month", 1)
+        if frequency == "monthly":
+            next_month = from_date.month + 1
+            next_year = from_date.year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            max_day = monthrange(next_year, next_month)[1]
+            next_due = date(next_year, next_month, min(day_of_month, max_day))
+        elif frequency == "weekly":
+            next_due = from_date + timedelta(weeks=1)
+        elif frequency == "biweekly":
+            next_due = from_date + timedelta(weeks=2)
+        elif frequency == "yearly":
+            max_day = monthrange(from_date.year + 1, from_date.month)[1]
+            next_due = date(from_date.year + 1, from_date.month, min(day_of_month, max_day))
+        else:
+            next_due = from_date + timedelta(days=30)
+
+        await rp_repo.update({**recurring, "next_due_date": next_due})
 
     async def unpay(self, event_id: str, user: dict) -> dict:
         event = await self.get(event_id, user["household_id"])

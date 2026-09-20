@@ -4,10 +4,12 @@ from app.database import get_db
 from app.presentation.deps import require_viewer, require_member
 from app.presentation.schemas.schemas import (
     RecurringPaymentCreate, RecurringPaymentUpdate, RecurringPaymentResponse,
+    EventResponse,
 )
 from app.application.services.recurring_payment_service import RecurringPaymentService
 from app.application.services.recurring_payment_history_service import RecurringPaymentHistoryService
 from app.application.services.obligation_sync_service import ObligationSyncService
+from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
 
 router = APIRouter(prefix="/recurring-payments", tags=["Recurring Payments"])
 
@@ -51,6 +53,30 @@ async def get_recurring_payment(
         return await service.get(payment_id, current_user["household_id"])
     except ValueError:
         raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
+
+
+@router.get("/{payment_id}/pending-event", response_model=EventResponse)
+async def get_pending_event(
+    payment_id: str,
+    current_user: dict = Depends(require_viewer),
+    db: AsyncSession = Depends(get_db),
+):
+    service = RecurringPaymentService(db)
+    try:
+        await service.get(payment_id, current_user["household_id"])
+    except ValueError:
+        raise HTTPException(status_code=404, detail="No encontramos este pago recurrente")
+
+    event_repo = SQLAlchemyFinancialEventRepository(db)
+    event = await event_repo.get_pending_for_recurring(
+        current_user["household_id"], payment_id
+    )
+    if not event:
+        raise HTTPException(
+            status_code=404,
+            detail="No hay eventos pendientes para este pago recurrente",
+        )
+    return event
 
 
 @router.put("/{payment_id}", response_model=RecurringPaymentResponse)

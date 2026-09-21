@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { useAgenda } from '@/composables/useAgenda'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 describe('useAgenda', () => {
   it('groupByDate agrupa eventos por fecha', () => {
@@ -17,21 +18,22 @@ describe('useAgenda', () => {
   })
 
   it('formatGroupLabel retorna HOY para fecha actual', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     expect(useAgenda().formatGroupLabel(today)).toBe('HOY')
   })
 
   it('formatGroupLabel retorna MAÑANA para fecha siguiente', () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
     expect(useAgenda().formatGroupLabel(tomorrowStr)).toBe('MAÑANA')
   })
 
   it('formatGroupLabel retorna fecha formateada para fechas lejanas', () => {
     const future = new Date()
     future.setDate(future.getDate() + 10)
-    const futureStr = future.toISOString().slice(0, 10)
+    const futureStr = getLocalDateString(future)
     const label = useAgenda().formatGroupLabel(futureStr)
     expect(label).not.toBe('HOY')
     expect(label).not.toBe('MAÑANA')

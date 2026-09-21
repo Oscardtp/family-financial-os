@@ -27,7 +27,7 @@ settings = get_settings()
 
 def _run_migrations():
     cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
-    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{DB_FILE}")
+    cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
     command.upgrade(cfg, "head")
 
 

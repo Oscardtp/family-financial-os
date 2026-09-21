@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useCalendarStore } from '@/stores/useCalendar'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
@@ -37,7 +38,7 @@ export function useCalendarFilters() {
       const inMonth = d.getMonth() === m - 1
       cells.push({
         day: d.getDate(),
-        dateStr: d.toISOString().slice(0, 10),
+        dateStr: getLocalDateString(d),
         inMonth,
         isToday: d.getTime() === today.getTime(),
         events: [],

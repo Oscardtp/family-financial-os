@@ -1,10 +1,10 @@
 from typing import Optional
 import uuid
 from decimal import Decimal
-from datetime import datetime
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import FinancialObligationModel
+from app.infrastructure.datetime_utils import utc_now_naive
 
 
 def _to_str_id(id_val) -> str:
@@ -69,7 +69,7 @@ class SQLAlchemyFinancialObligationRepository:
         for key, value in data.items():
             if key != "id":
                 setattr(model, key, value)
-        model.updated_at = datetime.utcnow()
+        model.updated_at = utc_now_naive()
         await self.session.flush()
         await self.session.refresh(model)
         return self._to_dict(model)

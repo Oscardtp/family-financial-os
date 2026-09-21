@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { eventsService, obligationsService } from '@/services/events'
 import { useCurrency } from '@/composables/useCurrency'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 export const useCalendarStore = defineStore('calendar', () => {
   const { fmt, fmtFull, fmtDate } = useCurrency()
@@ -28,8 +29,8 @@ export const useCalendarStore = defineStore('calendar', () => {
       const from = new Date(y, m - 2, 1)
       const to = new Date(y, m + 2, 0)
       const res = await eventsService.listRange(
-        from.toISOString().slice(0, 10),
-        to.toISOString().slice(0, 10)
+        getLocalDateString(from),
+        getLocalDateString(to)
       )
       events.value = res.data
     } catch {

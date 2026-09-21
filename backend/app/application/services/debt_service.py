@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -176,7 +176,7 @@ class DebtService:
         payments = await self.payment_repo.get_by_debt_id(debt_id, limit=1000)
         overrides = await self.override_repo.get_by_debt_id(debt_id)
 
-        today = datetime.now()
+        today = date.today()
         start = debt.get("start_date")
         if start:
             if hasattr(start, 'year'):

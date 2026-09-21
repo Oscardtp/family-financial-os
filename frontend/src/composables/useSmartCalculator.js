@@ -4,6 +4,7 @@
  */
 
 import { useCurrency } from '@/composables/useCurrency'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 function monthsUntil(targetDate) {
   if (!targetDate) return 0
@@ -25,7 +26,7 @@ function calculateDate(remaining, monthly) {
   const target = new Date()
   target.setMonth(target.getMonth() + months)
   if (Number.isNaN(target.getTime())) return null
-  return target.toISOString().split('T')[0]
+  return getLocalDateString(target)
 }
 
 function formatDateStr(d) {

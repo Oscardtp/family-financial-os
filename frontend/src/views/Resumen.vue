@@ -236,6 +236,7 @@ import { useDashboard } from '@/composables/useDashboard'
 import { useNotifications } from '@/composables/useNotifications'
 import { eventsService } from '@/services/events'
 import { useAgenda } from '@/composables/useAgenda'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const router = useRouter()
 const { fmt, fmtFull } = useCurrency()
@@ -353,9 +354,7 @@ async function loadEvents() {
     availability.value = availRes.data
     monthSummary.value = availRes.data
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().slice(0, 10)
+    const todayStr = getLocalDateString()
 
     const all = upcomingRes.data || []
     todayEvents.value = all.filter(e => e.due_date === todayStr && e.status !== 'paid').slice(0, 5)

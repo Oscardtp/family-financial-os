@@ -68,6 +68,7 @@ import RecurringForm from './RecurringForm.vue'
 import GoalForm from './GoalForm.vue'
 import SourcePicker from './SourcePicker.vue'
 import DoneConfirmation from './DoneConfirmation.vue'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const toast = useToast()
 
@@ -136,7 +137,7 @@ function handleTypeSelect(type) {
 async function handleTransactionSubmit(data) {
   submitting.value = true
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString()
     await api.post('/transactions', {
       account_id: props.accounts[0]?.id,
       amount: data.amount,

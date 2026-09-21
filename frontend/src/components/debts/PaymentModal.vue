@@ -59,6 +59,7 @@ import { ref, reactive, watch } from 'vue'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import api from '@/services/api'
 import { useCurrency } from '@/composables/useCurrency'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const { fmt } = useCurrency()
 
@@ -70,7 +71,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'paid'])
 
 const paymentForm = reactive({
-  payment_date: new Date().toISOString().split('T')[0]
+  payment_date: getLocalDateString()
 })
 
 const paying = ref(false)
@@ -80,7 +81,7 @@ const fmtPay = useFormattedNumber(0, { prefix: '$' })
 
 watch(() => props.show, (val) => {
   if (val && props.debt) {
-    paymentForm.payment_date = new Date().toISOString().split('T')[0]
+    paymentForm.payment_date = getLocalDateString()
     fmtPay.setInitial(props.debt.minimum_payment || 0)
     paymentError.value = ''
   }

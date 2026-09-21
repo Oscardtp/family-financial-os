@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 from decimal import Decimal
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
@@ -8,6 +8,7 @@ from app.infrastructure.repositories.transaction_repository import SQLAlchemyTra
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
 from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
 from app.infrastructure.repositories.obligation_repository import SQLAlchemyFinancialObligationRepository
+from app.infrastructure.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class FinancialEventService:
             event_id,
             user["id"],
             Decimal(str(event["amount"])),
-            datetime.now(timezone.utc),
+            utc_now_naive(),
         )
         await self._notify_family_payment(updated, user)
 

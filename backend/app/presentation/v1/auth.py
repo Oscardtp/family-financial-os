@@ -21,13 +21,17 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db), _rate
 @router.post("/login", response_model=TokenResponse)
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db), _rate=Depends(RateLimitDependency(tier=RateLimitTier.AUTH))):
     service = AuthService(db)
-    return await service.login(data)
+    result = await service.login(data)
+    await db.commit()
+    return result
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(data: TokenRefresh, db: AsyncSession = Depends(get_db), _rate=Depends(RateLimitDependency(tier=RateLimitTier.AUTH))):
     service = AuthService(db)
-    return await service.refresh(data.refresh_token)
+    result = await service.refresh(data.refresh_token)
+    await db.commit()
+    return result
 
 
 @router.get("/me", response_model=UserResponse)

@@ -177,6 +177,7 @@ import { ref, reactive, watch } from 'vue'
 import { useFormattedNumber } from '@/composables/useFormattedNumber'
 import api from '@/services/api'
 import FocusTrap from '@/components/FocusTrap.vue'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const props = defineProps({
   show: { type: Boolean, default: false }
@@ -191,7 +192,7 @@ const createForm = reactive({
   interest_rate_type: 'EA',
   debt_type: 'loan',
   due_day: 1,
-  start_date: new Date().toISOString().split('T')[0],
+  start_date: getLocalDateString(),
   note: ''
 })
 
@@ -210,7 +211,7 @@ watch(() => props.show, (val) => {
     createForm.interest_rate_type = 'EA'
     createForm.debt_type = 'loan'
     createForm.due_day = 1
-    createForm.start_date = new Date().toISOString().split('T')[0]
+    createForm.start_date = getLocalDateString()
     createForm.note = ''
     fmtAmount.setInitial(0)
     fmtBalance.setInitial(0)
@@ -234,7 +235,7 @@ async function submitCreate() {
       minimum_payment: fmtMinPay.rawValue.value,
       debt_type: createForm.debt_type,
       due_day: createForm.due_day,
-      start_date: createForm.start_date || new Date().toISOString().split('T')[0],
+      start_date: createForm.start_date || getLocalDateString(),
       note: createForm.note || null
     })
     emit('created')

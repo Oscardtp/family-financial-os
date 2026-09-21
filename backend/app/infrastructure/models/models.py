@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime, ForeignKey, Integer, Date, Text
 from app.database import Base
+from app.infrastructure.datetime_utils import utc_now_naive
 
 
 class HouseholdModel(Base):
@@ -12,8 +13,8 @@ class HouseholdModel(Base):
     base_currency = Column(String(3), default="COP")
     timezone = Column(String(50), default="America/Bogota")
     status = Column(String(20), default="active")
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class UserModel(Base):
@@ -27,8 +28,8 @@ class UserModel(Base):
     household_id = Column(String(36), ForeignKey("households.id"), nullable=True)
     status = Column(String(20), default="active")
     last_login_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class AccountModel(Base):
@@ -45,8 +46,8 @@ class AccountModel(Base):
     currency = Column(String(3), default="COP")
     is_active = Column(Boolean, default=True)
     status = Column(String(20), default="active")
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class CategoryModel(Base):
@@ -60,8 +61,8 @@ class CategoryModel(Base):
     is_active = Column(Boolean, default=True)
     icon = Column(String(50), nullable=True)
     color = Column(String(7), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class TransactionModel(Base):
@@ -81,8 +82,8 @@ class TransactionModel(Base):
     status = Column(String(20), default="completed")
     to_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True)
     recurring_payment_id = Column(String(36), ForeignKey("recurring_payments.id"), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class BudgetModel(Base):
@@ -95,8 +96,8 @@ class BudgetModel(Base):
     period = Column(String(20), default="monthly")
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class DebtModel(Base):
@@ -118,8 +119,8 @@ class DebtModel(Base):
     end_date = Column(Date, nullable=True)
     status = Column(String(50), default="active")
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class DebtPaymentModel(Base):
@@ -136,7 +137,7 @@ class DebtPaymentModel(Base):
     payment_date = Column(Date, nullable=False)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     is_reversed = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class DebtPaymentOverrideModel(Base):
@@ -148,7 +149,7 @@ class DebtPaymentOverrideModel(Base):
     month = Column(Integer, nullable=False)
     is_paid = Column(Boolean, default=True, nullable=False)
     marked_by = Column(String(36), ForeignKey("users.id"), nullable=True)
-    marked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    marked_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class SavingsGoalModel(Base):
@@ -170,8 +171,8 @@ class SavingsGoalModel(Base):
     goal_type = Column(String(20), default="savings")
     expected_return_rate = Column(Numeric(5, 2), nullable=True)
     horizon_months = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class SavingsContributionModel(Base):
@@ -184,7 +185,7 @@ class SavingsContributionModel(Base):
     amount = Column(Numeric(15, 2), nullable=False)
     contribution_date = Column(Date, nullable=False)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class AssetModel(Base):
@@ -231,7 +232,7 @@ class AuditLogModel(Base):
     entity_id = Column(String(36), nullable=True)
     entity_name = Column(String(255), nullable=True)
     details = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class RecurringPaymentModel(Base):
@@ -254,8 +255,8 @@ class RecurringPaymentModel(Base):
     status = Column(String(20), default="active")
     description = Column(Text, nullable=True)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())
 
 
 class NotificationModel(Base):
@@ -269,7 +270,7 @@ class NotificationModel(Base):
     message = Column(Text, nullable=False)
     data = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class CategoryAccountPreferenceModel(Base):
@@ -279,7 +280,7 @@ class CategoryAccountPreferenceModel(Base):
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False)
     category_id = Column(String(36), ForeignKey("categories.id"), nullable=False)
     account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class FinancialObligationModel(Base):
@@ -304,8 +305,8 @@ class FinancialObligationModel(Base):
     is_active = Column(Boolean, default=True)
     confidence = Column(Integer, default=100)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class FinancialEventModel(Base):
@@ -339,8 +340,8 @@ class FinancialEventModel(Base):
     confidence = Column(Integer, default=100)
     payment_method = Column(String(12), nullable=True)
     consequence_note = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class AccountBalanceHistoryModel(Base):
@@ -353,7 +354,7 @@ class AccountBalanceHistoryModel(Base):
     balance_after = Column(Numeric(15, 2), nullable=False)
     change_amount = Column(Numeric(15, 2), nullable=False)
     change_type = Column(String(20), nullable=False)  # income, expense, transfer, adjustment
-    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    recorded_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class AmortizationScheduleModel(Base):
@@ -370,7 +371,7 @@ class AmortizationScheduleModel(Base):
     cumulative_interest = Column(Numeric(15, 2), nullable=False)
     is_paid = Column(Boolean, default=False, nullable=False)
     paid_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class DetectedPatternModel(Base):
@@ -393,8 +394,8 @@ class DetectedPatternModel(Base):
     last_seen = Column(Date, nullable=False)
     is_confirmed = Column(Boolean, default=False, nullable=False)
     is_rejected = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class TransferModel(Base):
@@ -409,7 +410,7 @@ class TransferModel(Base):
     transaction_date = Column(Date, nullable=False)
     description = Column(Text, nullable=True)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class HouseholdMemberModel(Base):
@@ -420,7 +421,7 @@ class HouseholdMemberModel(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     role = Column(String(20), default="member")
     status = Column(String(20), default="active")
-    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    joined_at = Column(DateTime, default=lambda: utc_now_naive())
 
 
 class ImportBatchModel(Base):
@@ -429,7 +430,7 @@ class ImportBatchModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     household_id = Column(String(36), ForeignKey("households.id"), nullable=False, index=True)
     source_file = Column(String(500), nullable=False)
-    imported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    imported_at = Column(DateTime, default=lambda: utc_now_naive())
     status = Column(String(20), default="pending")
     records_detected = Column(Integer, default=0)
     records_imported = Column(Integer, default=0)
@@ -444,5 +445,5 @@ class RefreshTokenModel(Base):
     jti = Column(String(36), unique=True, nullable=False, index=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     revoked = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    expires_at = Column(DateTime(timezone=True), nullable=False)

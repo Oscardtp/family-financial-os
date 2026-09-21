@@ -72,6 +72,7 @@ import { useCalendarNavigation } from '@/composables/useCalendarNavigation'
 import { useCalendarFilters } from '@/composables/useCalendarFilters'
 import { eventColor as _eventColor, typeIcon as _typeIcon, fmtDateShort as _fmtDateShort } from '@/composables/useCalendarHelpers'
 import CalendarGridView from '@/components/calendar/CalendarGridView.vue'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -105,7 +106,7 @@ function fmtDateShort(dateStr) { return _fmtDateShort(dateStr) }
 const selectedDateLabel = computed(() => {
   if (!selectedDate.value) return ''
   const d = new Date(selectedDate.value + 'T00:00:00')
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = getLocalDateString()
   if (selectedDate.value === todayStr) return 'HOY'
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }).toUpperCase()
 })

@@ -1,9 +1,10 @@
 from typing import Optional
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from sqlalchemy import select, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import FinancialEventModel
+from app.infrastructure.datetime_utils import utc_now_naive
 
 
 def _to_str_id(id_val) -> str:
@@ -90,7 +91,7 @@ class SQLAlchemyFinancialEventRepository:
         for key, value in data.items():
             if key != "id":
                 setattr(model, key, value)
-        model.updated_at = datetime.now(timezone.utc)
+        model.updated_at = utc_now_naive()
         await self.session.flush()
         await self.session.refresh(model)
         return self._to_dict(model)
@@ -116,7 +117,7 @@ class SQLAlchemyFinancialEventRepository:
         model.paid_by = paid_by
         model.paid_amount = paid_amount
         model.paid_at = paid_at
-        model.updated_at = datetime.now(timezone.utc)
+        model.updated_at = utc_now_naive()
         await self.session.flush()
         await self.session.refresh(model)
         return self._to_dict(model)

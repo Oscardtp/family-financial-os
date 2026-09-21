@@ -314,3 +314,153 @@ Entre cada fase del protocolo, el agente DEBE:
 2. Documentar decisiones clave tomadas
 3. Confirmar si todo va de acuerdo al plan
 4. Esperar confirmación antes de continuar a la siguiente fase
+
+---
+
+## Protección contra Agentes IA (10M-E)
+
+### REGLAS ABSOLUTAS
+
+**REGLA 1 — NO tocar la base de datos:**
+Nunca ejecutar sin autorización explícita:
+- `DROP DATABASE`, `DROP TABLE`, `TRUNCATE`, `DELETE` masivo
+- `ALTER TABLE` manualmente
+- `alembic downgrade`, `alembic stamp` para "arreglar" estados
+- `alembic upgrade` sobre una DB real
+- Recrear la DB o borrar archivos de la DB
+- Modificar datos existentes
+
+Si alguna acción de este tipo parece necesaria: DETENERSE y reportar como `BLOCKED`.
+
+**REGLA 2 — NO usar comandos Git destructivos:**
+Nunca ejecutar automáticamente:
+```
+git reset --hard
+git clean -fd
+git checkout -- .
+git restore .
+git branch -D
+git push --force
+```
+Si un archivo parece "innecesario": inspeccionarlo → `git status` → `git diff` → identificar origen → reportar → proponer cambio mínimo.
+
+**REGLA 3 — Migraciones Alembic:**
+Antes de modificar una migración:
+1. Revisar `alembic history`, `alembic heads`, `alembic current`
+2. Inspeccionar `git status` y el contenido de la migración
+3. Comprobar `revision` y `down_revision`
+Nunca: cambiar un `revision` existente, reutilizar un revision ID, eliminar una migración "porque parece duplicada", crear una segunda migración con el mismo `revision`.
+Debe existir un único head salvo razón explícita y documentada.
+
+**REGLA 4 — DATABASE_URL:**
+No cambiar automáticamente: `DATABASE_URL`, configuración de PostgreSQL/SQLite, engine, pool, credenciales, configuración de Alembic.
+Antes de modificar la conexión: localizar config → localizar uso en app → localizar uso en Alembic → verificar mismo entorno → explicar cambio.
+No sustituir PostgreSQL por SQLite para "hacer funcionar" una prueba sin autorización.
+
+**REGLA 5 — Secrets:**
+Nunca introducir credenciales reales en código, scripts, tests, documentación, logs, commits, prompts, archivos de configuración versionados.
+Nunca imprimir contraseñas, tokens o connection strings completos en reportes.
+Usar variables de entorno.
+Si se encuentra un secret existente: no imprimirlo → no copiarlo → reportar que existe → proponer aislamiento/eliminación segura.
+
+**REGLA 6 — Backups:**
+Los backups NO deben entrar al repositorio Git, NO deben ser modificados por un agente durante una tarea normal, NO deben eliminarse automáticamente.
+Los backups deben estar protegidos mediante `.gitignore`.
+Antes de eliminar un backup: solicitar autorización explícita.
+
+**REGLA 7 — Alcance de cada tarea:**
+Antes de modificar: `git status`. Después de modificar: `git status` + `git diff`.
+Si aparecen archivos fuera del alcance: NO modificarlos, NO revertirlos automáticamente, reportarlos.
+No aprovechar una tarea pequeña para hacer refactors, limpieza general, actualización de dependencias, reorganización de arquitectura, cambios de DB, migraciones, configuración no relacionada.
+
+### PROTOCOLO OBLIGATORIO DE TRABAJO
+
+Toda tarea debe seguir:
+```
+1. DIAGNÓSTICO
+2. EVIDENCIA
+3. PLAN MÍNIMO
+4. CAMBIO
+5. TESTS
+6. REVISIÓN DEL DIFF
+7. REPORTE
+```
+No saltar directamente de `problema → código`. Debe existir evidencia antes del cambio.
+
+### CAMBIOS MÍNIMOS
+
+Preferir: `1 problema → 1 causa → 1 cambio pequeño → 1 validación`.
+Evitar modificar múltiples capas simultáneamente salvo estrictamente necesario.
+No refactorizar código que funciona solamente porque se está tocando el archivo.
+
+### NO OCULTAR ERRORES
+
+Nunca:
+- Eliminar tests para conseguir PASS
+- Modificar tests únicamente para esconder una regresión
+- Ignorar excepciones
+- Comentar código problemático sin explicación
+- Silenciar errores
+- Eliminar validaciones para conseguir que una petición funcione
+
+Si un test parece obsoleto: reportarlo antes de cambiarlo.
+
+### BASE DE DATOS — PRINCIPIO DE SEGURIDAD
+
+La DB contiene datos familiares reales.
+```
+Código puede reconstruirse.
+Datos reales pueden no poder recuperarse.
+```
+Ante cualquier duda que pueda afectar datos: DETENERSE.
+Es preferible devolver `BLOCKED — requiere autorización` que ejecutar una operación potencialmente destructiva.
+
+### SI UNA TAREA REQUIERE DB
+
+Si una futura tarea realmente necesita modificar la DB, no asumir autorización. Reportar:
+```
+DATABASE ACTION REQUIRED
+Acción:
+Motivo:
+Tablas afectadas:
+Datos potencialmente afectados:
+¿Existe backup verificable?: YES/NO
+¿Es entorno de prueba?: YES/NO
+```
+Esperar autorización explícita antes de una operación destructiva o irreversible.
+
+### NO HACER "LIMPIEZAS" AUTOMÁTICAS
+
+No eliminar automáticamente: archivos desconocidos, scripts, migraciones, backups, tests, configuraciones, archivos untracked.
+Primero identificar su función y procedencia.
+
+### REGLA PARA AGENTES DE IA — PROBLEMAS ANTERIORES
+
+Si el agente detecta que una modificación anterior de otro agente pudo haber causado un problema:
+NO intentar "limpiarlo todo". Debe:
+1. Preservar el estado actual
+2. Diagnosticar
+3. Recopilar evidencia
+4. Identificar el cambio sospechoso
+5. Reportar
+6. Proponer el cambio mínimo
+
+No utilizar `reset --hard`, `clean -fd`, `downgrade`, `drop/recreate DB` como primera respuesta.
+
+### REPORTE FINAL OBLIGATORIO
+
+Toda tarea debe terminar indicando:
+```
+STATUS: PASS / FAIL / BLOCKED
+Cambios realizados: ...
+Archivos modificados: ...
+Archivos creados: ...
+Archivos eliminados: ...
+DB modificada: YES / NO
+Migraciones modificadas: YES / NO
+Tests: X passed, Y failed
+Git status: CLEAN / MODIFIED
+Riesgos detectados: ...
+Acciones pendientes: ...
+```
+No declarar `PASS` si hubo errores no resueltos, cambios fuera de alcance, la DB fue modificada inesperadamente, o las migraciones quedaron inconsistentes.

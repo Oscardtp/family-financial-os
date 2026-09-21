@@ -27,6 +27,7 @@ htmlcov/
 # Database
 *.db
 *.sqlite3
+backup_*.sql
 
 # Node / Frontend
 node_modules/
@@ -56,6 +57,7 @@ seed_*.py
 verify_*.py
 check_pwd.py
 fix_*.py
+!fix_schema_gaps_phase2.py
 write.py
 
 # Logs

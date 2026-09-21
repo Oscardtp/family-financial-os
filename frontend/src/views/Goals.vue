@@ -187,6 +187,7 @@ const GoalContributionModal = defineAsyncComponent(() => import('@/components/go
 const GoalCreateModal = defineAsyncComponent(() => import('@/components/goals/GoalCreateModal.vue'))
 const GoalEditModal = defineAsyncComponent(() => import('@/components/goals/GoalEditModal.vue'))
 import GoalDeleteConfirm from '@/components/goals/GoalDeleteConfirm.vue'
+import { getLocalDateString } from '@/composables/useDateFormat'
 
 const toast = useToast()
 
@@ -200,7 +201,7 @@ const {
 const { fmt } = goalsStore
 
 const contributionAmount = ref('')
-const contributionDate = ref(new Date().toISOString().split('T')[0])
+const contributionDate = ref(getLocalDateString())
 const creating = ref(false)
 const showCreateModal = ref(false)
 
@@ -210,7 +211,7 @@ async function submitContribution() {
     toast.error(err)
   } else {
     contributionAmount.value = ''
-    contributionDate.value = new Date().toISOString().split('T')[0]
+    contributionDate.value = getLocalDateString()
     toast.success('Aporte registrado')
   }
 }

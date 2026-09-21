@@ -1,10 +1,10 @@
 from decimal import Decimal
-from datetime import datetime, timezone
 from typing import Optional
 import uuid
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.models.models import DetectedPatternModel
+from app.infrastructure.datetime_utils import utc_now_naive
 
 
 class SQLAlchemyDetectedPatternRepository:
@@ -50,7 +50,7 @@ class SQLAlchemyDetectedPatternRepository:
         if model:
             model.is_confirmed = True
             model.is_rejected = False
-            model.updated_at = datetime.now(timezone.utc)
+            model.updated_at = utc_now_naive()
             await self.session.flush()
             await self.session.refresh(model)
         return self._to_dict(model) if model else None
@@ -64,7 +64,7 @@ class SQLAlchemyDetectedPatternRepository:
         if model:
             model.is_rejected = True
             model.is_confirmed = False
-            model.updated_at = datetime.now(timezone.utc)
+            model.updated_at = utc_now_naive()
             await self.session.flush()
             await self.session.refresh(model)
         return self._to_dict(model) if model else None
@@ -91,7 +91,7 @@ class SQLAlchemyDetectedPatternRepository:
             for key, value in data.items():
                 if hasattr(model, key):
                     setattr(model, key, value)
-            model.updated_at = datetime.now(timezone.utc)
+            model.updated_at = utc_now_naive()
             await self.session.flush()
             await self.session.refresh(model)
         return self._to_dict(model) if model else None

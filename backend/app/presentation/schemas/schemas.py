@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from datetime import date as DateType, datetime
 from uuid import UUID
 from decimal import Decimal
@@ -418,6 +418,54 @@ class BudgetStatusItem(BaseModel):
     projected_remaining: Optional[Decimal] = Field(None, description="Projected remaining at month-end")
     will_exceed: Optional[bool] = Field(None, description="Whether the budget is likely to be exceeded by month-end")
     projected_overrun: Optional[Decimal] = Field(None, description="Projected amount over budget if will_exceed is true")
+
+
+class BudgetMethodConfigSchema(BaseModel):
+    """FASE 6.2 — Budget method configuration per household."""
+    method_type: str = Field(
+        ...,
+        description="Budget method type: preset name (e.g. '50_30_20') or 'custom'",
+        pattern="^(custom|[\\w]+)$",
+    )
+    needs_pct: Decimal = Field(
+        ...,
+        description="Percentage for needs (0-100)",
+        ge=Decimal("0"),
+        le=Decimal("100"),
+    )
+    wants_pct: Decimal = Field(
+        ...,
+        description="Percentage for wants (0-100)",
+        ge=Decimal("0"),
+        le=Decimal("100"),
+    )
+    savings_pct: Decimal = Field(
+        ...,
+        description="Percentage for savings (0-100)",
+        ge=Decimal("0"),
+        le=Decimal("100"),
+    )
+
+    @model_validator(mode="after")
+    def check_percentages_sum_to_100(self):
+        total = self.needs_pct + self.wants_pct + self.savings_pct
+        if total != Decimal("100"):
+            raise ValueError(
+                f"Los porcentajes deben sumar 100%. Actual: {total}%"
+            )
+        return self
+
+
+class BudgetMethodAnalysisSchema(BaseModel):
+    """FASE 6.2 — Analysis output for budget method."""
+    method_type: str = Field(..., description="Budget method type used")
+    total_income: Decimal = Field(..., description="Total monthly income")
+    needs_amount: Decimal = Field(..., description="Allocated amount for needs")
+    wants_amount: Decimal = Field(..., description="Allocated amount for wants")
+    savings_amount: Decimal = Field(..., description="Allocated amount for savings")
+    needs_pct: Decimal = Field(..., description="Percentage allocated to needs")
+    wants_pct: Decimal = Field(..., description="Percentage allocated to wants")
+    savings_pct: Decimal = Field(..., description="Percentage allocated to savings")
 
 
 class DashboardResponse(BaseModel):

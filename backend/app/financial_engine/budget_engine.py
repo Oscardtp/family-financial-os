@@ -158,3 +158,21 @@ class BudgetEngine:
             total_projected_remaining=total_projected_remaining,
             total_will_exceed=total_will_exceed,
         )
+
+    def calculate_method_distribution(
+        self,
+        income: Money,
+        needs_pct: Decimal,
+        wants_pct: Decimal,
+        savings_pct: Decimal,
+    ) -> dict[str, Money]:
+        """FASE 6.2 — Pure function: distribute income by budget method percentages.
+
+        Returns dict with keys: needs, wants, savings (all Money).
+        No DB access, no service dependencies.
+        """
+        return {
+            "needs": Money(income.amount * needs_pct / Decimal("100")),
+            "wants": Money(income.amount * wants_pct / Decimal("100")),
+            "savings": Money(income.amount * savings_pct / Decimal("100")),
+        }

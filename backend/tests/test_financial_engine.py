@@ -265,6 +265,103 @@ class TestNetWorthEngine:
         assert result.net_worth == Money("15000")
 
 
+class TestBudgetMethodEngine:
+    """FASE 6.2 — Budget Method distribution engine tests."""
+
+    def test_50_30_20_distribution(self):
+        engine = BudgetEngine()
+        income = Money("5000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("50"),
+            wants_pct=Decimal("30"),
+            savings_pct=Decimal("20"),
+        )
+        assert result["needs"] == Money("2500000")
+        assert result["wants"] == Money("1500000")
+        assert result["savings"] == Money("1000000")
+
+    def test_50_30_20_preserves_money_type(self):
+        engine = BudgetEngine()
+        income = Money("3000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("50"),
+            wants_pct=Decimal("30"),
+            savings_pct=Decimal("20"),
+        )
+        assert isinstance(result["needs"], Money)
+        assert isinstance(result["wants"], Money)
+        assert isinstance(result["savings"], Money)
+
+    def test_50_30_20_preserves_decimal_precision(self):
+        engine = BudgetEngine()
+        income = Money("1000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("50"),
+            wants_pct=Decimal("30"),
+            savings_pct=Decimal("20"),
+        )
+        assert result["needs"].amount == Decimal("500000.00")
+        assert result["wants"].amount == Decimal("300000.00")
+        assert result["savings"].amount == Decimal("200000.00")
+
+    def test_custom_distribution(self):
+        engine = BudgetEngine()
+        income = Money("2000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("70"),
+            wants_pct=Decimal("20"),
+            savings_pct=Decimal("10"),
+        )
+        assert result["needs"] == Money("1400000")
+        assert result["wants"] == Money("400000")
+        assert result["savings"] == Money("200000")
+
+    def test_custom_distribution_60_40(self):
+        engine = BudgetEngine()
+        income = Money("4000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("60"),
+            wants_pct=Decimal("40"),
+            savings_pct=Decimal("0"),
+        )
+        assert result["needs"] == Money("2400000")
+        assert result["wants"] == Money("1600000")
+        assert result["savings"] == Money("0")
+
+    def test_exact_amounts_5m_cop(self):
+        """Caso obligatorio: ingreso 5.000.000, 50/30/20."""
+        engine = BudgetEngine()
+        income = Money("5000000")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("50"),
+            wants_pct=Decimal("30"),
+            savings_pct=Decimal("20"),
+        )
+        assert result["needs"] == Money("2500000")
+        assert result["wants"] == Money("1500000")
+        assert result["savings"] == Money("1000000")
+        total = result["needs"] + result["wants"] + result["savings"]
+        assert total == income
+
+    def test_no_float_in_result(self):
+        engine = BudgetEngine()
+        income = Money("1234567")
+        result = engine.calculate_method_distribution(
+            income=income,
+            needs_pct=Decimal("50"),
+            wants_pct=Decimal("30"),
+            savings_pct=Decimal("20"),
+        )
+        for key in ("needs", "wants", "savings"):
+            assert not isinstance(result[key].amount, float)
+
+
 class TestAmortizationEngine:
     def test_generate_schedule_respects_calendar_months(self):
         engine = AmortizationEngine()

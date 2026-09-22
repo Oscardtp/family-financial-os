@@ -73,6 +73,7 @@ class DashboardService:
             "total_projected_spent": projection.total_projected_spent.amount,
             "total_projected_remaining": projection.total_projected_remaining.amount,
             "total_will_exceed": projection.total_will_exceed,
+            "total_budgeted": projection.total_budgeted.amount,
         }
         upcoming, savings_summary, financial_alert = await asyncio.gather(
             self._get_upcoming_payments(household_id),

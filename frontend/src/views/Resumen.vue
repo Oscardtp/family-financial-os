@@ -82,7 +82,13 @@
             </div>
           </div>
 
-          <BudgetPanel @open-detail="openBudgetDetail" />
+          <BudgetCard
+            :budget-status="d.budget_status || []"
+            :budget-projection="d.budget_projection || { total_projected_spent: 0, total_budgeted: 0, total_will_exceed: false }"
+            :loading="loading"
+            :error="error"
+            @open-budget="openBudgetDetail"
+          />
 
           <div v-if="upcomingMovements.length" class="card card-section">
             <div class="card-title-row">
@@ -228,7 +234,7 @@ import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, X, Calendar, Bell, BarChart3, Wallet, ClipboardList, Brain } from 'lucide-vue-next'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
-import BudgetPanel from '@/components/budget/BudgetPanel.vue'
+import BudgetCard from '@/components/resumen/BudgetCard.vue'
 const BudgetDetailModal = defineAsyncComponent(() => import('@/components/budget/BudgetDetailModal.vue'))
 import CalendarBottomSheet from '@/components/calendar/CalendarBottomSheet.vue'
 import { useCurrency } from '@/composables/useCurrency'
@@ -431,7 +437,7 @@ onMounted(loadAll)
 .card-tinted { border-radius: var(--radius-lg); padding: var(--spacing-lg); }
 .card-deudas { background: var(--color-surface-tinted-yellow); border: 1px solid var(--color-warning-100); }
 .card-metas { background: var(--color-surface-tinted-blue); border: 1px solid var(--color-primary-100); }
-.card-presupuesto { background: var(--color-surface-tinted-yellow); border: 1px solid var(--color-warning-100); }
+
 .card-coach { background: var(--color-neutral-0); border: 1px solid var(--color-neutral-100); }
 
 .card-title {
@@ -507,17 +513,7 @@ onMounted(loadAll)
 .side-mini-bar { width: 100%; height: 4px; background: var(--color-neutral-200); border-radius: 2px; overflow: hidden; }
 .side-mini-fill { height: 100%; background: var(--color-primary-500); border-radius: 2px; transition: width 300ms ease; }
 
-.budget-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
-.budget-item { padding: var(--spacing-sm); border: 1px solid var(--color-neutral-100); border-radius: var(--radius-md); }
-.budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.budget-name { font-size: 0.8rem; font-weight: 500; color: var(--color-neutral-700); }
-.budget-badge { font-size: 0.75rem; }
-.budget-bar { height: 6px; background: var(--color-neutral-100); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-.budget-fill { height: 100%; border-radius: 3px; transition: width 300ms ease; }
-.fill-ok { background: var(--color-success-500); }
-.fill-warning { background: var(--color-warning-500); }
-.fill-over { background: var(--color-error-500); }
-.budget-detail { font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-neutral-500); }
+
 
 .coach-list { display: flex; flex-direction: column; gap: 10px; }
 .coach-item { background: var(--color-neutral-50); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }

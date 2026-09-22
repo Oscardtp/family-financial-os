@@ -18,7 +18,7 @@
     <template v-else>
       <div v-if="isEmpty" class="bc-empty">
         <p class="bc-empty-text">Aun no has configurado un presupuesto.</p>
-        <button class="bc-empty-cta" @click="$emit('open-budget')">
+        <button class="bc-empty-cta" @click="$emit('create-budget')">
           Crear presupuesto
         </button>
       </div>
@@ -56,7 +56,7 @@
         </div>
 
         <button class="bc-cta" @click="$emit('open-budget')">
-          Ver todo el presupuesto
+          Editar presupuesto
         </button>
       </div>
     </template>
@@ -94,7 +94,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['open-budget'])
+defineEmits(['open-budget', 'create-budget'])
 
 const projection = computed(() => props.budgetProjection)
 

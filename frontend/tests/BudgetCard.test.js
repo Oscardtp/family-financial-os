@@ -163,7 +163,7 @@ describe('BudgetCard', () => {
     expect(wrapper.text()).toContain(msg)
   })
 
-  it('emits open-budget when CTA is clicked', async () => {
+  it('emits open-budget when CTA is clicked (non-empty state)', async () => {
     const wrapper = mount(BudgetCard, {
       props: makeProps(),
     })
@@ -171,6 +171,38 @@ describe('BudgetCard', () => {
     expect(cta.exists()).toBe(true)
     await cta.trigger('click')
     expect(wrapper.emitted('open-budget')).toBeTruthy()
+  })
+
+  it('shows "Editar presupuesto" CTA when budget exists', () => {
+    const wrapper = mount(BudgetCard, {
+      props: makeProps(),
+    })
+    expect(wrapper.find('.bc-cta').text()).toBe('Editar presupuesto')
+  })
+
+  it('emits create-budget when empty state CTA is clicked', async () => {
+    const wrapper = mount(BudgetCard, {
+      props: makeProps({
+        budgetStatus: [],
+        budgetProjection: { total_projected_spent: 0, total_budgeted: 0, total_will_exceed: false },
+      }),
+    })
+    const cta = wrapper.find('.bc-empty-cta')
+    expect(cta.exists()).toBe(true)
+    await cta.trigger('click')
+    expect(wrapper.emitted('create-budget')).toBeTruthy()
+    expect(wrapper.emitted('open-budget')).toBeFalsy()
+  })
+
+  it('does not emit open-budget from empty state CTA', async () => {
+    const wrapper = mount(BudgetCard, {
+      props: makeProps({
+        budgetStatus: [],
+        budgetProjection: { total_projected_spent: 0, total_budgeted: 0, total_will_exceed: false },
+      }),
+    })
+    await wrapper.find('.bc-empty-cta').trigger('click')
+    expect(wrapper.emitted('open-budget')).toBeFalsy()
   })
 
   it('does not recalculate percentages from budgetStatus', () => {

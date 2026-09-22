@@ -88,6 +88,7 @@
             :loading="loading"
             :error="error"
             @open-budget="openBudgetDetail"
+            @create-budget="createBudget"
           />
 
           <div v-if="upcomingMovements.length" class="card card-section">
@@ -345,6 +346,8 @@ function handleAlertOption(option) {
 }
 
 function openBudgetDetail() { budgetModalOpen.value = true }
+
+function createBudget() { router.push('/config?tab=budgets') }
 
 function onShowObligationInfo(obligationId) {
   if (!obligationId) return

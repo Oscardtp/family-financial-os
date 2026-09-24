@@ -468,6 +468,94 @@ class BudgetMethodAnalysisSchema(BaseModel):
     savings_pct: Decimal = Field(..., description="Percentage allocated to savings")
 
 
+class MethodGroupSchema(BaseModel):
+    """FASE 6.3B — One allocation group inside a budget method (N groups)."""
+    key: str = Field(..., description="Stable group key", pattern="^[a-z_]+$")
+    label: str = Field(..., description="Display label", min_length=1, max_length=80)
+    pct: int = Field(..., description="Percentage for this group (0-100)", ge=0, le=100)
+
+
+class MethodPresetSchema(BaseModel):
+    """FASE 6.3B — Static catalog preset (never persisted as household data)."""
+    id: str = Field(..., description="Preset identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(..., description="Short description")
+    groups: list[MethodGroupSchema] = Field(..., description="Allocation groups")
+
+
+class HouseholdMethodConfigSchema(BaseModel):
+    """FASE 6.3B — Household budget method configuration (PUT body)."""
+    method_type: Optional[str] = Field(
+        default=None,
+        description="Preset id or 'custom'",
+        pattern="^(custom|[\\w]+)$",
+    )
+    groups: list[MethodGroupSchema] = Field(
+        default_factory=list,
+        description="Active allocation groups with percentages",
+    )
+    category_groups: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mapping category_id -> method group key",
+    )
+    reference_income_source: str = Field(
+        default="manual",
+        description="Income source: manual (future: avg_3m, recurring, dashboard)",
+        pattern="^(manual|avg_3m|recurring|dashboard)$",
+    )
+    reference_income_amount: Optional[Decimal] = Field(
+        default=None,
+        description="Manual reference income amount",
+        ge=Decimal("0"),
+    )
+
+    @model_validator(mode="after")
+    def check_groups_sum_to_100(self):
+        if self.groups:
+            total = sum(g.pct for g in self.groups)
+            if total != 100:
+                raise ValueError(
+                    f"Los porcentajes deben sumar 100%. Actual: {total}%"
+                )
+        if self.method_type is not None and not self.groups:
+            raise ValueError("Un método seleccionado requiere sus grupos con porcentajes")
+        return self
+
+
+class MethodConfigResponse(HouseholdMethodConfigSchema):
+    """FASE 6.3B — Persisted configuration with metadata."""
+    updated_at: Optional[datetime] = Field(default=None, description="Last update")
+
+
+class MethodPreviewRequest(BaseModel):
+    """FASE 6.3B — Preview a distribution without persisting anything."""
+    income_amount: Decimal = Field(..., description="Reference income", gt=Decimal("0"))
+    groups: list[MethodGroupSchema] = Field(..., description="Groups to preview", min_length=1)
+
+    @model_validator(mode="after")
+    def check_preview_sum_to_100(self):
+        total = sum(g.pct for g in self.groups)
+        if total != 100:
+            raise ValueError(
+                f"Los porcentajes deben sumar 100%. Actual: {total}%"
+            )
+        return self
+
+
+class MethodPreviewAllocation(BaseModel):
+    """FASE 6.3B — One computed allocation line."""
+    key: str = Field(..., description="Group key")
+    label: str = Field(..., description="Group label")
+    pct: int = Field(..., description="Percentage applied")
+    amount: Decimal = Field(..., description="Computed amount")
+
+
+class MethodPreviewResponse(BaseModel):
+    """FASE 6.3B — Backend-computed preview (Vue only presents)."""
+    income_amount: Decimal = Field(..., description="Reference income used")
+    allocations: list[MethodPreviewAllocation] = Field(..., description="Computed lines")
+
+
 class DashboardResponse(BaseModel):
     total_balance: Decimal = Field(..., description="Total balance across all accounts")
     monthly_income: Decimal = Field(..., description="Total income for current month")

@@ -13,7 +13,7 @@ from app.presentation.v1 import (
     auth, accounts, transactions, categories, budgets, debts, savings,
     dashboard, projections, household, reports, audit,
     recurring_payments, notifications, preferences, events, obligations, coach, month,
-    patterns, balance_history,
+    patterns, balance_history, budget_methods,
 )
 from app.presentation.error_handlers import validation_error_handler, http_error_handler, generic_error_handler, register_rate_limit_handler
 from app.presentation.middleware.rate_limit import RateLimitMiddleware
@@ -68,6 +68,7 @@ app.include_router(accounts.router, prefix="/api/v1")
 app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(budgets.router, prefix="/api/v1")
+app.include_router(budget_methods.router, prefix="/api/v1")
 app.include_router(debts.router, prefix="/api/v1")
 app.include_router(savings.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")

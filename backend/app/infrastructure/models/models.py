@@ -447,3 +447,17 @@ class RefreshTokenModel(Base):
     revoked = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class HouseholdBudgetMethodModel(Base):
+    """FASE 6.3B — One configuration row per household. Never touches budgets."""
+    __tablename__ = "household_budget_methods"
+
+    household_id = Column(String(36), ForeignKey("households.id"), primary_key=True)
+    method_type = Column(String(50), nullable=True)
+    groups_json = Column(Text, nullable=True)
+    category_groups_json = Column(Text, nullable=True, default="{}")
+    reference_income_source = Column(String(30), default="manual")
+    reference_income_amount = Column(Numeric(15, 2), nullable=True)
+    created_at = Column(DateTime, default=lambda: utc_now_naive())
+    updated_at = Column(DateTime, default=lambda: utc_now_naive(), onupdate=lambda: utc_now_naive())

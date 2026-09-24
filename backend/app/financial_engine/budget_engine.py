@@ -176,3 +176,21 @@ class BudgetEngine:
             "wants": Money(income.amount * wants_pct / Decimal("100")),
             "savings": Money(income.amount * savings_pct / Decimal("100")),
         }
+
+    def distribute_by_groups(
+        self,
+        income: Money,
+        groups: list,
+    ) -> dict[str, Money]:
+        """FASE 6.3B — Pure function: distribute income across N method groups.
+
+        groups: list of {key: str, pct: int|Decimal}. Percentages must sum to 100.
+        Returns dict keyed by group key with Money values. No DB access.
+        """
+        total = sum(Decimal(str(g["pct"])) for g in groups)
+        if total != Decimal("100"):
+            raise ValueError(f"Los porcentajes deben sumar 100%. Actual: {total}%")
+        return {
+            g["key"]: Money(income.amount * Decimal(str(g["pct"])) / Decimal("100"))
+            for g in groups
+        }

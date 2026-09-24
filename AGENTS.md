@@ -3,8 +3,8 @@
 ## 1. 🚨 Estado Operativo Actual
 
 ```
-MODO: BASELINE ESTABLE (post-recuperación)
-CHECKPOINT: b6006a3 — "chore: establish stable family finance baseline"
+MODO: BASELINE ESTABLE (post-FASE 6.2.1)
+CHECKPOINT: d21a87d — "fix(budget): eliminate intermediate step in budget creation flow (FASE 6.2.1)"
 ```
 
 **Restricción temporal:** No desarrollar nuevas funcionalidades financieras hasta completar todas las fases del Protocolo Maestro (Fase 0 a Fase 6). Leer `docs/PROTOCOLO_MAESTRO.md` antes de asumir el estado actual.
@@ -59,6 +59,7 @@ CHECKPOINT: b6006a3 — "chore: establish stable family finance baseline"
 - **Timezone:** America/Bogota (UTC-5)
 - **Calendario único:** El proyecto tiene pantalla Calendario dedicada. No duplicar en otras vistas
 - **Responsive:** Toda UI debe funcionar en mobile y desktop
+- **Presupuesto único:** `BudgetDetailModal` es el único centro de gestión del presupuesto. Cualquier funcionalidad futura (health_score, distribución 50/30/20, recomendaciones inteligentes, historial de cambios) se integra dentro de ese mismo flujo. No crear nuevos modales ni pantallas paralelas para presupuesto
 
 ### Frontend — Trampas Conocidas
 
@@ -231,3 +232,51 @@ La importación inicial es una migración de datos reales. Aplica restricciones 
 **Criterio de éxito:** DATA PERSISTENCE + DATA INTEGRITY + FINANCIAL RECONCILIATION + HOUSEHOLD ISOLATION + BACKUP + RECOVERY TEST = todos PASS.
 
 Leer `docs/REGLA_DE_MIGRACION.md` para el procedimiento completo.
+
+---
+
+## 🧩 context-mode — Reglas de Enrutamiento
+
+Herramientas MCP `ctx_*` disponibles. Estas reglas protegen la ventana de contexto de flooding. Un comando sin enrutamiento puede volcar 56 KB en contexto.
+
+### THINK IN CODE — OBLIGATORIO
+
+Analizar/datos: escribir código via `ctx_execute(language, code)`, `console.log()` solo respuesta.
+NO leer datos crudos en contexto. PROGRAMAR el análisis, no COMPUTARLO.
+JavaScript puro — solo Node.js built-ins (`fs`, `path`, `child_process`).
+
+### BLOQUEADO — NO intentar
+
+- `curl` / `wget` → interceptados. NO reintentar. Usar `ctx_execute` con `fetch()`
+- `fetch('http...')` inline → interceptado. Usar `ctx_execute`
+- HTTP requests directos → usar `ctx_fetch_and_index(url, source)` luego `ctx_search`
+
+### REDIRIGIDO — usar sandbox
+
+- Shell >20 líneas output → `ctx_batch_execute` o `ctx_execute`
+- Lectura de archivos para ANÁLISIS/EXPLORACIÓN → `ctx_execute_file`
+- grep con muchos resultados → `ctx_execute` en sandbox
+
+### Tool selection
+
+0. **MEMORY**: `ctx_search(sort: "timeline")` — tras resume, revisar contexto previo
+1. **GATHER**: `ctx_batch_execute(commands, queries)` — ejecuta todo, auto-indexa, retorna search
+2. **FOLLOW-UP**: `ctx_search(queries: [...])` — todas las preguntas como array
+3. **PROCESSING**: `ctx_execute(language, code)` | `ctx_execute_file(path, language, code)`
+4. **WEB**: `ctx_fetch_and_index(url, source)` → `ctx_search(queries)`
+5. **INDEX**: `ctx_index(content, source)` — almacenar en FTS5
+
+### Comandos útiles
+
+| Comando | Acción |
+|---------|--------|
+| `ctx stats` | Ahorro de contexto — breakdown por tool |
+| `ctx doctor` | Diagnóstico del sistema |
+| `ctx index` | Indexar archivo/directorio en knowledge base |
+| `ctx search` | Buscar en knowledge base |
+| `ctx upgrade` | Actualizar hooks y configuración |
+| `ctx purge` | Limpiar knowledge base (con confirmación) |
+
+### Session Continuity
+
+Skills, roles y decisiones persisten durante toda la sesión. NO abandonarlos a medida que crece la conversación.

@@ -122,7 +122,11 @@ export function useBudgets() {
   }
 
   async function createBudget(payload) {
-    await api.post('/budgets', payload)
+    await api.post('/budgets', {
+      ...payload,
+      month: month.value,
+      year: year.value,
+    })
     await loadBudgets()
   }
 

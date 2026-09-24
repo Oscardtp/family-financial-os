@@ -220,7 +220,7 @@
       </div>
     </div>
 
-    <BudgetDetailModal :open="budgetModalOpen" @close="budgetModalOpen = false" />
+    <BudgetDetailModal :open="budgetModalOpen" :mode="budgetModalMode" @close="budgetModalOpen = false" @saved="onBudgetSaved" />
     <CalendarBottomSheet
       :open="calendarOpen"
       :selected-event="selectedEvent"
@@ -262,6 +262,7 @@ const error = computed(() => dashError.value)
 const alertDismissed = ref(false)
 const showFullCat = ref(false)
 const budgetModalOpen = ref(false)
+const budgetModalMode = ref('view')
 const calendarOpen = ref(false)
 const selectedEvent = ref(null)
 
@@ -345,9 +346,19 @@ function handleAlertOption(option) {
   else if (opt.includes('ingreso') || opt.includes('ingres')) router.push('/config')
 }
 
-function openBudgetDetail() { budgetModalOpen.value = true }
+function openBudgetDetail() {
+  budgetModalMode.value = 'view'
+  budgetModalOpen.value = true
+}
 
-function createBudget() { router.push('/config?tab=budgets') }
+function createBudget() {
+  budgetModalMode.value = 'create'
+  budgetModalOpen.value = true
+}
+
+function onBudgetSaved() {
+  loadData()
+}
 
 function onShowObligationInfo(obligationId) {
   if (!obligationId) return

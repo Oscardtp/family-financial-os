@@ -128,6 +128,10 @@ def downgrade() -> None:
     op.drop_column("liabilities", "interest_rate_type")
     op.drop_column("debts", "interest_rate_type")
 
+    # HF4: simetría con el add_column de is_reversed en upgrade() (línea 118).
+    # d4e5f6g7h8i9 quedó neutralizada, así que esta revision es la dueña del par add/drop.
+    op.drop_column("debt_payments", "is_reversed")
+
     op.drop_table("financial_obligations")
     op.drop_table("financial_events")
     op.drop_table("debt_payment_overrides")

@@ -24,16 +24,24 @@ async def cash_flow_projection(
 ):
     household_id = current_user["household_id"]
     tx_repo = SQLAlchemyTransactionRepository(db)
+    debt_repo = SQLAlchemyDebtRepository(db)
+    savings_repo = SQLAlchemySavingsGoalRepository(db)
     today = date.today()
     monthly = await tx_repo.get_monthly_totals(household_id, today.year, today.month)
+    debts = await debt_repo.get_all(household_id)
+    goals = await savings_repo.get_all(household_id)
+
+    total_debt = sum(Decimal(str(d["current_balance"])) for d in debts)
+    total_savings = sum(Decimal(str(g["current_amount"])) for g in goals)
+    total_min_payment = sum(Decimal(str(d.get("minimum_payment", 0))) for d in debts)
 
     engine = ProjectionEngine()
     result = engine.project_scenario(
         current_monthly_income=Money(Decimal(str(monthly["income"]))),
         current_monthly_expenses=Money(Decimal(str(monthly["expense"]))),
-        current_debt_balance=Money(Decimal("0")),
-        current_savings=Money(Decimal("0")),
-        monthly_debt_payment=Money(Decimal("0")),
+        current_debt_balance=Money(total_debt),
+        current_savings=Money(total_savings),
+        monthly_debt_payment=Money(total_min_payment),
         months=months,
     )
 

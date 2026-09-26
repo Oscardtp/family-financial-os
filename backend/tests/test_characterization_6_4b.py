@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from calendar import monthrange
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -431,22 +432,45 @@ async def test_flujo4_pago_recurrente_crea_transaccion_sin_avanzar_next_due(clie
     r = await client.get(f"/api/v1/accounts/{account['id']}", headers=headers)
     assert r.json()["balance"] == "955000.00"
 
-    # DEFECTO CONGELADO (D-5): el cobro desde calendario NO escribe balance_history
+    # CONTRATO ACTUALIZADO (D-5, 6.4C-C2a-2): el cobro desde calendario ahora
+    # pasa por TransactionService, así que SÍ escribe account_balance_history.
+    # Antes se congelaba el defecto (history vacío) porque event_service
+    # ajustaba el saldo sin registrar el movimiento.
     r = await client.get(f"/api/v1/balance-history/{account['id']}", headers=headers)
     assert r.status_code == 200
-    assert r.json()["history"] == [], (
-        "CONGELADO: event_service ajusta el saldo SIN registrar balance_history "
-        "(hallazgo D-5 de 6.4A)"
+    history = r.json()["history"]
+    assert len(history) == 1, (
+        "CONTRATO ACTUALIZADO (D-5): exactamente UN registro de balance_history "
+        f"por cobro; se obtuvieron {len(history)}."
+    )
+    record = history[0]
+    assert record["change_type"] == "expense"
+    assert Decimal(str(record["change_amount"])) == Decimal("-" + RECURRING_AMOUNT)
+    assert record["transaction_id"] is not None, (
+        "CONTRATO ACTUALIZADO (D-5): el historial debe apuntar a la Transaction "
+        "que lo causó."
     )
 
 
 @pytest.mark.anyio
-async def test_flujo4_camino_b_recurring_pay_no_marca_evento_pagado(client):
-    """DEFECTO CONGELADO (D-4): existen dos ejecutores de pago recurrente.
+async def test_flujo4_camino_b_cierra_el_evento_del_ciclo(client):
+    """Camino B (pago directo) — CONTRATO ACTUALIZADO en 6.4C-C2a-1 (D-4).
 
-    POST /recurring-payments/{id}/pay crea transacción, debita la cuenta y
-    recalcula next_due_date, pero NO marca el evento del calendario como
-    pagado → los dos caminos divergen.
+    Congelaba el defecto D-4: «POST /recurring-payments/{id}/pay crea
+    transacción, debita la cuenta y recalcula next_due_date, pero NO marca el
+    evento del calendario como pagado → los dos caminos divergen y el ciclo se
+    puede cobrar dos veces».
+
+    JUSTIFICACIÓN DEL CAMBIO DE CONTRATO (6.4C-C2a-1): el objetivo de esa
+    fase es exactamente eliminar la doble ejecución de un mismo ciclo. El pago
+    directo ahora cierra el FinancialEvent del ciclo (mismo evento que expone
+    `pending-event`), por lo que el calendario se entera y el ciclo deja de
+    ser re-cobrable. Se conservan intactas todas las demás observaciones
+    congeladas: 1 transacción, fecha = hoy, saldo debitado una sola vez,
+    next_due_date sin moverse por la fórmula congelada y balance_history
+    todavía vacío (D-5 sigue abierto).
+
+    Cubierto por C1: test_d4a / test_d4c / test_d4e.
     """
     headers = await _register(client, "char_flow4b@example.com")
     account = await _create_account(client, headers, "1000000")
@@ -489,21 +513,45 @@ async def test_flujo4_camino_b_recurring_pay_no_marca_evento_pagado(client):
         "el Camino A con la fecha de vencimiento del evento"
     )
 
-    # el evento sigue pendiente → el calendario no se enteró
+    # D-4 CORREGIDO (6.4C-C2a-1): el Camino B ahora cierra el ciclo
+    r = await client.get(f"/api/v1/events/{event['id']}", headers=headers)
+    assert r.status_code == 200, r.text
+    closed = r.json()
+    assert closed["status"] == "paid", (
+        "CONTRATO ACTUALIZADO (D-4): pagar por la ruta directa debe marcar el "
+        f"evento del ciclo como pagado; hoy está «{closed['status']}»."
+    )
+    assert closed["paid_amount"] is not None
+
     r = await client.get(
         f"/api/v1/recurring-payments/{recurring['id']}/pending-event",
         headers=headers,
     )
     assert r.status_code == 200, (
-        "CONGELADO: el Camino B deja el evento pendiente mientras cobra "
-        "(hallazgo D-4 de 6.4A) → se puede cobrar dos veces"
+        "la serie tiene 12 eventos generados; tras cerrar el ciclo debe quedar "
+        "otro pendiente"
     )
-    assert r.json()["id"] == event["id"], "sigue siendo el MISMO evento pendiente"
+    next_event = r.json()
+    assert next_event["id"] != event["id"], (
+        "CONTRATO ACTUALIZADO (D-4): `pending-event` ya no puede devolver el "
+        f"evento {event['id']} cobrado ⇒ el ciclo deja de ser re-cobrable."
+    )
+    assert next_event["status"] == "pending"
 
     # la cuenta sí se debita
     r = await client.get(f"/api/v1/accounts/{account['id']}", headers=headers)
     assert r.json()["balance"] == "955000.00"
 
-    # también deja el balance_history vacío (misma deuda técnica que el Camino A)
+    # CONTRATO ACTUALIZADO (D-5, 6.4C-C2a-2): la ruta directa ahora delega la
+    # mutación monetaria en TransactionService ⇒ SÍ escribe balance_history
+    # (antes se congelaba que lo dejaba vacío, hallazgo D-5 de 6.4A).
     r = await client.get(f"/api/v1/balance-history/{account['id']}", headers=headers)
-    assert r.json()["history"] == []
+    assert r.status_code == 200
+    history = r.json()["history"]
+    assert len(history) == 1, (
+        "CONTRATO ACTUALIZADO (D-5): un solo cobro ⇒ un solo registro de "
+        f"balance_history; se obtuvieron {len(history)}."
+    )
+    assert history[0]["change_type"] == "expense"
+    assert Decimal(str(history[0]["change_amount"])) == Decimal("-" + RECURRING_AMOUNT)
+    assert history[0]["transaction_id"] is not None

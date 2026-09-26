@@ -138,6 +138,20 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             "created_at": model.created_at,
         }
 
+    async def exists_for_recurring_on(self, recurring_payment_id, day: date) -> bool:
+        """¿Esta fuente recurrente ya movió dinero en `day`? (idempotencia D-4)
+
+        No filtra por `household_id`: las Transactions creadas por la ruta
+        directa aún no lo portan (hallazgo HH, fuera de alcance en C2a-1).
+        """
+        result = await self.session.execute(
+            select(TransactionModel.id)
+            .where(TransactionModel.recurring_payment_id == _to_str_id(recurring_payment_id))
+            .where(TransactionModel.date == day)
+            .limit(1)
+        )
+        return result.first() is not None
+
     async def get_by_recurring(
         self, recurring_payment_id: str, household_id: str, skip: int = 0, limit: int = 100
     ) -> list[dict]:

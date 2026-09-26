@@ -4,11 +4,10 @@ from decimal import Decimal
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
 from app.infrastructure.repositories.notification_repository import SQLAlchemyNotificationRepository
-from app.infrastructure.repositories.transaction_repository import SQLAlchemyTransactionRepository
-from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
 from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
 from app.infrastructure.repositories.obligation_repository import SQLAlchemyFinancialObligationRepository
 from app.application.services.next_due_service import NextDueDateService
+from app.application.services.transaction_service import TransactionService
 from app.infrastructure.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
@@ -87,6 +86,12 @@ class FinancialEventService:
         event = await self.get(event_id, user["household_id"])
         if event["status"] == "paid":
             return event
+
+        # 1) Dinero primero, vía la única autoridad monetaria (D-5).
+        #    Si el cobro falla, el evento queda intacto y nada persiste.
+        await self._execute_payment_for_recurring_event(event, user)
+
+        # 2) Sólo después de un cobro exitoso se cambia el estado de negocio.
         updated = await self.repo.mark_as_paid(
             event_id,
             user["id"],
@@ -99,15 +104,16 @@ class FinancialEventService:
         sync = CalendarDebtSyncService(self.db)
         await sync.on_event_paid(event, user["household_id"], user["id"])
 
-        await self._create_transaction_for_recurring_event(updated, user)
-
         return updated
 
-    async def _create_transaction_for_recurring_event(self, event: dict, user: dict) -> None:
-        """Create a Transaction when a recurring payment event is marked as paid.
+    async def _execute_payment_for_recurring_event(self, event: dict, user: dict) -> None:
+        """Cobra desde el calendario un evento ligado a un RecurringPayment.
 
-        Only applies to events linked to a RecurringPayment (via obligation).
-        Debt events are handled by CalendarDebtSyncService.
+        Resuelve el contexto (obligación → pago recurrente → cuenta) y delega
+        toda la mutación monetaria en `TransactionService` (D-5): valida fondos,
+        crea la Transaction, actualiza Account.balance y registra
+        account_balance_history. Los eventos de deuda no entran aquí (G-1 sigue
+        fuera de alcance) y los eventos sin obligación tampoco.
         """
         if not event.get("obligation_id"):
             return
@@ -130,28 +136,17 @@ class FinancialEventService:
         if not account_id:
             return
 
-        amount = Decimal(str(event["amount"]))
-
-        tx_repo = SQLAlchemyTransactionRepository(self.db)
-        await tx_repo.create({
-            "household_id": event["household_id"],
-            "account_id": account_id,
-            "category_id": event.get("category_id"),
-            "user_id": user["id"],
-            "type": event["type"],
-            "amount": amount,
-            "description": event["title"],
-            "date": event["due_date"],
-            "recurring_payment_id": recurring_id,
-        })
-
-        acc_repo = SQLAlchemyAccountRepository(self.db)
-        if event["type"] == "income":
-            await acc_repo.update_balance(account_id, amount)
-        elif event["type"] == "expense":
-            await acc_repo.deduct_balance(account_id, amount)
-        else:
-            await acc_repo.update_balance(account_id, amount)
+        await TransactionService(self.db).execute_payment(
+            account_id=account_id,
+            amount=event["amount"],
+            tx_type=event["type"],
+            tx_date=event["due_date"],
+            description=event["title"],
+            category_id=event.get("category_id"),
+            user_id=user["id"],
+            household_id=event["household_id"],
+            recurring_payment_id=recurring_id,
+        )
 
         await NextDueDateService.persist_mirror(rp_repo, recurring)
 

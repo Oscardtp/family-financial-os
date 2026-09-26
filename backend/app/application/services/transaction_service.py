@@ -46,29 +46,106 @@ class TransactionService:
         account = await self._get_owned_account(data.account_id, household_id)
 
         self._validate_transfer(data)
-        await self._validate_category(data, household_id)
+        await self._validate_category(data.category_id, data.type, household_id)
 
         if data.type == "transfer" and data.to_account_id:
             await self._get_owned_account(data.to_account_id, household_id)
 
         self._check_balance(account, data.type, amount)
 
-        transaction = await self.tx_repo.create({
-            "account_id": data.account_id,
-            "category_id": data.category_id,
-            "user_id": user["id"],
-            "type": data.type,
-            "amount": amount,
-            "description": data.description,
-            "date": data.date,
-            "to_account_id": data.to_account_id,
-        })
-
-        await self._adjust_balances(data, transaction["id"])
+        transaction = await self._register(
+            account_id=data.account_id,
+            category_id=data.category_id,
+            user_id=user["id"],
+            tx_type=data.type,
+            amount=amount,
+            description=data.description,
+            tx_date=data.date,
+            to_account_id=data.to_account_id,
+            household_id=household_id,
+            recurring_payment_id=None,
+        )
 
         await log_action(
             self.db, household_id, user["id"], user["email"],
             "create", "transaction", transaction["id"], data.description,
+        )
+        return transaction
+
+    async def execute_payment(
+        self,
+        *,
+        account_id,
+        amount,
+        tx_type: str,
+        tx_date,
+        description: str | None = None,
+        category_id=None,
+        user_id: str,
+        household_id: str,
+        recurring_payment_id=None,
+    ) -> dict:
+        """Única entrada para persistir una salida real de dinero (D-5).
+
+        Los ejecutores de pago (evento, ruta recurrente, process-due) resuelven
+        el contexto y las reglas de dominio; la mutación persistente
+        — Transaction + Account.balance + account_balance_history — vive aquí.
+
+        Mismas validaciones que `create` (cuenta del hogar, categoría, fondos),
+        sin lógica de transferencia porque un cobro nunca mueve dinero entre
+        cuentas.
+        """
+        value = Decimal(str(amount))
+        if value <= 0:
+            raise ValueError("El monto debe ser mayor a cero")
+
+        account = await self._get_owned_account(account_id, household_id)
+        await self._validate_category(category_id, tx_type, household_id)
+        self._check_balance(account, tx_type, value)
+
+        return await self._register(
+            account_id=account_id,
+            category_id=category_id,
+            user_id=user_id,
+            tx_type=tx_type,
+            amount=value,
+            description=description,
+            tx_date=tx_date,
+            to_account_id=None,
+            household_id=household_id,
+            recurring_payment_id=recurring_payment_id,
+        )
+
+    async def _register(
+        self,
+        *,
+        account_id,
+        category_id,
+        user_id,
+        tx_type: str,
+        amount,
+        description,
+        tx_date,
+        to_account_id=None,
+        household_id: str | None = None,
+        recurring_payment_id=None,
+    ) -> dict:
+        """Crea la Transaction y aplica el efecto monetario en una sola tanda."""
+        transaction = await self.tx_repo.create({
+            "household_id": household_id,
+            "account_id": account_id,
+            "category_id": category_id,
+            "user_id": user_id,
+            "type": tx_type,
+            "amount": amount,
+            "description": description,
+            "date": tx_date,
+            "to_account_id": to_account_id,
+            "recurring_payment_id": recurring_payment_id,
+        })
+
+        await self._adjust_balances(
+            tx_type, amount, account_id, to_account_id, transaction["id"]
         )
         return transaction
 
@@ -102,16 +179,16 @@ class TransactionService:
         if data.type == "transfer" and data.to_account_id and data.account_id == data.to_account_id:
             raise ValueError("No puedes transferir a la misma cuenta")
 
-    async def _validate_category(self, data, household_id: str):
-        if not data.category_id:
+    async def _validate_category(self, category_id, tx_type: str, household_id: str):
+        if not category_id:
             return
-        category = await self.category_repo.get_by_id(data.category_id)
+        category = await self.category_repo.get_by_id(category_id)
         if not category or category.get("household_id") != household_id:
             raise ValueError("Categoría no encontrada")
-        if category["type"] != data.type:
+        if category["type"] != tx_type:
             raise ValueError(
                 f"La categoría '{category['name']}' es de tipo '{category['type']}', "
-                f"pero estás intentando registrar un movimiento tipo '{data.type}'. "
+                f"pero estás intentando registrar un movimiento tipo '{tx_type}'. "
                 f"Usa la categoría correcta."
             )
 
@@ -130,51 +207,53 @@ class TransactionService:
                     f"Disponible: ${account['balance']:,.2f}, necesitas: ${Decimal(str(amount)):,.2f}"
                 )
 
-    async def _adjust_balances(self, data, transaction_id: str = None):
-        amount = Decimal(str(data.amount))
+    async def _adjust_balances(
+        self, tx_type: str, amount, account_id, to_account_id, transaction_id: str | None = None
+    ):
+        amount = Decimal(str(amount))
 
-        if data.type == "income":
-            account = await self.account_repo.get_by_id(data.account_id)
+        if tx_type == "income":
+            account = await self.account_repo.get_by_id(account_id)
             balance_before = account["balance"]
-            await self.account_repo.update_balance(data.account_id, amount)
-            account_after = await self.account_repo.get_by_id(data.account_id)
+            await self.account_repo.update_balance(account_id, amount)
+            account_after = await self.account_repo.get_by_id(account_id)
             await self._record_balance_history(
-                data.account_id, transaction_id, balance_before,
+                account_id, transaction_id, balance_before,
                 account_after["balance"], amount, "income"
             )
 
-        elif data.type == "expense":
-            account = await self.account_repo.get_by_id(data.account_id)
+        elif tx_type == "expense":
+            account = await self.account_repo.get_by_id(account_id)
             balance_before = account["balance"]
-            deducted = await self.account_repo.deduct_balance(data.account_id, amount)
+            deducted = await self.account_repo.deduct_balance(account_id, amount)
             if not deducted:
                 raise ValueError("No tienes suficiente plata para este pago")
-            account_after = await self.account_repo.get_by_id(data.account_id)
+            account_after = await self.account_repo.get_by_id(account_id)
             await self._record_balance_history(
-                data.account_id, transaction_id, balance_before,
+                account_id, transaction_id, balance_before,
                 account_after["balance"], -amount, "expense"
             )
 
-        elif data.type == "transfer" and data.to_account_id:
+        elif tx_type == "transfer" and to_account_id:
             # Origen
-            account_from = await self.account_repo.get_by_id(data.account_id)
+            account_from = await self.account_repo.get_by_id(account_id)
             balance_before_from = account_from["balance"]
-            deducted = await self.account_repo.deduct_balance(data.account_id, amount)
+            deducted = await self.account_repo.deduct_balance(account_id, amount)
             if not deducted:
                 raise ValueError("No tienes suficiente plata en la cuenta origen")
-            account_after_from = await self.account_repo.get_by_id(data.account_id)
+            account_after_from = await self.account_repo.get_by_id(account_id)
             await self._record_balance_history(
-                data.account_id, transaction_id, balance_before_from,
+                account_id, transaction_id, balance_before_from,
                 account_after_from["balance"], -amount, "transfer"
             )
 
             # Destino
-            account_to = await self.account_repo.get_by_id(data.to_account_id)
+            account_to = await self.account_repo.get_by_id(to_account_id)
             balance_before_to = account_to["balance"]
-            await self.account_repo.update_balance(data.to_account_id, amount)
-            account_after_to = await self.account_repo.get_by_id(data.to_account_id)
+            await self.account_repo.update_balance(to_account_id, amount)
+            account_after_to = await self.account_repo.get_by_id(to_account_id)
             await self._record_balance_history(
-                data.to_account_id, transaction_id, balance_before_to,
+                to_account_id, transaction_id, balance_before_to,
                 account_after_to["balance"], amount, "transfer"
             )
 

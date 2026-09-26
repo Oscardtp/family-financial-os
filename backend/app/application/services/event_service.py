@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from app.infrastructure.repositories.financial_event_repository import SQLAlchemyFinancialEventRepository
@@ -8,6 +8,7 @@ from app.infrastructure.repositories.transaction_repository import SQLAlchemyTra
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
 from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
 from app.infrastructure.repositories.obligation_repository import SQLAlchemyFinancialObligationRepository
+from app.application.services.next_due_service import NextDueDateService
 from app.infrastructure.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
@@ -152,30 +153,7 @@ class FinancialEventService:
         else:
             await acc_repo.update_balance(account_id, amount)
 
-        from calendar import monthrange
-        from datetime import date as date_type
-        from_date = date_type.today()
-        frequency = recurring.get("frequency", "monthly")
-        day_of_month = recurring.get("day_of_month", 1)
-        if frequency == "monthly":
-            next_month = from_date.month + 1
-            next_year = from_date.year
-            if next_month > 12:
-                next_month = 1
-                next_year += 1
-            max_day = monthrange(next_year, next_month)[1]
-            next_due = date(next_year, next_month, min(day_of_month, max_day))
-        elif frequency == "weekly":
-            next_due = from_date + timedelta(weeks=1)
-        elif frequency == "biweekly":
-            next_due = from_date + timedelta(weeks=2)
-        elif frequency == "yearly":
-            max_day = monthrange(from_date.year + 1, from_date.month)[1]
-            next_due = date(from_date.year + 1, from_date.month, min(day_of_month, max_day))
-        else:
-            next_due = from_date + timedelta(days=30)
-
-        await rp_repo.update({**recurring, "next_due_date": next_due})
+        await NextDueDateService.persist_mirror(rp_repo, recurring)
 
     async def unpay(self, event_id: str, user: dict) -> dict:
         event = await self.get(event_id, user["household_id"])

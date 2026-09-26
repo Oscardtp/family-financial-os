@@ -1,8 +1,8 @@
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from calendar import monthrange
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.services.next_due_service import NextDueDateService
 from app.infrastructure.repositories.recurring_payment_repository import SQLAlchemyRecurringPaymentRepository
 from app.infrastructure.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
@@ -34,12 +34,7 @@ class RecurringPaymentService:
             if not accounts:
                 raise ValueError("Necesitas tener una cuenta creada para registrar un pago recurrente.")
             payload["account_id"] = accounts[0]["id"]
-        if not payload.get("next_due_date"):
-            payload["next_due_date"] = self._calculate_next_due(
-                payload.get("frequency", "monthly"),
-                payload.get("day_of_month", 1),
-                date.today(),
-            )
+        NextDueDateService.ensure_initial(payload)
         return await self.repo.create(payload)
 
     async def update(self, payment_id: str, data, household_id: str) -> dict:
@@ -56,10 +51,7 @@ class RecurringPaymentService:
     async def pay(self, payment_id: str, user: dict) -> dict:
         payment = await self.get(payment_id, user["household_id"])
         await self._execute_payment(payment, user["id"])
-        next_due = self._calculate_next_due(
-            payment["frequency"], payment["day_of_month"], date.today()
-        )
-        return await self.repo.update({**payment, "next_due_date": next_due})
+        return await NextDueDateService.persist_mirror(self.repo, payment)
 
     async def process_due(self, household_id: str, user_id: str) -> dict:
         today = date.today()
@@ -69,10 +61,7 @@ class RecurringPaymentService:
         for payment in due_payments:
             try:
                 await self._execute_payment(payment, user_id)
-                next_due = self._calculate_next_due(
-                    payment["frequency"], payment["day_of_month"], today
-                )
-                await self.repo.update({**payment, "next_due_date": next_due})
+                await NextDueDateService.persist_mirror(self.repo, payment, today)
                 processed += 1
             except Exception:
                 continue
@@ -105,22 +94,3 @@ class RecurringPaymentService:
                 raise ValueError("No tienes suficiente plata para este pago")
         else:
             await self.acc_repo.update_balance(account["id"], amount)
-
-    @staticmethod
-    def _calculate_next_due(frequency: str, day_of_month: int, from_date: date) -> date:
-        if frequency == "weekly":
-            return from_date + timedelta(weeks=1)
-        elif frequency == "biweekly":
-            return from_date + timedelta(weeks=2)
-        elif frequency == "monthly":
-            next_month = from_date.month + 1
-            next_year = from_date.year
-            if next_month > 12:
-                next_month = 1
-                next_year += 1
-            max_day = monthrange(next_year, next_month)[1]
-            return date(next_year, next_month, min(day_of_month, max_day))
-        elif frequency == "yearly":
-            max_day = monthrange(from_date.year + 1, from_date.month)[1]
-            return date(from_date.year + 1, from_date.month, min(day_of_month, max_day))
-        return from_date + timedelta(days=30)

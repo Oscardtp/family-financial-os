@@ -96,4 +96,6 @@ class SQLAlchemyDebtPaymentRepository(DebtPaymentRepository):
             "interest": Decimal(str(model.interest)) if model.interest else None,
             "payment_date": model.payment_date,
             "is_reversed": model.is_reversed,
+            "transaction_id": getattr(model, "transaction_id", None),
+            "household_id": getattr(model, "household_id", None),
         }

@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.repositories.debt_repository import SQLAlchemyDebtRepository
 from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDebtPaymentRepository
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
+from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
+from app.application.services.payment_account_resolver import resolve_payment_account
+from app.application.services.transaction_service import TransactionService
 from app.financial_engine.amortization import AmortizationEngine
 from app.domain.value_objects.money import Money
 from app.domain.value_objects.interest_rate import InterestRate, RateType
@@ -21,6 +24,7 @@ class DebtService:
         self.debt_repo = SQLAlchemyDebtRepository(db)
         self.payment_repo = SQLAlchemyDebtPaymentRepository(db)
         self.override_repo = SQLAlchemyDebtPaymentOverrideRepository(db)
+        self.acc_repo = SQLAlchemyAccountRepository(db)
 
     async def list(self, household_id: str, skip: int = 0, limit: int = 100):
         return await self.debt_repo.get_all(household_id, skip, limit)
@@ -49,10 +53,24 @@ class DebtService:
         if interest_rate < 0:
             raise ValueError("La tasa de interés no puede ser negativa")
 
+        await self._validate_account(payload.get("account_id"), household_id)
+
         return await self.debt_repo.create({
             "household_id": household_id,
             **payload,
         })
+
+    async def _validate_account(self, account_id, household_id: str) -> None:
+        """Rechaza una cuenta ajena al hogar al crear la deuda (aislamiento HH).
+
+        La guarda autoritativa en el borde del dinero sigue siendo
+        `resolve_payment_account`, que se ejecuta antes de `execute_payment`.
+        """
+        if account_id is None:
+            return
+        account = await self.acc_repo.get_by_id(account_id)
+        if not account or account.get("household_id") != household_id:
+            raise ValueError("La cuenta indicada no existe o no pertenece a este hogar")
 
     async def update(self, debt_id: str, data, household_id: str) -> dict:
         debt = await self.get(debt_id, household_id)
@@ -84,21 +102,60 @@ class DebtService:
 
         principal_portion = payment_amount - interest_charge if payment_amount > interest_charge else Decimal("0")
 
+        payment_date = data.payment_date
+
+        # Protección contra doble amortización del mismo ciclo: la ruta directa
+        # aplica la misma guarda que ya usa `CalendarDebtSyncService.on_event_paid`
+        # sobre `find_by_debt_and_month`. Sin esto, evento + endpoint podían
+        # descontar dos veces un mismo mes (G-1 / doble gasto).
+        existing = await self.payment_repo.find_by_debt_and_month(
+            debt_id, payment_date.year, payment_date.month
+        )
+        if existing and not existing.get("is_reversed"):
+            raise ValueError(
+                f"Este mes ya tiene un pago registrado para esta deuda "
+                f"(fecha {existing['payment_date']})"
+            )
+
+        # 1) Fuente de fondos — única política, compartida con la ruta de
+        #    calendario. Aborta ANTES de cualquier efecto monetario.
+        account_id = await resolve_payment_account(
+            debt, user["household_id"], self.acc_repo
+        )
+
+        # 2) Dinero primero (fail-fast). Si `execute_payment` falla no se crea
+        #    DebtPayment ni se mueve Debt.current_balance.
+        transaction = await TransactionService(self.db).execute_payment(
+            account_id=account_id,
+            amount=payment_amount,
+            tx_type="expense",
+            tx_date=payment_date,
+            description=debt["name"],
+            category_id=None,
+            user_id=user["id"],
+            household_id=user["household_id"],
+            recurring_payment_id=None,
+        )
+
+        # 3) El pago queda enlazado a la Transaction que movió el dinero.
         payment = await self.payment_repo.create({
             "debt_id": debt_id,
+            "household_id": user["household_id"],
+            "transaction_id": transaction["id"],
             "amount": payment_amount,
             "principal": principal_portion,
             "interest": min(payment_amount, interest_charge),
-            "payment_date": data.payment_date,
+            "payment_date": payment_date,
         })
 
+        # 4) Sólo después del éxito monetario.
         new_balance = max(Decimal("0"), Decimal(str(debt["current_balance"])) - principal_portion)
         new_status = "paid_off" if new_balance == 0 else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})
 
+        # 5) Sincronización de calendario (sin cambios en su responsabilidad).
         from app.application.services.calendar_debt_sync_service import CalendarDebtSyncService
         sync = CalendarDebtSyncService(self.db)
-        payment_date = data.payment_date if hasattr(data.payment_date, "year") else data.payment_date
         await sync.on_debt_payment(debt_id, payment_date, payment_amount, user["household_id"])
 
         logger.info("Payment created successfully: debt=%s payment_id=%s", debt_id, payment["id"])

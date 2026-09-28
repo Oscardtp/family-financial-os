@@ -46,6 +46,8 @@ class SQLAlchemyDebtRepository(DebtRepository):
         model = result.scalar_one()
         for key, value in debt.items():
             if key != "id":
+                if isinstance(value, uuid.UUID):
+                    value = str(value)
                 setattr(model, key, value)
         await self.session.flush()
         await self.session.refresh(model)
@@ -86,4 +88,5 @@ class SQLAlchemyDebtRepository(DebtRepository):
             "start_date": model.start_date,
             "end_date": model.end_date,
             "status": model.status,
+            "account_id": model.account_id if hasattr(model, "account_id") else None,
         }

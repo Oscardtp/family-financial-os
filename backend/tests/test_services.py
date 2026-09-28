@@ -140,6 +140,11 @@ async def test_debt_service_payment_interest_split(client):
     })
     headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
 
+    # setup nuevo (C2b): el pago de deuda necesita una cuenta de origen (G-1)
+    acc = await client.post("/api/v1/accounts",
+        json={"name": "Checking", "type": "bank", "balance": 1000000}, headers=headers)
+    assert acc.status_code == 201
+
     debt = await client.post("/api/v1/debts", json={
         "name": "Loan", "creditor": "Bank",
         "total_amount": 1000000, "current_balance": 1000000,

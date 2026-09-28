@@ -15,8 +15,11 @@ Hallazgos cubiertos (auditoría 6.4A + C0):
 
 RESTRICCIONES RESPETADAS:
   * No se modifica producción, modelos, migraciones ni frontend.
-  * No se modifica `tests/test_characterization_6_4b.py` (sigue congelando G-1,
-    D-4 y D-5; C2 lo actualizará con ADR después de corregir).
+  * `tests/test_characterization_6_4b.py` fue ACTUALIZADO en C2b sólo en los
+    asertas congelados de G-1 (los pagos de deuda ahora crean 1 Transaction),
+    cada uno con su justificación "CONTRATO ACTUALIZADO (G-1)". El resto de
+    los flujos congelados (FLUJO 1, FLUJO 4, matemática, fechas, pagador) no
+    cambió. Es el gate G-14.
   * No se modifican los 3 tests preexistentes fallidos de `tests/test_calendar.py`.
   * No se toca `NextDueDateService` (FASE 6.4C-B).
   * No se crean entidades ni columnas nuevas.
@@ -330,6 +333,159 @@ async def test_g1e_transaction_del_pago_de_deuda_lleva_household_id(client, sess
         "CONTRATO HH: la Transaction del pago de deuda debe portar household_id; "
         f"esperado {household_id}, obtenido {txs[0]['household_id']}."
     )
+
+
+# ================================================================================
+# 1b. G-11 / G-12 / G-13 — Fuente de fondos del pago de deuda (C2b)
+# ================================================================================
+# G-11  DebtCreate / DebtUpdate / DebtResponse exponen account_id
+# G-12  UNA sola política de resolución compartida por ambas rutas
+# G-13  deudas legacy (account_id = NULL) siguen siendo pagables por fallback
+# (G-14 no es un test: son las justificaciones escritas en
+#  tests/test_characterization_6_4b.py al actualizar los asertas congelados.)
+
+@pytest.mark.anyio
+async def test_g11a_debt_create_y_list_exponen_account_id(client):
+    """CONTRATO G11: `DebtCreate` y `DebtResponse` exponen `account_id`."""
+    headers = await _register(client, "c1_g11a@example.com")
+    account = await _create_account(client, headers, "1000000")
+
+    debt = await _create_debt(client, headers, account_id=account["id"])
+    assert debt.get("account_id") == account["id"], (
+        "CONTRATO G11: la respuesta al crear la deuda debe exponer account_id."
+    )
+
+    listed = (await client.get("/api/v1/debts", headers=headers)).json()
+    assert listed and listed[0].get("account_id") == account["id"], (
+        "CONTRATO G11: GET /debts debe seguir exponiendo account_id."
+    )
+
+
+@pytest.mark.anyio
+async def test_g11b_debt_update_exponen_account_id(client):
+    """CONTRATO G11: `DebtUpdate` acepta y devuelve `account_id`."""
+    headers = await _register(client, "c1_g11b@example.com")
+    account = await _create_account(client, headers, "1000000")
+    debt = await _create_debt(client, headers)
+
+    r = await client.put(
+        f"/api/v1/debts/{debt['id']}",
+        json={"account_id": account["id"]},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("account_id") == account["id"], (
+        "CONTRATO G11: DebtUpdate debe aceptar account_id y devolverlo."
+    )
+
+
+@pytest.mark.anyio
+async def test_g12_ambas_rutas_usan_la_misma_cuenta_de_la_deuda(client, session):
+    """CONTRATO G12: directa y calendario comparten UNA política de resolución.
+
+    Con dos cuentas en el hogar y `Debt.account_id` apuntando a la SEGUNDA,
+    ambas rutas deben debitar exactamente esa cuenta. Si una ruta eligiera
+    por su cuenta la "primera" cuenta disponible, los resultados divergirían:
+    esa duplicación de lógica es lo que G-12 prohíbe (un único
+    `resolve_payment_account` compartido).
+    """
+    # --- ruta directa, hogar A
+    headers_a = await _register(client, "c1_g12a@example.com")
+    acc_a1 = await _create_account(client, headers_a, "1000000")
+    acc_a2 = await _create_account(client, headers_a, "1000000")
+    debt_a = await _create_debt(client, headers_a, account_id=acc_a2["id"])
+    await _pay_debt_endpoint(client, headers_a, debt_a["id"])
+
+    txs_a = [t for t in await _db_transactions(session)
+             if t["account_id"] in (acc_a1["id"], acc_a2["id"])]
+    assert len(txs_a) == 1, "CONTRATO G-1: la ruta directa debe crear 1 Transaction."
+    assert txs_a[0]["account_id"] == acc_a2["id"], (
+        "CONTRATO G12: la ruta directa debe debitar la cuenta fijada en la deuda, "
+        f"esperado {acc_a2['id']}, obtenido {txs_a[0]['account_id']}."
+    )
+    assert await _account_balance(client, headers_a, acc_a1["id"]) == Decimal("1000000"), (
+        "CONTRATO G12: la cuenta NO elegida no puede verse afectada."
+    )
+
+    # --- ruta de calendario, hogar B
+    headers_b = await _register(client, "c1_g12b@example.com")
+    acc_b1 = await _create_account(client, headers_b, "1000000")
+    acc_b2 = await _create_account(client, headers_b, "1000000")
+    await _create_debt(client, headers_b, account_id=acc_b2["id"])
+    event_b = await _debt_event(client, headers_b)
+    await _pay_event(client, headers_b, event_b["id"])
+
+    txs_b = [t for t in await _db_transactions(session)
+             if t["account_id"] in (acc_b1["id"], acc_b2["id"])]
+    assert len(txs_b) == 1, "CONTRATO G-1: la ruta de calendario debe crear 1 Transaction."
+    assert txs_b[0]["account_id"] == acc_b2["id"], (
+        "CONTRATO G12: la ruta de calendario debe debitar la MISMA cuenta que "
+        f"resolvería la ruta directa; esperado {acc_b2['id']}, obtenido {txs_b[0]['account_id']}."
+    )
+    assert await _account_balance(client, headers_b, acc_b1["id"]) == Decimal("1000000"), (
+        "CONTRATO G12: la cuenta NO elegida no puede verse afectada."
+    )
+
+
+@pytest.mark.anyio
+async def test_g13_deuda_legacy_sin_account_id_se_paga_por_fallback(client, session):
+    """CONTRATO G13: deuda antigua (account_id NULL) sigue siendo pagable."""
+    headers = await _register(client, "c1_g13@example.com")
+    account = await _create_account(client, headers, "1000000")   # única cuenta activa
+    debt = await _create_debt(client, headers)
+    assert debt.get("account_id") is None, "setup: la deuda es legacy (sin account_id)."
+
+    await _pay_debt_endpoint(client, headers, debt["id"])
+
+    txs = await _db_transactions(session)
+    assert len(txs) == 1, "CONTRATO G13: la deuda legacy debe poder pagarse."
+    assert txs[0]["account_id"] == account["id"], (
+        "CONTRATO G13: el fallback debe escoger la única cuenta activa del hogar."
+    )
+    assert await _debt_balance(client, headers, debt["id"]) == Decimal(NEW_BALANCE)
+
+
+@pytest.mark.anyio
+async def test_g13b_pago_sin_cuenta_disponible_aborta_sin_efecto(client, session):
+    """CONTRATO G13: sin cuenta que financie el pago ⇒ fallo ANTES del dinero."""
+    headers = await _register(client, "c1_g13b@example.com")
+    debt = await _create_debt(client, headers)   # el hogar no tiene ninguna cuenta
+
+    r = await client.post(
+        f"/api/v1/debts/{debt['id']}/payments",
+        json={"amount": MIN_PAYMENT, "payment_date": date.today().isoformat()},
+        headers=headers,
+    )
+    assert r.status_code == 400, (
+        f"CONTRATO G13: sin cuenta el pago debe rechazarse (400); obtuvo {r.status_code}: {r.text}"
+    )
+    assert await _db_transactions(session) == [], (
+        "CONTRATO G13: no puede existir ninguna Transaction si no hubo fuente de fondos."
+    )
+    assert await _debt_balance(client, headers, debt["id"]) == Decimal(BALANCE), (
+        "CONTRATO G13: el saldo de la deuda no puede moverse si el pago abortó."
+    )
+
+
+@pytest.mark.anyio
+async def test_hh_account_id_ajeno_al_hogar_se_rechaza(client, session):
+    """CONTRATO HH/G13: no se puede crear una deuda apuntando a cuenta ajena."""
+    headers_a = await _register(client, "c1_hha@example.com")
+    await _create_account(client, headers_a, "1000000")
+
+    headers_b = await _register(client, "c1_hhb@example.com")
+    acc_b = await _create_account(client, headers_b, "1000000")
+
+    r = await client.post("/api/v1/debts", json={
+        "name": "Deuda intrusa", "creditor": "Banco",
+        "total_amount": BALANCE, "current_balance": BALANCE,
+        "interest_rate": "2", "minimum_payment": MIN_PAYMENT, "due_day": 31,
+        "account_id": acc_b["id"],
+    }, headers=headers_a)
+    assert r.status_code == 400, (
+        f"CONTRATO HH: una cuenta de otro hogar debe rechazarse con 400; obtuvo {r.status_code}"
+    )
+    assert await _db_transactions(session) == []
 
 
 # ================================================================================

@@ -184,6 +184,7 @@ async def test_flujo1_crear_deuda_genera_obligacion_y_12_eventos(client):
 async def test_flujo2_pago_por_monto_registra_interes_principal_saldo_y_evento(client):
     """FLUJO 2 (congelado): POST /debts/{id}/payments."""
     headers = await _register(client, "char_flow2@example.com")
+    await _create_account(client, headers)   # setup nuevo (C2b): el pago necesita fuente de fondos
     debt = await _create_debt(client, headers)
     today = date.today()
 
@@ -221,9 +222,17 @@ async def test_flujo2_pago_por_monto_registra_interes_principal_saldo_y_evento(c
 
 
 @pytest.mark.anyio
-async def test_flujo2_pago_por_monto_no_crea_transaccion(client):
-    """DEFECTO CONGELADO (G-1): pagar la deuda no genera Transaction."""
+async def test_flujo2_pago_por_monto_crea_exactamente_una_transaccion(client):
+    """CONTRATO ACTUALIZADO (G-1): pagar la deuda ahora genera UNA Transaction.
+
+    Justificación del cambio sobre el test congelado original
+    (`test_flujo2_pago_por_monto_no_crea_transaccion`): FASE 6.4C-C2b cerró el
+    hallazgo G-1. El pago ya debe mover dinero vía TransactionService.execute_payment,
+    por lo que la afirmación "crea cero transacciones" quedó incorrecta.
+    Se conserva el resto del test y sólo se actualiza esta aserción congelada.
+    """
     headers = await _register(client, "char_flow2b@example.com")
+    account = await _create_account(client, headers)   # setup nuevo (C2b)
     debt = await _create_debt(client, headers)
 
     r = await client.post(
@@ -232,12 +241,20 @@ async def test_flujo2_pago_por_monto_no_crea_transaccion(client):
         headers=headers,
     )
     assert r.status_code == 201, r.text
+    payment = r.json()
 
     txs = await _get_transactions(client, headers)
-    assert txs == [], (
-        "CONGELADO: hoy el pago de deuda NO crea transacción → no afecta "
-        "saldo de cuenta, cashflow ni presupuesto (hallazgo G-1 de 6.4A)"
-    )
+    assert len(txs) == 1, f"CONTRATO G-1: esperaba 1 transacción, hay {len(txs)}"
+    tx = txs[0]
+    assert tx["type"] == "expense"
+    assert tx["amount"] == MIN_PAYMENT
+    assert tx["account_id"] == account["id"]
+    assert tx["description"] == debt["name"]
+    assert tx["date"] == date.today().isoformat()
+
+    # el saldo de la cuenta bajó exactamente el monto pagado
+    r = await client.get(f"/api/v1/accounts/{account['id']}", headers=headers)
+    assert r.json()["balance"] == "900000.00"
 
 
 # ---------------------------------------------------------------- Flujo 3
@@ -246,6 +263,7 @@ async def test_flujo2_pago_por_monto_no_crea_transaccion(client):
 async def test_flujo3_pago_desde_evento_usa_misma_matematica(client):
     """FLUJO 3 (congelado): POST /events/{id}/pay sobre un evento de deuda."""
     headers = await _register(client, "char_flow3@example.com")
+    await _create_account(client, headers)   # setup nuevo (C2b): el pago necesita fuente de fondos
     debt = await _create_debt(client, headers)
 
     events = await _current_month_events(client, headers)
@@ -276,15 +294,22 @@ async def test_flujo3_pago_desde_evento_usa_misma_matematica(client):
 
 
 @pytest.mark.anyio
-async def test_flujo3_pago_desde_evento_tampoco_crea_transaccion(client):
-    """DEFECTO CONGELADO: el evento de deuda tampoco genera Transaction.
+async def test_flujo3_pago_desde_evento_crea_exactamente_una_transaccion(client):
+    """CONTRATO ACTUALIZADO (G-1): el evento de deuda ahora genera UNA Transaction.
 
-    event_service._create_transaction_for_recurring_event resuelve el
-    RecurringPayment por obligation.source_id; para deudas ese id es un
-    DebtModel, el lookup devuelve None y sale sin crear transacción.
+    Justificación del cambio sobre el test congelado original
+    (`test_flujo3_pago_desde_evento_tampoco_crea_transaccion`): FASE 6.4C-C2b
+    cerró el hallazgo G-1. La explicación original (el lookup de RecurringPayment
+    devolvía None para deudas y salía sin crear transacción) ya no aplica: la
+    ruta de calendario pasa por TransactionService.execute_payment como la
+    ruta directa. Se conserva el resto del test y sólo se actualiza esta
+    aserción congelada.
+
+    FLUJO 4 (recurrente) sigue intacto: crear/generar NO mueve dinero.
     """
     headers = await _register(client, "char_flow3b@example.com")
-    await _create_debt(client, headers)
+    account = await _create_account(client, headers)   # setup nuevo (C2b)
+    debt = await _create_debt(client, headers)
 
     events = await _current_month_events(client, headers)
     event = next(e for e in events if e.get("obligation_id"))
@@ -293,9 +318,18 @@ async def test_flujo3_pago_desde_evento_tampoco_crea_transaccion(client):
     assert r.status_code == 200, r.text
 
     txs = await _get_transactions(client, headers)
-    assert txs == [], (
-        "CONGELADO: pagar un evento de deuda NO crea transacción (hallazgo G-1)"
-    )
+    assert len(txs) == 1, f"CONTRATO G-1: esperaba 1 transacción, hay {len(txs)}"
+    tx = txs[0]
+    assert tx["type"] == "expense"
+    assert tx["amount"] == MIN_PAYMENT
+    assert tx["account_id"] == account["id"]
+    assert tx["description"] == debt["name"]
+    # CONGELADO (igual que FLUJO 4): la transacción se fecha con el
+    # vencimiento del evento, no con la fecha en que se ejecuta el pago.
+    assert tx["date"] == event["due_date"]
+
+    r = await client.get(f"/api/v1/accounts/{account['id']}", headers=headers)
+    assert r.json()["balance"] == "900000.00"
 
 
 @pytest.mark.anyio
@@ -309,6 +343,7 @@ async def test_flujo2_vs_flujo3_diferencias_documentadas(client):
 
     # --- Flujo 2 (pago por monto), hogar A
     headers_a = await _register(client, "char_diff_a@example.com")
+    account_a = await _create_account(client, headers_a)   # setup nuevo (C2b)
     debt_a = await _create_debt(client, headers_a)
     r = await client.post(
         f"/api/v1/debts/{debt_a['id']}/payments",
@@ -323,6 +358,7 @@ async def test_flujo2_vs_flujo3_diferencias_documentadas(client):
 
     # --- Flujo 3 (pago desde evento), hogar B
     headers_b = await _register(client, "char_diff_b@example.com")
+    account_b = await _create_account(client, headers_b)   # setup nuevo (C2b)
     debt_b = await _create_debt(client, headers_b)
     events_b = await _current_month_events(client, headers_b)
     event_b = next(e for e in events_b if e.get("obligation_id"))
@@ -352,9 +388,21 @@ async def test_flujo2_vs_flujo3_diferencias_documentadas(client):
     assert event_a["paid_amount"] == MIN_PAYMENT          # monto real pagado
     assert event_b_paid["paid_amount"] == event_b["amount"]  # monto del evento
 
-    # Común: ninguno de los dos caminos crea transacción
-    assert await _get_transactions(client, headers_a) == []
-    assert await _get_transactions(client, headers_b) == []
+    # Común: AMBOS caminos crean exactamente UNA transacción (CONTRATO
+    # ACTUALIZADO G-1 — justificación: FASE 6.4C-C2b cerró "los pagos de deuda
+    # no crean transacción"). La diferencia original (creaba cero) ahora es que
+    # ambos crean una y la única diferencia real sigue siendo la fecha del pago.
+    txs_a = await _get_transactions(client, headers_a)
+    txs_b = await _get_transactions(client, headers_b)
+    assert len(txs_a) == len(txs_b) == 1, (
+        "CONTRATO G-1: cada ruta debe crear exactamente una transacción"
+    )
+    assert txs_a[0]["type"] == txs_b[0]["type"] == "expense"
+    assert txs_a[0]["amount"] == txs_b[0]["amount"] == MIN_PAYMENT
+    assert txs_a[0]["account_id"] == account_a["id"]
+    assert txs_b[0]["account_id"] == account_b["id"]
+    assert txs_a[0]["date"] == today.isoformat()      # fecha elegida por el usuario
+    assert txs_b[0]["date"] == event_b["due_date"]    # vencimiento del evento
 
 
 # ---------------------------------------------------------------- Flujo 4

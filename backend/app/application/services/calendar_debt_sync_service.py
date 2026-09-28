@@ -7,6 +7,9 @@ from app.infrastructure.repositories.financial_event_repository import SQLAlchem
 from app.infrastructure.repositories.debt_repository import SQLAlchemyDebtRepository
 from app.infrastructure.repositories.debt_payment_repository import SQLAlchemyDebtPaymentRepository
 from app.infrastructure.repositories.debt_payment_override_repository import SQLAlchemyDebtPaymentOverrideRepository
+from app.infrastructure.repositories.account_repository import SQLAlchemyAccountRepository
+from app.application.services.payment_account_resolver import resolve_payment_account
+from app.application.services.transaction_service import TransactionService
 from app.domain.value_objects.interest_rate import InterestRate, RateType
 from app.financial_engine.rate_engine import RateEngine
 
@@ -21,6 +24,7 @@ class CalendarDebtSyncService:
         self.debt_repo = SQLAlchemyDebtRepository(db)
         self.payment_repo = SQLAlchemyDebtPaymentRepository(db)
         self.override_repo = SQLAlchemyDebtPaymentOverrideRepository(db)
+        self.acc_repo = SQLAlchemyAccountRepository(db)
 
     async def on_event_paid(self, event: dict, household_id: str, user_id: str) -> dict | None:
         """Calendar event paid → create debt payment if linked to a debt."""
@@ -69,14 +73,36 @@ class CalendarDebtSyncService:
         interest_charge = (Decimal(str(debt["current_balance"])) * monthly_rate).quantize(Decimal("0.01"))
         principal_portion = payment_amount - interest_charge if payment_amount > interest_charge else Decimal("0")
 
+        # 1) Fuente de fondos — misma política que la ruta directa (G-1).
+        #    Aborta ANTES de cualquier efecto monetario si no hay cuenta válida.
+        account_id = await resolve_payment_account(debt, household_id, self.acc_repo)
+
+        # 2) Dinero primero (fail-fast): Transaction + Account.balance +
+        #    account_balance_history viven únicamente en TransactionService.
+        transaction = await TransactionService(self.db).execute_payment(
+            account_id=account_id,
+            amount=payment_amount,
+            tx_type="expense",
+            tx_date=due_date,
+            description=debt["name"],
+            category_id=None,
+            user_id=user_id,
+            household_id=household_id,
+            recurring_payment_id=None,
+        )
+
+        # 3) El pago queda enlazado a la Transaction que movió el dinero.
         payment = await self.payment_repo.create({
             "debt_id": debt_id,
+            "household_id": household_id,
+            "transaction_id": transaction["id"],
             "amount": payment_amount,
             "principal": principal_portion,
             "interest": min(payment_amount, interest_charge),
             "payment_date": due_date,
         })
 
+        # 4) Sólo después del éxito monetario.
         new_balance = max(Decimal("0"), Decimal(str(debt["current_balance"])) - principal_portion)
         new_status = "paid_off" if new_balance == 0 else debt["status"]
         await self.debt_repo.update({**debt, "current_balance": new_balance, "status": new_status})

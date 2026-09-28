@@ -264,6 +264,11 @@ class DebtCreate(BaseModel):
     )
     start_date: Optional[DateType] = Field(None, description="Debt start date")
     end_date: Optional[DateType] = Field(None, description="Expected payoff date")
+    account_id: Optional[UUID] = Field(
+        None,
+        description="Cuenta que financia los pagos de esta deuda. Si es null, "
+                    "se resuelve al pagar (cuenta del hogar / única cuenta activa)."
+    )
 
 
 class DebtUpdate(BaseModel):
@@ -275,6 +280,7 @@ class DebtUpdate(BaseModel):
     minimum_payment: Optional[Decimal] = Field(None, description="Updated minimum payment", ge=0)
     due_day: Optional[int] = Field(None, description="Updated payment due day", ge=1, le=31)
     status: Optional[str] = Field(None, description="Updated debt status")
+    account_id: Optional[UUID] = Field(None, description="Updated funding account for this debt")
 
 
 class DebtResponse(BaseModel):
@@ -291,6 +297,9 @@ class DebtResponse(BaseModel):
     start_date: Optional[DateType] = Field(None, description="Debt start date")
     end_date: Optional[DateType] = Field(None, description="Expected payoff date")
     status: str = Field(..., description="Debt status")
+    account_id: Optional[UUID] = Field(
+        None, description="Cuenta que financia los pagos de esta deuda (null si no está fijada)"
+    )
 
 
 class DebtPaymentCreate(BaseModel):
